@@ -1,0 +1,20 @@
+# ===================================================================
+# security.txt for kabhishek18.com
+# -------------------------------------------------------------------
+# This file provides a point of contact for security researchers
+# to report vulnerabilities in a responsible manner.
+# For more information, see https://securitytxt.org/
+# ===================================================================
+
+# The primary contact for any security-related issues.
+# All vulnerability reports should be sent to this email address.
+Contact: mailto:developer@kabhishek18.com
+
+# I do not have a PGP key at this time.
+# Encryption:
+
+# The canonical URL of this security.txt file.
+Canonical: https://kabhishek18.com/.well-known/security.txt
+
+# I prefer to be contacted in English.
+Preferred-Languages: en

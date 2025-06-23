@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 Not Found - The Digital Architect</title>
+
+    <meta name="description" content="Error: The page you are looking for has been lost in the digital void.">
+    <meta name="robots" content="noindex, follow">
+
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <link rel="manifest" href="favicon_manifest.json">
+
+    <meta name="theme-color" content="#00ffff">
+
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Scroll Progress Indicator -->
+    <div class="scroll-indicator" id="scrollIndicator"></div>
+
+    <!-- Background effects from your theme -->
+    <canvas id="matrix" class="matrix-bg"></canvas>
+    <div class="neural-network" id="neuralNetwork"></div>
+    <div class="data-particles" id="dataParticles"></div>
+
+    <!-- Main navigation from your index.html for perfect consistency -->
+    <nav class="main-nav" id="mainNav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">
+                DIGITAL ARCHITECT
+            </a>
+            
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="index.html#home" class="nav-link">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a href="index.html#about" class="nav-link">About</a>
+                </li>
+                <li class="nav-item">
+                    <a href="index.html#projects" class="nav-link">Projects</a>
+                </li>
+                <li class="nav-item">
+                    <a href="blog.html" class="nav-link">Blog</a>
+                </li>
+                <li class="nav-item">
+                    <a href="index.html#contact" class="nav-link">Contact</a>
+                </li>
+            </ul>
+            
+            <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        
+        <!-- Mobile Menu -->
+        <div class="mobile-menu" id="mobileMenu">
+            <div class="mobile-nav-links">
+                <a href="index.html#home" class="nav-link">Home</a>
+                <a href="index.html#about" class="nav-link">About</a>
+                <a href="index.html#projects" class="nav-link">Projects</a>
+                <a href="blog.html" class="nav-link">Blog</a>
+                <a href="index.html#contact" class="nav-link">Contact</a>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main 404 Content - Themed -->
+    <div class="container main-container" style="display: flex; align-items: center; justify-content: center; text-align: center;">
+        
+        <div class="content-section">
+            <h1 class="main-title" style="font-size: clamp(6rem, 20vw, 10rem); line-height: 1; margin-bottom: 1.5rem;">
+                <span class="title-line" style="background: linear-gradient(45deg, var(--accent-orange), var(--accent-pink)); -webkit-background-clip: text; background-clip: text; animation: none;">
+                    404
+                </span>
+            </h1>
+            
+            <div class="subtitle-container" style="margin-bottom: 2rem;">
+                <div class="terminal-prefix" style="color: var(--accent-orange);">error@kabhishek18:~$</div>
+                <div id="typewriter" style="color: var(--text-secondary); border-right: 2px solid var(--accent-orange);">Signal Lost</div>
+            </div>
+
+            <div class="description">
+                <p>The requested resource appears to be an anomaly within the system. The pathway is corrupted or the data fragment never existed. Please verify the transmission coordinates.</p>
+            </div>
+            
+            <a href="index.html" class="btn btn-primary btn-lg" style="margin-top: 2rem;">
+                <i class="fas fa-home"></i>
+                Return to Mainframe
+            </a>
+        </div>
+
+    </div>
+
+    <!-- Scripts to enable all theme effects and interactivity -->
+    <script>
+        // Inline script to handle navigation on this specific page
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+            const mobileMenu = document.getElementById('mobileMenu');
+            
+            if (mobileMenuToggle && mobileMenu) {
+                mobileMenuToggle.addEventListener('click', () => {
+                    mobileMenu.classList.toggle('active');
+                    const icon = mobileMenuToggle.querySelector('i');
+                    icon.classList.toggle('fa-bars');
+                    icon.classList.toggle('fa-times');
+                });
+
+                // Close mobile menu when clicking a link inside it
+                const mobileNavLinks = mobileMenu.querySelectorAll('.nav-link');
+                mobileNavLinks.forEach(link => {
+                    link.addEventListener('click', () => {
+                         mobileMenu.classList.remove('active');
+                         const icon = mobileMenuToggle.querySelector('i');
+                         icon.classList.add('fa-bars');
+                         icon.classList.remove('fa-times');
+                    });
+                });
+            }
+
+            // Simple typewriter for the 404 page message
+            const typewriterElement = document.getElementById('typewriter');
+            if(typewriterElement) {
+                const text = "Signal Lost";
+                let i = 0;
+                typewriterElement.textContent = '';
+                function type() {
+                    if (i < text.length) {
+                        typewriterElement.textContent += text.charAt(i);
+                        i++;
+                        setTimeout(type, 120);
+                    }
+                }
+                type();
+            }
+        });
+    </script>
+    <script src="script.js"></script>
+
+</body>
+</html>

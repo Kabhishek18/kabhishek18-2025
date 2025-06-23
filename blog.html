@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Codex - Kumar Abhishek | Digital Architect</title>
+
+    <meta name="description" content="Explore the digital frontier through insights on AI, machine learning, and software development from Kumar Abhishek.">
+    <meta name="author" content="Kumar Abhishek">
+    <meta name="keywords" content="AI, Machine Learning, Software Development, Blog, Tech Insights, Python, React, Kumar Abhishek">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://kabhishek18.com/blog.html">
+
+    <meta property="og:title" content="Digital Codex - Kumar Abhishek's Blog">
+    <meta property="og:description" content="Explore insights on AI, machine learning, and the future of software development.">
+    <meta property="og:image" content="https://kabhishek18.com/web-app-manifest-512x512.png">
+    <meta property="og:url" content="https://kabhishek18.com/blog.html">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="The Digital Architect">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Digital Codex - Kumar Abhishek's Blog">
+    <meta name="twitter:description" content="Explore insights on AI, machine learning, and the future of software development.">
+    <meta name="twitter:image" content="https://kabhishek18.com/web-app-manifest-512x512.png">
+    <meta name="twitter:site" content="@kabhishek18">
+    <meta name="twitter:creator" content="@kabhishek18">
+
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <link rel="manifest" href="favicon_manifest.json">
+
+    <meta name="theme-color" content="#00ffff">
+
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Matrix Rain Background -->
+    <canvas id="matrix" class="matrix-bg"></canvas>
+    
+    <!-- Neural Network Background -->
+    <div class="neural-network" id="neuralNetwork"></div>
+    
+    <!-- Floating Data Particles -->
+    <div class="data-particles" id="dataParticles"></div>
+
+    <!-- Navigation -->
+    <nav class="blog-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-back">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to Portfolio</span>
+            </a>
+            <div class="nav-logo">DIGITAL CODEX</div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="blog-container">
+        <!-- Blog Header -->
+        <div class="blog-header">
+            <h1 class="blog-title">DIGITAL CODEX</h1>
+            <p class="blog-subtitle">
+                Exploring the intersection of artificial intelligence, machine learning, and the future of software development through the lens of a digital architect.
+            </p>
+        </div>
+
+        <!-- Search Container -->
+        <div class="search-container">
+            <div class="search-icon">
+                <i class="fas fa-search"></i>
+            </div>
+            <input type="text" class="search-input" placeholder="Search the digital archives..." id="searchInput">
+        </div>
+
+        <!-- Blog Filters -->
+        <div class="blog-filters">
+            <button class="filter-btn active" data-filter="all">All Posts</button>
+            <button class="filter-btn" data-filter="ai">AI & ML</button>
+            <button class="filter-btn" data-filter="development">Development</button>
+            <button class="filter-btn" data-filter="tutorials">Tutorials</button>
+            <button class="filter-btn" data-filter="insights">Tech Insights</button>
+        </div>
+
+        <!-- Blog Grid -->
+        <div class="blog-grid" id="blogGrid">
+            <!-- Featured Post -->
+            <article class="blog-card featured-post" data-category="ai">
+                <div class="blog-image">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <div class="blog-content">
+                    <span class="featured-badge">Featured</span>
+                    <div class="blog-meta">
+                        <span class="blog-category">AI & ML</span>
+                        <span class="blog-date">
+                            <i class="fas fa-calendar"></i>
+                            June 15, 2025
+                        </span>
+                    </div>
+                    <h2 class="blog-card-title">The Future of AI in Software Development: A Developer's Perspective</h2>
+                    <p class="blog-excerpt">
+                        As we stand at the precipice of a new era in software development, artificial intelligence is not just changing how we code—it's fundamentally reshaping what it means to be a developer. From AI-powered code completion to intelligent debugging, explore how these tools are augmenting human creativity rather than replacing it.
+                    </p>
+                    <div class="blog-tags">
+                        <span class="blog-tag">Artificial Intelligence</span>
+                        <span class="blog-tag">Software Development</span>
+                        <span class="blog-tag">Future Tech</span>
+                    </div>
+                    <a href="blog-detail.html?id=ai-future-development" class="read-more">
+                        Read Full Article
+                        <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </article>
+
+            <!-- Regular Blog Posts -->
+            <article class="blog-card" data-category="development">
+                <div class="blog-image">
+                    <i class="fas fa-code"></i>
+                </div>
+                <div class="blog-content">
+                    <div class="blog-meta">
+                        <span class="blog-category">Development</span>
+                        <span class="blog-date">
+                            <i class="fas fa-calendar"></i>
+                            June 12, 2025
+                        </span>
+                    </div>
+                    <h2 class="blog-card-title">Building Scalable APIs with Python and FastAPI</h2>
+                    <p class="blog-excerpt">
+                        Dive deep into creating high-performance APIs using FastAPI, exploring async programming patterns, database optimization, and deployment strategies for modern web applications.
+                    </p>
+                    <div class="blog-tags">
+                        <span class="blog-tag">Python</span>
+                        <span class="blog-tag">FastAPI</span>
+                        <span class="blog-tag">Backend</span>
+                    </div>
+                    <a href="blog-detail.html?id=fastapi-scalable-apis" class="read-more">
+                        Read More
+                        <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </article>
+
+            <article class="blog-card" data-category="ai">
+                <div class="blog-image">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="blog-content">
+                    <div class="blog-meta">
+                        <span class="blog-category">AI & ML</span>
+                        <span class="blog-date">
+                            <i class="fas fa-calendar"></i>
+                            June 10, 2025
+                        </span>
+                    </div>
+                    <h2 class="blog-card-title">Neural Networks Demystified: A Practical Guide</h2>
+                    <p class="blog-excerpt">
+                        Understanding the fundamentals of neural networks through hands-on examples, from perceptrons to deep learning architectures, with practical Python implementations.
+                    </p>
+                    <div class="blog-tags">
+                        <span class="blog-tag">Neural Networks</span>
+                        <span class="blog-tag">Deep Learning</span>
+                        <span class="blog-tag">Python</span>
+                    </div>
+                    <a href="blog-detail.html?id=neural-networks-guide" class="read-more">
+                        Read More
+                        <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </article>
+
+            <article class="blog-card" data-category="tutorials">
+                <div class="blog-image">
+                    <i class="fas fa-laptop-code"></i>
+                </div>
+                <div class="blog-content">
+                    <div class="blog-meta">
+                        <span class="blog-category">Tutorials</span>
+                        <span class="blog-date">
+                            <i class="fas fa-calendar"></i>
+                            June 8, 2025
+                        </span>
+                    </div>
+                    <h2 class="blog-card-title">React Performance Optimization: Advanced Techniques</h2>
+                    <p class="blog-excerpt">
+                        Master advanced React optimization techniques including memoization, code splitting, and virtual DOM optimization to build lightning-fast user interfaces.
+                    </p>
+                    <div class="blog-tags">
+                        <span class="blog-tag">React</span>
+                        <span class="blog-tag">Performance</span>
+                        <span class="blog-tag">JavaScript</span>
+                    </div>
+                    <a href="blog-detail.html?id=react-performance-optimization" class="read-more">
+                        Read More
+                        <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </article>
+
+            <article class="blog-card" data-category="insights">
+                <div class="blog-image">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="blog-content">
+                    <div class="blog-meta">
+                        <span class="blog-category">Tech Insights</span>
+                        <span class="blog-date">
+                            <i class="fas fa-calendar"></i>
+                            June 5, 2025
+                        </span>
+                    </div>
+                    <h2 class="blog-card-title">The Rise of Edge Computing: Transforming Modern Applications</h2>
+                    <p class="blog-excerpt">
+                        Exploring how edge computing is revolutionizing application architecture, reducing latency, and enabling new possibilities for IoT and mobile applications.
+                    </p>
+                    <div class="blog-tags">
+                        <span class="blog-tag">Edge Computing</span>
+                        <span class="blog-tag">IoT</span>
+                        <span class="blog-tag">Architecture</span>
+                    </div>
+                    <a href="blog-detail.html?id=edge-computing-rise" class="read-more">
+                        Read More
+                        <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </article>
+
+            <article class="blog-card" data-category="development">
+                <div class="blog-image">
+                    <i class="fas fa-database"></i>
+                </div>
+                <div class="blog-content">
+                    <div class="blog-meta">
+                        <span class="blog-category">Development</span>
+                        <span class="blog-date">
+                            <i class="fas fa-calendar"></i>
+                            June 3, 2025
+                        </span>
+                    </div>
+                    <h2 class="blog-card-title">Database Design Patterns for Modern Applications</h2>
+                    <p class="blog-excerpt">
+                        Comprehensive guide to database design patterns, normalization strategies, and choosing the right database technology for your specific use case.
+                    </p>
+                    <div class="blog-tags">
+                        <span class="blog-tag">Database</span>
+                        <span class="blog-tag">Design Patterns</span>
+                        <span class="blog-tag">SQL</span>
+                    </div>
+                    <a href="blog-detail.html?id=database-design-patterns" class="read-more">
+                        Read More
+                        <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </article>
+
+            <article class="blog-card" data-category="ai">
+                <div class="blog-image">
+                    <i class="fas fa-microchip"></i>
+                </div>
+                <div class="blog-content">
+                    <div class="blog-meta">
+                        <span class="blog-category">AI & ML</span>
+                        <span class="blog-date">
+                            <i class="fas fa-calendar"></i>
+                            June 1, 2025
+                        </span>
+                    </div>
+                    <h2 class="blog-card-title">Large Language Models: Understanding GPT and Beyond</h2>
+                    <p class="blog-excerpt">
+                        Deep dive into the architecture and training methodologies of large language models, exploring their capabilities, limitations, and future potential.
+                    </p>
+                    <div class="blog-tags">
+                        <span class="blog-tag">LLM</span>
+                        <span class="blog-tag">GPT</span>
+                        <span class="blog-tag">NLP</span>
+                    </div>
+                    <a href="blog-detail.html?id=large-language-models" class="read-more">
+                        Read More
+                        <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </article>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination">
+            <a href="#" class="page-btn">&larr;</a>
+            <a href="#" class="page-btn active">1</a>
+            <a href="#" class="page-btn">2</a>
+            <a href="#" class="page-btn">3</a>
+            <a href="#" class="page-btn">&rarr;</a>
+        </div>
+
+        <!-- Newsletter Signup -->
+        <div class="newsletter-signup">
+            <h3 class="newsletter-title">Join the Digital Evolution</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 0;">
+                Subscribe to receive the latest insights on AI, development, and the future of technology.
+            </p>
+            <form class="newsletter-form">
+                <input type="email" class="newsletter-input" placeholder="Enter your email">
+                <button type="submit" class="newsletter-btn">Subscribe</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Filter functionality
+            const filterBtns = document.querySelectorAll('.filter-btn');
+            const blogCards = document.querySelectorAll('.blog-card');
+            
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Remove active class from all buttons
+                    filterBtns.forEach(b => b.classList.remove('active'));
+                    // Add active class to clicked button
+                    btn.classList.add('active');
+                    
+                    const filter = btn.getAttribute('data-filter');
+                    
+                    blogCards.forEach(card => {
+                        if (filter === 'all' || card.getAttribute('data-category') === filter) {
+                            card.style.display = 'block';
+                            card.style.animation = 'fadeInUp 0.5s ease forwards';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                });
+            });
+            
+            // Search functionality
+            const searchInput = document.getElementById('searchInput');
+            
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                
+                blogCards.forEach(card => {
+                    const title = card.querySelector('.blog-card-title').textContent.toLowerCase();
+                    const excerpt = card.querySelector('.blog-excerpt').textContent.toLowerCase();
+                    const tags = Array.from(card.querySelectorAll('.blog-tag')).map(tag => tag.textContent.toLowerCase()).join(' ');
+                    
+                    if (title.includes(searchTerm) || excerpt.includes(searchTerm) || tags.includes(searchTerm)) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+            
+            // Newsletter form
+            const newsletterForm = document.querySelector('.newsletter-form');
+            
+            newsletterForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const email = e.target.querySelector('.newsletter-input').value;
+                
+                if (email) {
+                    // Simulate newsletter signup
+                    alert('Thanks for subscribing! You\'ll receive updates on the latest digital insights.');
+                    e.target.querySelector('.newsletter-input').value = '';
+                }
+            });
+            
+            // Add fade in animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes fadeInUp {
+                    from {
+                        opacity: 0;
+                        transform: translateY(20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+                
+                .blog-card {
+                    animation: fadeInUp 0.6s ease forwards;
+                }
+                
+                .blog-card:nth-child(even) {
+                    animation-delay: 0.1s;
+                }
+                
+                .blog-card:nth-child(odd) {
+                    animation-delay: 0.2s;
+                }
+            `;
+            document.head.appendChild(style);
+        });
+    </script>
+    <script src="script.js"></script>
+</body>
+</html>
