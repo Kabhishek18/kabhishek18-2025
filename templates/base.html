@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    {% if change_title %}
+        {% block title %}Kumar Abhishek - The Digital Architect{% endblock title %}
+    {% endif %}
+    {% if change_meta %}
+        {% block meta_data %}
+            <meta name="description" content="Kumar Abhishek - Full Stack Software Developer with 9+ years of experience, crafting the future with AI, Python, and React.">
+            <meta name="author" content="Kumar Abhishek">
+            <meta name="keywords" content="Kumar Abhishek, Full Stack Developer, Software Engineer, AI, Machine Learning, Python, React, Portfolio, Digital Architect">
+            <meta name="robots" content="index, follow">
+            <link rel="canonical" href="https://kabhishek18.com/">
+
+            <meta property="og:title" content="Kumar Abhishek - The Digital Architect">
+            <meta property="og:description" content="Full Stack Software Developer crafting the future with AI and code.">
+            <meta property="og:image" content="https://kabhishek18.com/web-app-manifest-512x512.png">
+            <meta property="og:url" content="https://kabhishek18.com/">
+            <meta property="og:type" content="website">
+            <meta property="og:site_name" content="The Digital Architect">
+
+            <meta name="twitter:card" content="summary_large_image">
+            <meta name="twitter:title" content="Kumar Abhishek - The Digital Architect">
+            <meta name="twitter:description" content="Full Stack Software Developer crafting the future with AI and code.">
+            <meta name="twitter:image" content="https://kabhishek18.com/web-app-manifest-512x512.png">
+            <meta name="twitter:site" content="@kabhishek18">
+            <meta name="twitter:creator" content="@kabhishek18">
+        {% endblock meta_data %}
+    {% endif %}
+    
+
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <link rel="manifest" href="favicon_manifest.json">
+
+    <meta name="theme-color" content="#00ffff">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Matrix Rain Background -->
+    <canvas id="matrix" class="matrix-bg"></canvas>
+    
+    <!-- Neural Network Background -->
+    <div class="neural-network" id="neuralNetwork"></div>
+    
+    <!-- Floating Data Particles -->
+    <div class="data-particles" id="dataParticles"></div>
+    
+    {% block content %}{% endblock %}
+
+    <script src="script.js"></script>
+</body>
+</html>
