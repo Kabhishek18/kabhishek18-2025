@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     {% if change_title %}
-        {% block title %}Kumar Abhishek - The Digital Architect{% endblock title %}
+        {% block title %}Kumar Abhishek | The Digital Architect{% endblock title %}
     {% endif %}
     {% if change_meta %}
         {% block meta_data %}
@@ -39,12 +40,15 @@
     <link rel="manifest" href="favicon_manifest.json">
 
     <meta name="theme-color" content="#00ffff">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="{% static 'style.css' %}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
 </head>
 
 <body>
+    {% block navbar %}
+    {% endblock navbar %}
+
     <!-- Matrix Rain Background -->
     <canvas id="matrix" class="matrix-bg"></canvas>
     
@@ -54,8 +58,11 @@
     <!-- Floating Data Particles -->
     <div class="data-particles" id="dataParticles"></div>
     
-    {% block content %}{% endblock %}
+    {% block content %}{% endblock content %}
 
-    <script src="script.js"></script>
+    <script src="{% static 'script.js' %}"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
 </body>
 </html>

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}
+ <title>{{title}}</title>
+{% endblock title %}
+
+{% block meta_data %}
+    {% if meta_details %}
+        {{meta_details}}
+    {% else %}    
+    <meta name="description" content="Kumar Abhishek - Full Stack Software Developer with 9+ years of experience, crafting the future with AI, Python, and React.">
+    <meta name="author" content="Kumar Abhishek">
+    <meta name="keywords" content="Kumar Abhishek, Full Stack Developer, Software Engineer, AI, Machine Learning, Python, React, Portfolio, Digital Architect">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://kabhishek18.com/">
+
+    <meta property="og:title" content="Kumar Abhishek - The Digital Architect">
+    <meta property="og:description" content="Full Stack Software Developer crafting the future with AI and code.">
+    <meta property="og:image" content="https://kabhishek18.com/web-app-manifest-512x512.png">
+    <meta property="og:url" content="https://kabhishek18.com/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="The Digital Architect">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Kumar Abhishek - The Digital Architect">
+    <meta name="twitter:description" content="Full Stack Software Developer crafting the future with AI and code.">
+    <meta name="twitter:image" content="https://kabhishek18.com/web-app-manifest-512x512.png">
+    <meta name="twitter:site" content="@kabhishek18">
+    <meta name="twitter:creator" content="@kabhishek18">
+    {% endif %}
+{% endblock meta_data %}
+{% block navbar %}
+    {% if home_navbar %}
+        <!-- Home Page Navigation -->
+        <div class="scroll-indicator" id="scrollIndicator"></div>
+        <nav class="main-nav" id="mainNav">
+            <div class="nav-container">
+                <a href="#home" class="nav-logo">DIGITAL ARCHITECT</a>
+                <ul class="nav-menu">
+                    <li class="nav-item"><a href="#home" class="nav-link active">Home</a></li>
+                    <li class="nav-item"><a href="#about" class="nav-link">About</a></li>
+                    <li class="nav-item"><a href="#projects" class="nav-link">Projects</a></li>
+                    <li class="nav-item"><a href="/blog" class="nav-link">Blog</a></li>
+                    <li class="nav-item"><a href="#contact" class="nav-link">Contact</a></li>
+                    <li class="nav-item">
+                        <a href="mailto:developer@kabhishek18.com" class="nav-cta">
+                            <i class="fas fa-rocket"></i> Let's Connect
+                        </a>
+                    </li>
+                </ul>
+                <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            <!-- Mobile Menu -->
+            <div class="mobile-menu" id="mobileMenu">
+                <div class="mobile-nav-links">
+                    <a href="#home" class="nav-link">Home</a>
+                    <a href="#about" class="nav-link">About</a>
+                    <a href="#projects" class="nav-link">Projects</a>
+                    <a href="/blog" class="nav-link">Blog</a>
+                    <a href="#contact" class="nav-link">Contact</a>
+                    <a href="mailto:developer@kabhishek18.com" class="nav-cta">
+                        <i class="fas fa-rocket"></i> Let's Connect
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+    {% elif blog_navbar %}
+        <!-- Blog Detail Page Navigation -->
+        <nav class="detail-nav">
+            <div class="nav-container">
+                <a href="/blog" class="nav-back">
+                    <i class="fas fa-arrow-left"></i> <span>Back to Blog</span>
+                </a>
+                <div class="nav-actions">
+                    <button class="share-btn" id="shareBtn">
+                        <i class="fas fa-share-alt"></i> <span>Share</span>
+                    </button>
+                    <button class="bookmark-btn" id="bookmarkBtn">
+                        <i class="fas fa-bookmark"></i> <span>Save</span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+    {% else %}
+        <!-- Generic Page Navigation -->
+        <nav class="blog-nav">
+            <div class="nav-container">
+                <a href="/" class="nav-back">
+                    <i class="fas fa-arrow-left"></i> <span>Back to Home</span>
+                </a>
+                <div class="nav-logo">  KABHISHEK18 - THE DIGITAL ARCHITECT</div>
+            </div>
+        </nav>
+    {% endif %}
+{% endblock navbar %}
+
+{% block content %}
+    {% if template_includes %}
+        {# If a list of template paths is provided, loop and include them #}
+        {% for template_path in template_includes %}
+            {% include template_path %}
+        {% endfor %}
+    {% elif page_content %}
+        {# Otherwise, if there is raw page content, render it safely #}
+        <div class="container main-container">
+            {{ page_content|safe }}
+        </div>
+    {% else %}
+        <div class="container main-container">
+            <p>This page has no content or template assigned.</p>
+        </div>
+    {% endif %}
+{% endblock %}

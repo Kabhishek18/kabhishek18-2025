@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}
+ <title>{{title}}</title>
+{% endblock title %}
+
+{% block meta_data %}
+    {% if meta_details %}
+        {{meta_details}}
+    {% else %}    
+    <meta name="description" content="Kumar Abhishek - Full Stack Software Developer with 9+ years of experience, crafting the future with AI, Python, and React.">
+    <meta name="author" content="Kumar Abhishek">
+    <meta name="keywords" content="Kumar Abhishek, Full Stack Developer, Software Engineer, AI, Machine Learning, Python, React, Portfolio, Digital Architect">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://kabhishek18.com/">
+
+    <meta property="og:title" content="Kumar Abhishek - The Digital Architect">
+    <meta property="og:description" content="Full Stack Software Developer crafting the future with AI and code.">
+    <meta property="og:image" content="https://kabhishek18.com/web-app-manifest-512x512.png">
+    <meta property="og:url" content="https://kabhishek18.com/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="The Digital Architect">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Kumar Abhishek - The Digital Architect">
+    <meta name="twitter:description" content="Full Stack Software Developer crafting the future with AI and code.">
+    <meta name="twitter:image" content="https://kabhishek18.com/web-app-manifest-512x512.png">
+    <meta name="twitter:site" content="@kabhishek18">
+    <meta name="twitter:creator" content="@kabhishek18">
+    {% endif %}
+{% endblock meta_data %}
+{% block navbar %}
+    {% if home_navbar %}
+        <!-- Home Page Navigation -->
+        <div class="scroll-indicator" id="scrollIndicator"></div>
+        <nav class="main-nav" id="mainNav">
+            <div class="nav-container">
+                <a href="#home" class="nav-logo">DIGITAL ARCHITECT</a>
+                <ul class="nav-menu">
+                    <li class="nav-item"><a href="#home" class="nav-link active">Home</a></li>
+                    <li class="nav-item"><a href="#about" class="nav-link">About</a></li>
+                    <li class="nav-item"><a href="#projects" class="nav-link">Projects</a></li>
+                    <li class="nav-item"><a href="/blog" class="nav-link">Blog</a></li>
+                    <li class="nav-item"><a href="#contact" class="nav-link">Contact</a></li>
+                    <li class="nav-item">
+                        <a href="mailto:developer@kabhishek18.com" class="nav-cta">
+                            <i class="fas fa-rocket"></i> Let's Connect
+                        </a>
+                    </li>
+                </ul>
+                <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            <!-- Mobile Menu -->
+            <div class="mobile-menu" id="mobileMenu">
+                <div class="mobile-nav-links">
+                    <a href="#home" class="nav-link">Home</a>
+                    <a href="#about" class="nav-link">About</a>
+                    <a href="#projects" class="nav-link">Projects</a>
+                    <a href="/blog" class="nav-link">Blog</a>
+                    <a href="#contact" class="nav-link">Contact</a>
+                    <a href="mailto:developer@kabhishek18.com" class="nav-cta">
+                        <i class="fas fa-rocket"></i> Let's Connect
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+    {% elif blog_navbar %}
+        <!-- Blog Detail Page Navigation -->
+        <nav class="detail-nav">
+            <div class="nav-container">
+                <a href="/blog" class="nav-back">
+                    <i class="fas fa-arrow-left"></i> <span>Back to Blog</span>
+                </a>
+                <div class="nav-actions">
+                    <button class="share-btn" id="shareBtn">
+                        <i class="fas fa-share-alt"></i> <span>Share</span>
+                    </button>
+                    <button class="bookmark-btn" id="bookmarkBtn">
+                        <i class="fas fa-bookmark"></i> <span>Save</span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+    {% else %}
+        <!-- Generic Page Navigation -->
+        <nav class="blog-nav">
+            <div class="nav-container">
+                <a href="/" class="nav-back">
+                    <i class="fas fa-arrow-left"></i> <span>Back to Home</span>
+                </a>
+                <div class="nav-logo">DIGITAL CODEX</div>
+            </div>
+        </nav>
+    {% endif %}
+{% endblock navbar %}
+
+   
+{% block content %}
+   
+
+    <!-- Main 404 Content - Themed -->
+    <div class="container main-container" style="display: flex; align-items: center; justify-content: center; text-align: center;">
+        
+        <div class="content-section">
+            <h1 class="main-title" style="font-size: clamp(6rem, 20vw, 10rem); line-height: 1; margin-bottom: 1.5rem;">
+                <span class="title-line" style="background: linear-gradient(45deg, var(--accent-orange), var(--accent-pink)); -webkit-background-clip: text; background-clip: text; animation: none;">
+                    404
+                </span>
+            </h1>
+            
+            <div class="subtitle-container" style="margin-bottom: 2rem;">
+                <div class="terminal-prefix" style="color: var(--accent-orange);">error@kabhishek18:~$</div>
+                <div id="typewriter" style="color: var(--text-secondary); border-right: 2px solid var(--accent-orange);">Signal Lost</div>
+            </div>
+
+            <div class="description">
+                <p>The requested resource appears to be an anomaly within the system. The pathway is corrupted or the data fragment never existed. Please verify the transmission coordinates.</p>
+            </div>
+            
+            <a href="/" class="btn btn-primary btn-lg" style="margin-top: 2rem;">
+                <i class="fas fa-home"></i>
+                Return to Mainframe
+            </a>
+        </div>
+
+    </div>
+
+    <!-- Scripts to enable all theme effects and interactivity -->
+    <script>
+        // Inline script to handle navigation on this specific page
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+            const mobileMenu = document.getElementById('mobileMenu');
+            
+            if (mobileMenuToggle && mobileMenu) {
+                mobileMenuToggle.addEventListener('click', () => {
+                    mobileMenu.classList.toggle('active');
+                    const icon = mobileMenuToggle.querySelector('i');
+                    icon.classList.toggle('fa-bars');
+                    icon.classList.toggle('fa-times');
+                });
+
+                // Close mobile menu when clicking a link inside it
+                const mobileNavLinks = mobileMenu.querySelectorAll('.nav-link');
+                mobileNavLinks.forEach(link => {
+                    link.addEventListener('click', () => {
+                         mobileMenu.classList.remove('active');
+                         const icon = mobileMenuToggle.querySelector('i');
+                         icon.classList.add('fa-bars');
+                         icon.classList.remove('fa-times');
+                    });
+                });
+            }
+
+            // Simple typewriter for the 404 page message
+            const typewriterElement = document.getElementById('typewriter');
+            if(typewriterElement) {
+                const text = "Signal Lost";
+                let i = 0;
+                typewriterElement.textContent = '';
+                function type() {
+                    if (i < text.length) {
+                        typewriterElement.textContent += text.charAt(i);
+                        i++;
+                        setTimeout(type, 120);
+                    }
+                }
+                type();
+            }
+        });
+    </script>
+
+{% endblock %}

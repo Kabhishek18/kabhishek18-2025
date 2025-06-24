@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load static %}
+
+{# Override meta details for this specific page #}
+{% block meta_data %}
+    <meta name="description" content="{{ meta_details }}">
+    <meta property="og:title" content="{{ title }}">
+    <meta property="og:description" content="{{ meta_details }}">
+    <link rel="canonical" href="{{ request.build_absolute_uri }}">
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+{% endblock meta_data %}
+
+{% block title %}
+    <title>{{ title }}</title>
+{% endblock title %}
+
+{% block content %}
+    <!-- Navigation -->
+    <nav class="blog-nav">
+        <div class="nav-container">
+            <a href="/" class="nav-back"> {# Assumes '/' is the homepage #}
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to Portfolio</span>
+            </a>
+            <div class="nav-logo">DIGITAL CODEX</div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="blog-container">
+        <div class="blog-header">
+            <h1 class="blog-title">DIGITAL CODEX</h1>
+            <p class="blog-subtitle">
+                Exploring the intersection of artificial intelligence, machine learning, and the future of software development through the lens of a digital architect.
+            </p>
+        </div>
+
+        <div class="search-container">
+            <form method="get" action="{% url 'blog:list' %}">
+                <div class="search-icon"><i class="fas fa-search"></i></div>
+                <input type="text" class="search-input" name="q" placeholder="Search the digital archives..." value="{{ request.GET.q }}">
+            </form>
+        </div>
+
+        <div class="blog-filters">
+            <a href="{% url 'blog:list' %}" class="filter-btn {% if not current_category %}active{% endif %}">All Posts</a>
+            {% for cat in all_categories %}
+                 <a href="{% url 'blog:list_by_category' cat.slug %}" class="filter-btn {% if current_category.slug == cat.slug %}active{% endif %}">{{ cat.name }}</a>
+            {% endfor %}
+        </div>
+
+        <div class="blog-grid" id="blogGrid">
+            {% for post in posts %}
+                {% if post.is_featured and not current_category and not request.GET.q %}
+                    <article class="blog-card featured-post">
+                        {% if post.featured_image %}
+                            <div class="blog-image" style="background-image: url('{{ post.featured_image.url }}');"></div>
+                        {% else %}
+                             <div class="blog-image"><i class="fas fa-brain"></i></div>
+                        {% endif %}
+                        <div class="blog-content">
+                            <span class="featured-badge">Featured</span>
+                            <div class="blog-meta">
+                                <span class="blog-category">{{ post.categories.first.name|default:'General' }}</span>
+                                <span class="blog-date"><i class="fas fa-calendar"></i> {{ post.created_at|date:"F d, Y" }}</span>
+                            </div>
+                            <h2 class="blog-card-title">{{ post.title }}</h2>
+                            <p class="blog-excerpt">{{ post.excerpt }}</p>
+                            <a href="{% url 'blog:detail' post.slug %}" class="read-more">Read Full Article <i class="fas fa-arrow-right"></i></a>
+                        </div>
+                    </article>
+                {% else %}
+                    <article class="blog-card">
+                        {% if post.featured_image %}
+                             <div class="blog-image" style="background-image: url('{{ post.featured_image.url }}');"></div>
+                        {% else %}
+                             <div class="blog-image"><i class="fas fa-code"></i></div>
+                        {% endif %}
+                        <div class="blog-content">
+                            <div class="blog-meta">
+                                <span class="blog-category">{{ post.categories.first.name|default:'General' }}</span>
+                                <span class="blog-date"><i class="fas fa-calendar"></i> {{ post.created_at|date:"F d, Y" }}</span>
+                            </div>
+                            <h2 class="blog-card-title">{{ post.title }}</h2>
+                            <p class="blog-excerpt">{{ post.excerpt }}</p>
+                            <a href="{% url 'blog:detail' post.slug %}" class="read-more">Read More <i class="fas fa-arrow-right"></i></a>
+                        </div>
+                    </article>
+                {% endif %}
+            {% empty %}
+                <p style="grid-column: 1 / -1; text-align: center; padding: 4rem 0;">No posts found matching your criteria.</p>
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}
