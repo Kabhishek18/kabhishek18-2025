@@ -184,7 +184,7 @@ UNFOLD = {
     ],
     "SHOW_HISTORY": True, # show/hide "History" button, default: True
     "SHOW_VIEW_ON_SITE": True, # show/hide "View on site" button, default: True
-    "SHOW_BACK_BUTTON": False,
+    "SHOW_BACK_BUTTON": True,
     "LOGIN": {
         "image": lambda request: static("login-bg.jpg"),
         "redirect_after": lambda request: reverse_lazy("admin:APP_MODEL_changelist"),
@@ -199,54 +199,75 @@ UNFOLD = {
         },
     },
     "SIDEBAR": {
-        "show_search": True,  # Search in applications and models names
-        "show_all_applications": True,  # Dropdown with all applications and models
+        "show_search": True,
+        "show_all_applications": False, # We will define our own navigation
         "navigation": [
             {
                 "title": _("Navigation"),
-                "separator": True,  # Top border
-                "collapsible": True,  # Collapsible group of links
+                "separator": True,
                 "items": [
                     {
                         "title": _("Dashboard"),
-                        "icon": "dashboard",  # Supported icon set: https://fonts.google.com/icons
+                        "icon": "dashboard",
                         "link": reverse_lazy("admin:index"),
-                        "badge": "0",
-                        "permission": lambda request: request.user.is_superuser,
+                        # No permission needed, visible to all staff
                     },
                     {
                         "title": _("Users"),
                         "icon": "people",
                         "link": reverse_lazy("admin:auth_user_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                     {
+                        "title": _("Groups"),
+                        "icon": "group",
+                        "link": reverse_lazy("admin:auth_group_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                ],
+            },
+            {
+                "title": _("Content Management"),
+                "separator": True,
+                "items": [
+                    {
+                        "title": _("Pages"),
+                        "icon": "article",
+                        "link": reverse_lazy("admin:core_page_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": _("Templates"),
+                        "icon": "layers",
+                        "link": reverse_lazy("admin:core_template_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": _("Template Files"),
+                        "icon": "html",
+                        "link": reverse_lazy("admin:core_templatefile_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                ],
+            },
+            {
+                "title": _("Blog Management"),
+                "separator": True,
+                "items": [
+                    {
+                        "title": _("Posts"),
+                        "icon": "edit_document",
+                        "link": reverse_lazy("admin:blog_post_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": _("Categories"),
+                        "icon": "folder",
+                        "link": reverse_lazy("admin:blog_category_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
                     },
                 ],
             },
         ],
     },
 }
-
-
-def dashboard_callback(request, context):
-
-    context.update(
-        {
-            "sample": "example",  # this will be injected into templates/admin/index.html
-        }
-    )
-    return context
-
-
-def environment_callback(request):
-    """
-    Callback has to return a list of two values represeting text value and the color
-    type of the label displayed in top right corner.
-    """
-    return ["Production", "danger"] # info, danger, warning, success
-
-
-def badge_callback(request):
-    return 3
-
-def permission_callback(request):
-    return request.user.has_perm("sample_app.change_model")
-

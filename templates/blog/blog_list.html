@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "index.html" %}
 {% load static %}
 
 {# Override meta details for this specific page #}
@@ -42,16 +42,9 @@
             </form>
         </div>
 
-        <div class="blog-filters">
-            <a href="{% url 'blog:list' %}" class="filter-btn {% if not current_category %}active{% endif %}">All Posts</a>
-            {% for cat in all_categories %}
-                 <a href="{% url 'blog:list_by_category' cat.slug %}" class="filter-btn {% if current_category.slug == cat.slug %}active{% endif %}">{{ cat.name }}</a>
-            {% endfor %}
-        </div>
-
         <div class="blog-grid" id="blogGrid">
             {% for post in posts %}
-                {% if post.is_featured and not current_category and not request.GET.q %}
+                {% if post.is_featured and forloop.first and not current_category and not request.GET.q and not posts.has_previous %}
                     <article class="blog-card featured-post">
                         {% if post.featured_image %}
                             <div class="blog-image" style="background-image: url('{{ post.featured_image.url }}');"></div>
@@ -65,7 +58,7 @@
                                 <span class="blog-date"><i class="fas fa-calendar"></i> {{ post.created_at|date:"F d, Y" }}</span>
                             </div>
                             <h2 class="blog-card-title">{{ post.title }}</h2>
-                            <p class="blog-excerpt">{{ post.excerpt }}</p>
+                            <p class="blog-excerpt">{{ post.excerpt|safe }}</p>
                             <a href="{% url 'blog:detail' post.slug %}" class="read-more">Read Full Article <i class="fas fa-arrow-right"></i></a>
                         </div>
                     </article>
@@ -92,4 +85,52 @@
             {% endfor %}
         </div>
     </div>
+
+    <!-- Pagination -->
+    {% if posts.has_other_pages %}
+        <div class="pagination">
+            {% if posts.has_previous %}
+                <a href="?page={{ posts.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="page-btn">&larr;</a>
+            {% else %}
+                <span class="page-btn disabled">&larr;</span>
+            {% endif %}
+
+            {% for i in posts.paginator.page_range %}
+                {% if posts.number == i %}
+                    <a href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="page-btn active">{{ i }}</a>
+                {% elif i > posts.number|add:'-3' and i < posts.number|add:'3' %}
+                    <a href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="page-btn">{{ i }}</a>
+                {% endif %}
+            {% endfor %}
+
+            {% if posts.has_next %}
+                <a href="?page={{ posts.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="page-btn">&rarr;</a>
+            {% else %}
+                <span class="page-btn disabled">&rarr;</span>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- Newsletter Signup -->
+    <div class="newsletter-signup">
+        <h3 class="newsletter-title">Join the Digital Evolution</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 0;">
+            Subscribe to receive the latest insights on AI, development, and the future of technology.
+        </p>
+        
+        {% if messages %}
+            <div class="newsletter-messages">
+                {% for message in messages %}
+                    <p class="message {{ message.tags }}">{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        <form class="newsletter-form" method="post" action="{% url 'blog:subscribe_newsletter' %}">
+            {% csrf_token %}
+            {{ newsletter_form.email }}
+            <button type="submit" class="newsletter-btn">Subscribe</button>
+        </form>
+    </div>
+    
 {% endblock %}

@@ -1,6 +1,8 @@
 from django.contrib import admin
 from unfold.admin import ModelAdmin
 from .models import Post, Category
+from unfold.contrib.forms.widgets import WysiwygWidget
+from django.db import models
 
 # Register the new Category model
 @admin.register(Category)
@@ -16,6 +18,11 @@ class PostAdmin(ModelAdmin):
     search_fields = ('title', 'content', 'excerpt')
     prepopulated_fields = {'slug': ('title',)}
     
+    formfield_overrides = {
+        models.TextField: {
+            "widget": WysiwygWidget,
+        }
+    }
     # Use filter_horizontal for a better ManyToMany widget for categories
     filter_horizontal = ('categories',)
     

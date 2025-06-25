@@ -1,6 +1,9 @@
 from django.contrib import admin
 from unfold.admin import ModelAdmin
 from .models import Page, Template, TemplateFile
+from unfold.contrib.forms.widgets import WysiwygWidget
+from django.db import models
+
 
 @admin.register(TemplateFile)
 class TemplateFileAdmin(ModelAdmin):
@@ -10,6 +13,12 @@ class TemplateFileAdmin(ModelAdmin):
     list_display = ('name', 'filename', 'get_include_path')
     search_fields = ('name', 'filename', 'content')
     
+    # formfield_overrides = {
+    #     models.TextField: {
+    #         "widget": WysiwygWidget,
+    #     }
+    # }
+
     fieldsets = (
         (None, {
             'fields': ('name', 'filename')
@@ -61,4 +70,5 @@ class PageAdmin(ModelAdmin):
             'fields': ('is_published', 'is_homepage', 'navbar_type')
         }),
     )
+
 
