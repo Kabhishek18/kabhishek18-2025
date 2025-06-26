@@ -13,6 +13,7 @@ WORKDIR /app
 # - gcc and libmysqlclient-dev are needed to build the mysqlclient package
 RUN apt-get update \
     && apt-get install -y --no-install-recommends procps gcc default-libmysqlclient-dev pkg-config \
+    netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the requirements file into the container
