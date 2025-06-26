@@ -67,6 +67,58 @@ These instructions will get you a copy of the project up and running on your loc
     python manage.py createsuperuser
     ```
 
+## Management Commands
+
+This project includes custom management commands to automate common tasks.
+
+### `projectsetup`
+
+Automates project setup and management.
+
+*   **Initialize the project:**
+    ```bash
+    python manage.py projectsetup init
+    ```
+    This command creates the database, runs migrations, creates a superuser, and syncs templates.
+
+*   **Reset the database:**
+    ```bash
+    python manage.py projectsetup resetdb
+    ```
+    This command drops and recreates the database, then runs migrations and syncs templates.
+
+*   **Reset a specific app:**
+    ```bash
+    python manage.py projectsetup resetapp <app_label>
+    ```
+    This command reverts all migrations for a specific app and then re-applies them.
+
+*   **Sync templates:**
+    ```bash
+    python manage.py projectsetup synctemplates
+    ```
+    This command synchronizes template files from the `includes/` directory to the database.
+
+### `aicontent`
+
+Uses AI to generate blog content and featured images.
+
+*   **Create a blog post:**
+    ```bash
+    python manage.py aicontent create_post
+    ```
+    This command generates a new blog post with a title, excerpt, content, and a featured image.
+
+*   **Create a blog post with a specific topic:**
+    ```bash
+    python manage.py aicontent create_post --topic "Your Topic"
+    ```
+
+*   **Create a blog post without a featured image:**
+    ```bash
+    python manage.py aicontent create_post --no-image
+    ```
+
 ## Running the application
 
 1.  **Start the development server:**

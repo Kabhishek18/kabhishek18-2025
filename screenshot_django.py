@@ -7,6 +7,7 @@ DJANGO_HOME_URL = "http://127.0.0.1:8000"
 SCREENSHOTS = {
     "homepage":"http://127.0.0.1:8000",
     "blog":"http://127.0.0.1:8000/blog",
+    "blog_details":"http://127.0.0.1:8000/blog/serverless-functions-and-ai-building-scalable-event-driven-ml-pipelines/",
     "admin":"http://127.0.0.1:8000/admin",
 }
 def take_screenshot(url, output_file="screenshots/homepage.png"):
@@ -18,7 +19,7 @@ def take_screenshot(url, output_file="screenshots/homepage.png"):
     driver = webdriver.Chrome(options=chrome_options)
     driver.get(url)
 
-    time.sleep(2)  # wait for the page to load (adjust if needed)
+    time.sleep(15)  # wait for the page to load (adjust if needed)
     driver.save_screenshot(output_file)
     driver.quit()
     print(f"Screenshot saved to {output_file}")
