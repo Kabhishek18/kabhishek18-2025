@@ -92,9 +92,9 @@ WSGI_APPLICATION = 'kabhishek18.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASS'),  # your MySQL root password
+        'NAME': os.getenv('MYSQL_DATABASE'),
+        'USER': os.getenv('MYSQL_USER'),
+        'PASSWORD': os.getenv('MYSQL_PASSWORD'),  # your MySQL root password
         'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {
