@@ -27,7 +27,7 @@ def blog_list(request, category_slug=None):
         ).distinct()
 
     # Pagination - Show 6 posts per page
-    paginator = Paginator(posts_list, 10)
+    paginator = Paginator(posts_list, 9)
     page_number = request.GET.get('page')
     try:
         posts = paginator.page(page_number)

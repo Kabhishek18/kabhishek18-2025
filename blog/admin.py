@@ -1,40 +1,56 @@
 from django.contrib import admin
-from unfold.admin import ModelAdmin
-from .models import Post, Category
-from unfold.contrib.forms.widgets import WysiwygWidget
 from django.db import models
-
-# Register the new Category model
-@admin.register(Category)
-class CategoryAdmin(ModelAdmin):
-    list_display = ('name', 'slug')
-    prepopulated_fields = {'slug': ('name',)}
+from unfold.admin import ModelAdmin
+from unfold.contrib.forms.widgets import WysiwygWidget
+from .models import Post, Category, NewsletterSubscriber
 
 @admin.register(Post)
 class PostAdmin(ModelAdmin):
-    # Add new fields to list_display and list_filter
+    """
+    Admin configuration for Blog Posts, providing a rich interface
+    for content management with a WYSIWYG editor.
+    """
     list_display = ('title', 'author', 'status', 'is_featured', 'created_at')
-    list_filter = ('status', 'author', 'categories', 'is_featured')
-    search_fields = ('title', 'content', 'excerpt')
+    list_filter = ('status', 'is_featured', 'categories', 'author')
+    search_fields = ('title', 'excerpt', 'content')
     prepopulated_fields = {'slug': ('title',)}
+    list_editable = ('status', 'is_featured')
     
-    formfield_overrides = {
-        models.TextField: {
-            "widget": WysiwygWidget,
-        }
-    }
     # Use filter_horizontal for a better ManyToMany widget for categories
     filter_horizontal = ('categories',)
-    
-    # Update fieldsets to include all new model fields
+
+    # Override the default TextField widget with Unfold's WYSIWYG editor
+    formfield_overrides = {
+        models.TextField: {"widget": WysiwygWidget},
+    }
+
     fieldsets = (
-        ('Main Info', {
-            'fields': ('title', 'slug', 'author', 'status', 'is_featured')
+        ("Main Content", {
+            'fields': ('title', 'slug', 'author', 'status', 'excerpt', 'content')
         }),
-        ('Content', {
-            'fields': ('excerpt', 'content', 'featured_image')
+        ("Organization & Media", {
+            'fields': ('categories', 'is_featured', 'featured_image')
         }),
-        ('Categorization & Meta', {
-            'fields': ('categories', 'read_time')
+        ("SEO & Meta", {
+            'classes': ('collapse',), # Make this section collapsible
+            'fields': ('read_time', 'view_count')
         }),
     )
+    
+    readonly_fields = ('view_count',) # view_count should not be manually editable
+
+@admin.register(Category)
+class CategoryAdmin(ModelAdmin):
+    """
+    Admin configuration for Categories.
+    """
+    search_fields = ('name',)
+    prepopulated_fields = {'slug': ('name',)}
+
+@admin.register(NewsletterSubscriber)
+class NewsletterSubscriberAdmin(ModelAdmin):
+    """
+    Admin configuration for Newsletter Subscribers.
+    """
+    list_display = ('email', 'subscribed_at')
+    readonly_fields = ('subscribed_at',)

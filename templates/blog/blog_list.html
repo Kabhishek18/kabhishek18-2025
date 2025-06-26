@@ -1,5 +1,5 @@
 {% extends "index.html" %}
-{% load static %}
+{% load static random_icons %}
 
 {# Override meta details for this specific page #}
 {% block meta_data %}
@@ -49,7 +49,7 @@
                         {% if post.featured_image %}
                             <div class="blog-image" style="background-image: url('{{ post.featured_image.url }}');"></div>
                         {% else %}
-                             <div class="blog-image"><i class="fas fa-brain"></i></div>
+                             <div class="blog-image"><i class="{% random_icon %}"></i></div>
                         {% endif %}
                         <div class="blog-content">
                             <span class="featured-badge">Featured</span>
@@ -58,7 +58,7 @@
                                 <span class="blog-date"><i class="fas fa-calendar"></i> {{ post.created_at|date:"F d, Y" }}</span>
                             </div>
                             <h2 class="blog-card-title">{{ post.title }}</h2>
-                            <p class="blog-excerpt">{{ post.excerpt|safe }}</p>
+                        <p class="blog-excerpt">{{ post.excerpt|safe|truncatechars:200 }}</p>
                             <a href="{% url 'blog:detail' post.slug %}" class="read-more">Read Full Article <i class="fas fa-arrow-right"></i></a>
                         </div>
                     </article>
@@ -67,7 +67,7 @@
                         {% if post.featured_image %}
                              <div class="blog-image" style="background-image: url('{{ post.featured_image.url }}');"></div>
                         {% else %}
-                             <div class="blog-image"><i class="fas fa-code"></i></div>
+                             <div class="blog-image"><i class="{% random_icon %}"></i></div>
                         {% endif %}
                         <div class="blog-content">
                             <div class="blog-meta">
@@ -75,7 +75,7 @@
                                 <span class="blog-date"><i class="fas fa-calendar"></i> {{ post.created_at|date:"F d, Y" }}</span>
                             </div>
                             <h2 class="blog-card-title">{{ post.title }}</h2>
-                            <p class="blog-excerpt">{{ post.excerpt }}</p>
+                        <p class="blog-excerpt">{{ post.excerpt|safe|truncatechars:200 }}</p>
                             <a href="{% url 'blog:detail' post.slug %}" class="read-more">Read More <i class="fas fa-arrow-right"></i></a>
                         </div>
                     </article>
