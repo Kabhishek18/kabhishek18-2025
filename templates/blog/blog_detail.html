@@ -81,4 +81,226 @@
             </div>
         </section>
     </div>
+    <script>
+        // Blog Detail Page JavaScript Functionality
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Reading Progress Bar
+    const readingProgress = document.getElementById('readingProgress');
+    
+    function updateReadingProgress() {
+        const article = document.querySelector('.article-content');
+        if (!article) return;
+        
+        const articleTop = article.offsetTop;
+        const articleHeight = article.offsetHeight;
+        const windowHeight = window.innerHeight;
+        const scrollTop = window.pageYOffset;
+        
+        const articleBottom = articleTop + articleHeight;
+        const windowBottom = scrollTop + windowHeight;
+        
+        if (scrollTop >= articleTop && scrollTop <= articleBottom - windowHeight) {
+            const progress = ((scrollTop - articleTop) / (articleHeight - windowHeight)) * 100;
+            readingProgress.style.width = Math.min(Math.max(progress, 0), 100) + '%';
+        } else if (scrollTop < articleTop) {
+            readingProgress.style.width = '0%';
+        } else {
+            readingProgress.style.width = '100%';
+        }
+    }
+    
+    window.addEventListener('scroll', updateReadingProgress);
+    updateReadingProgress(); // Initial call
+
+    // Share Button Functionality
+    const shareBtn = document.getElementById('shareBtn');
+    if (shareBtn) {
+        shareBtn.addEventListener('click', function() {
+            const url = window.location.href;
+            const title = document.querySelector('.article-title')?.textContent || document.title;
+            
+            // Check if Web Share API is supported
+            if (navigator.share) {
+                navigator.share({
+                    title: title,
+                    url: url
+                }).catch(err => console.log('Error sharing:', err));
+            } else {
+                // Fallback: Copy to clipboard and show notification
+                navigator.clipboard.writeText(url).then(() => {
+                    showNotification('Link copied to clipboard!', 'success');
+                }).catch(() => {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = url;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    showNotification('Link copied to clipboard!', 'success');
+                });
+            }
+        });
+    }
+
+    // Bookmark/Save Button Functionality
+    const bookmarkBtn = document.getElementById('bookmarkBtn');
+    if (bookmarkBtn) {
+        const postSlug = window.location.pathname.split('/').filter(Boolean).pop();
+        
+        // Check if post is already bookmarked
+        const savedPosts = JSON.parse(localStorage.getItem('savedPosts') || '[]');
+        const isBookmarked = savedPosts.includes(postSlug);
+        
+        // Update button appearance based on bookmark status
+        updateBookmarkButton(isBookmarked);
+        
+        bookmarkBtn.addEventListener('click', function() {
+            const currentlySaved = savedPosts.includes(postSlug);
+            
+            if (currentlySaved) {
+                // Remove from bookmarks
+                const index = savedPosts.indexOf(postSlug);
+                savedPosts.splice(index, 1);
+                updateBookmarkButton(false);
+                showNotification('Article removed from saved items', 'info');
+            } else {
+                // Add to bookmarks
+                savedPosts.push(postSlug);
+                updateBookmarkButton(true);
+                showNotification('Article saved successfully!', 'success');
+            }
+            
+            localStorage.setItem('savedPosts', JSON.stringify(savedPosts));
+        });
+    }
+
+    // Helper function to update bookmark button appearance
+    function updateBookmarkButton(isBookmarked) {
+        const icon = bookmarkBtn.querySelector('i');
+        const text = bookmarkBtn.querySelector('span');
+        
+        if (isBookmarked) {
+            icon.className = 'fas fa-bookmark';
+            text.textContent = 'Saved';
+            bookmarkBtn.classList.add('bookmarked');
+        } else {
+            icon.className = 'far fa-bookmark';
+            text.textContent = 'Save';
+            bookmarkBtn.classList.remove('bookmarked');
+        }
+    }
+
+    // Notification system
+    function showNotification(message, type = 'info') {
+        // Remove existing notification if any
+        const existingNotification = document.querySelector('.notification');
+        if (existingNotification) {
+            existingNotification.remove();
+        }
+
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.innerHTML = `
+            <div class="notification-content">
+                <i class="fas fa-${getNotificationIcon(type)}"></i>
+                <span>${message}</span>
+            </div>
+        `;
+
+        // Add notification to page
+        document.body.appendChild(notification);
+
+        // Trigger animation
+        setTimeout(() => notification.classList.add('show'), 100);
+
+        // Remove notification after 3 seconds
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+
+    function getNotificationIcon(type) {
+        switch (type) {
+            case 'success': return 'check-circle';
+            case 'error': return 'exclamation-circle';
+            case 'warning': return 'exclamation-triangle';
+            default: return 'info-circle';
+        }
+    }
+
+    // Enhanced share options (optional)
+    function showShareModal() {
+        const url = window.location.href;
+        const title = document.querySelector('.article-title')?.textContent || document.title;
+        
+        const shareModal = document.createElement('div');
+        shareModal.className = 'share-modal-overlay';
+        shareModal.innerHTML = `
+            <div class="share-modal">
+                <div class="share-modal-header">
+                    <h3>Share Article</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="share-options">
+                    <button class="share-option" data-platform="twitter">
+                        <i class="fab fa-twitter"></i> Twitter
+                    </button>
+                    <button class="share-option" data-platform="facebook">
+                        <i class="fab fa-facebook"></i> Facebook
+                    </button>
+                    <button class="share-option" data-platform="linkedin">
+                        <i class="fab fa-linkedin"></i> LinkedIn
+                    </button>
+                    <button class="share-option" data-platform="copy">
+                        <i class="fas fa-copy"></i> Copy Link
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(shareModal);
+        
+        // Handle share option clicks
+        shareModal.addEventListener('click', function(e) {
+            if (e.target.classList.contains('share-modal-overlay') || 
+                e.target.classList.contains('close-modal')) {
+                shareModal.remove();
+                return;
+            }
+            
+            const platform = e.target.closest('.share-option')?.dataset.platform;
+            if (platform) {
+                handleSharePlatform(platform, url, title);
+                shareModal.remove();
+            }
+        });
+    }
+
+    function handleSharePlatform(platform, url, title) {
+        const encodedUrl = encodeURIComponent(url);
+        const encodedTitle = encodeURIComponent(title);
+        
+        switch (platform) {
+            case 'twitter':
+                window.open(`https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`, '_blank');
+                break;
+            case 'facebook':
+                window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`, '_blank');
+                break;
+            case 'linkedin':
+                window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`, '_blank');
+                break;
+            case 'copy':
+                navigator.clipboard.writeText(url).then(() => {
+                    showNotification('Link copied to clipboard!', 'success');
+                });
+                break;
+        }
+    }
+});
+    </script>
 {% endblock %}

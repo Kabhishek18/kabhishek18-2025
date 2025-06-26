@@ -18,6 +18,11 @@ This is a personal portfolio and blog website built with Django. It features a d
 |---|---|
 | ![Admin Dashboard](screenshots/admin.png) | ![Blog Page](screenshots/blog.png) |
 
+
+|  Blog Detail Page |
+|---|
+| ![Blog Detail Page](screenshots/blog_detail.png) |
+
 ## Getting Started
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
@@ -101,7 +106,7 @@ Automates project setup and management.
 
 ### `aicontent`
 
-Uses AI to generate blog content and featured images.
+Uses Gemini AI to generate blog content and featured images.
 
 *   **Create a blog post:**
     ```bash
@@ -118,6 +123,21 @@ Uses AI to generate blog content and featured images.
     ```bash
     python manage.py aicontent create_post --no-image
     ```
+
+*   **Regenerate the featured image for an existing post:**
+    ```bash
+    python manage.py aicontent update_image --slug <post-slug>
+    ```
+
+### `screenshot`
+
+Takes screenshots of key pages of the website using Selenium.
+
+*   **Take screenshots:**
+    ```bash
+    python manage.py screenshot
+    ```
+    This command will take screenshots of the homepage, blog list, admin index, and the latest blog post, saving them to the `screenshots` directory.
 
 ## Running the application
 
@@ -152,6 +172,6 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Contact
 
-Kumar Abhishek - [@kabhishek18](https://twitter.com/kabhishek18) - blog.kabhishek18@gmail.com
+Kumar Abhishek - [@kabhishek18](https://kabhishek18.com) - developer@kabhishek18.com
 
-Project Link: [https://github.com/your-username/kabhishek18-2025](https://github.com/your-username/kabhishek18-2025)
+Project Link: [https://github.com/kabhishek18/kabhishek18-2025](https://github.com/kabhishek18/kabhishek18-2025)
