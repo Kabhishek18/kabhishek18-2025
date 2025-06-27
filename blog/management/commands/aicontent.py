@@ -1,252 +1,355 @@
-# python manage.py aicontent create_post --topic "The Impact of AI on UI/UX Design"
-# python manage.py aicontent create_post
-# python manage.py aicontent create_post --no-image
+# # Create a single post (tries Gemini → Free API → Placeholder)
+# python manage.py ai_blog_generator create_post --topic "Advanced Django Patterns"
+
+# # Create multiple posts with longer content
+# python manage.py ai_blog_generator create_post --count 3
+
+# # Create and publish immediately
+# python manage.py ai_blog_generator create_post --publish --topic "AI in Web Development"
+
+# # Skip image generation entirely
+# python manage.py ai_blog_generator create_post --no-image
 import os
 import json
+import time
 from io import BytesIO
+from PIL import Image
+import requests
+
+# Django Core Imports
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth import get_user_model
-from django.utils.text import slugify
 from django.core.files.base import ContentFile
-from blog.models import Post, Category
-import google.generativeai as genai
-from PIL import Image
 
-def get_ai_generated_content(existing_categories: list, topic: str = None, existing_titles: list = None) -> dict:
+# App-specific Imports
+from blog.models import Post, Category
+
+# Third-party Imports
+import google.generativeai as genai
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+# --- AI CONTENT GENERATION ---
+
+@retry(wait=wait_exponential(multiplier=1, min=4, max=60), stop=stop_after_attempt(3))
+def get_ai_generated_content(existing_categories: list, topic: str = None) -> dict:
     """
-    Calls the Google Gemini API to generate structured blog content,
-    avoiding previously generated titles.
+    Generates blog post content (title, excerpt, content, category, and image prompt)
+    from the Gemini AI, with retry logic for network resilience.
     """
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise CommandError("GEMINI_API_KEY environment variable not found.")
-    
+
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel('gemini-1.5-flash')
+
     category_list_str = ", ".join(f"'{cat}'" for cat in existing_categories) if existing_categories else "None"
-    existing_titles_str = ", ".join(f'"{title}"' for title in existing_titles) if existing_titles else "None"
 
     prompt = f"""
-    You are an expert content creator for the 'Digital Codex' tech blog. Your audience is software developers and AI enthusiasts.
+    You are an expert content creator for the 'Digital Codex' tech blog.
+    Your audience is software developers and AI enthusiasts.
     Generate a complete, high-quality blog post.
 
     **Topic:**
-    {'Generate a new, engaging, and specific blog post topic related to artificial intelligence, machine learning, or modern software development trends.' if not topic else f"Write about: '{topic}'."}
-    IMPORTANT: Do not generate a topic with a title that is similar to any of these existing post titles: [{existing_titles_str}].
+    {'Generate a new, engaging, and specific blog post topic.' if not topic else f"Write about: '{topic}'."}
 
     **Category Assignment:**
-    Existing categories: [{category_list_str}]. Assign the most appropriate category. Create a new one only if necessary.
+    Existing categories: [{category_list_str}].
+    Assign the most appropriate category. Create a new one only if necessary.
 
     **Content Requirements:**
-    1.  **Title:** An engaging, SEO-friendly title that is distinct from the existing titles provided.
+    1.  **Title:** An engaging, SEO-friendly title.
     2.  **Excerpt:** A compelling plain text summary (~500 characters).
-    3.  **Content:** A comprehensive HTML article (5000-20000 characters) with h2, h3, p, ul, li, and strong tags.
-    4.  **Image Prompt:** A descriptive, artistic prompt for a text-to-image AI like Gemini. Focus on concepts, not just literal descriptions.
+    3.  **Content:** A comprehensive HTML article (5000-20000 characters) using h2, h3, p, ul, li, and strong tags.
+    4.  **Image Prompt:** A descriptive, artistic prompt for a text-to-image AI.
 
     **Output Format:**
     You MUST return your response as a single, valid JSON object.
     Schema: {{"title": "string", "excerpt": "string", "content": "string (HTML)", "category": "string", "image_prompt": "string"}}
     """
-    
+
     print("\n🤖 Asking Gemini AI to generate a blog post...")
     try:
-        response = model.generate_content(prompt)
-        cleaned_response_text = response.text.strip().replace("```json", "").replace("```", "")
+        # Add rate limiting for free tier
+        time.sleep(2)
+        
+        response = model.generate_content(
+            prompt,
+            generation_config=genai.types.GenerationConfig(
+                temperature=0.7,
+                max_output_tokens=16000,  # Increased for longer content
+            )
+        )
+        
+        if not response.text:
+            raise CommandError("Empty response from Gemini API")
+            
+        cleaned_response_text = response.text.strip()
+        # Remove markdown code blocks if present
+        if cleaned_response_text.startswith("```json"):
+            cleaned_response_text = cleaned_response_text[7:]
+        if cleaned_response_text.endswith("```"):
+            cleaned_response_text = cleaned_response_text[:-3]
+        cleaned_response_text = cleaned_response_text.strip()
+        
         ai_data = json.loads(cleaned_response_text)
-        print("✅ AI has successfully generated the text content.")
+        
+        # Validate required fields
+        required_fields = ['title', 'excerpt', 'content', 'category', 'image_prompt']
+        for field in required_fields:
+            if field not in ai_data or not ai_data[field]:
+                raise CommandError(f"Missing or empty field: {field}")
+        
+        print("✅ AI has successfully generated the content.")
         return ai_data
+    except json.JSONDecodeError as e:
+        print(f"❌ Failed to parse JSON response: {e}")
+        print(f"Response text: {response.text[:500]}...")
+        raise CommandError("Invalid JSON response from AI")
     except Exception as e:
-        raise CommandError(f"Failed to get a valid response from the Gemini AI for text generation: {e}")
+        print(f"❌ An error occurred while interacting with the text generation AI: {e}")
+        raise
 
-def generate_image_with_gemini(post: Post, prompt: str):
+# --- AI IMAGE GENERATION (Fallback chain: Gemini -> Free API -> Placeholder) ---
+
+def generate_and_save_real_image(post: Post, prompt: str):
     """
-    Generates an image using Gemini's text-to-image capabilities and saves it to the Post.
-    Note: As of current API limitations, we'll use a placeholder approach.
+    Try to generate image with Gemini first, then fallback to free API, then placeholder.
     """
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise CommandError("GEMINI_API_KEY environment variable not found.")
+    print(f"🎨 Attempting to generate image with Gemini for prompt: '{prompt}'...")
     
-    print(f"🎨 Attempting image generation for prompt: '{prompt[:100]}...'")
-    
+    # First try: Gemini image generation
     try:
-        # Configure the genai library
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise Exception("GEMINI_API_KEY not found")
+            
         genai.configure(api_key=api_key)
         
-        # Note: Gemini image generation is limited. 
-        # For production, consider using alternative services like:
-        # - DALL-E API
-        # - Stable Diffusion
-        # - Midjourney API
+        # Try using Gemini Pro Vision for image generation
+        model = genai.GenerativeModel("gemini-1.5-flash")
         
-        # For now, we'll create a placeholder or use alternative approach
-        print("⚠️  Direct Gemini image generation not available in current API.")
-        print("   Consider integrating with DALL-E, Stable Diffusion, or other image generation services.")
-        print("   Skipping image generation for now...")
+        # Note: Gemini doesn't directly generate images, but we'll try the approach
+        # If this fails, we'll catch the exception and move to next method
+        response = model.generate_content(
+            contents=[f"Generate an image: {prompt}"],
+            generation_config=genai.types.GenerationConfig(
+                response_mime_type="image/png"
+            )
+        )
         
-        # Alternative: You could integrate with other image generation APIs here
-        # Example placeholder implementation:
-        # create_placeholder_image(post, prompt)
+        image_data = None
+        if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
+            for part in response.candidates[0].content.parts:
+                if hasattr(part, 'inline_data') and part.inline_data:
+                    image_data = part.inline_data.data
+                    break
         
+        if image_data:
+            image_name = f"{post.slug}.png"
+            content_file = ContentFile(image_data, name=image_name)
+            post.featured_image.save(image_name, content_file, save=True)
+            print(f"✅ Gemini image successfully generated and saved to post '{post.title}'.")
+            return True
+        else:
+            raise Exception("No image data received from Gemini")
+            
     except Exception as e:
-        print(f"⚠️  Could not generate image: {e}")
-        print("   Continuing without featured image...")
+        print(f"❌ Gemini image generation failed: {e}")
+        print("🔄 Falling back to free API...")
+        
+        # Second try: Free API
+        if generate_image_with_free_api(post, prompt):
+            return True
+        
+        # Third try: Placeholder
+        print("🔄 Falling back to placeholder image...")
+        generate_placeholder_image(post, prompt)
+        return True
 
-def create_placeholder_image(post: Post, prompt: str):
+def generate_placeholder_image(post: Post, prompt: str):
     """
-    Creates a simple placeholder image as fallback.
-    Replace this with actual image generation service integration.
+    Creates a placeholder image as final fallback.
     """
+    print(f"🎨 Creating placeholder image for prompt: '{prompt}'...")
     try:
         from PIL import Image, ImageDraw, ImageFont
         
-        # Create a simple placeholder image
-        img = Image.new('RGB', (1200, 600), color='#2C3E50')
-        draw = ImageDraw.Draw(img)
+        # Create a 1080x720 image with a gradient background
+        width, height = 1080, 720
+        image = Image.new('RGB', (width, height), color='#1f2937')
+        draw = ImageDraw.Draw(image)
         
-        # Add text
+        # Add a simple gradient effect
+        for i in range(height):
+            color_value = int(31 + (i / height) * 100)  # Gradient from dark to lighter
+            draw.line([(0, i), (width, i)], fill=(color_value, color_value + 20, color_value + 40))
+        
+        # Add text overlay
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 48)
-        except:
+            # Try to use a default font, fallback to default if not available
             font = ImageFont.load_default()
+        except:
+            font = None
         
-        text = post.title[:50] + "..." if len(post.title) > 50 else post.title
-        bbox = draw.textbbox((0, 0), text, font=font)
-        text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1]
+        # Wrap text to fit image
+        words = post.title.split()
+        lines = []
+        current_line = []
         
-        x = (1200 - text_width) // 2
-        y = (600 - text_height) // 2
+        for word in words:
+            current_line.append(word)
+            test_line = ' '.join(current_line)
+            bbox = draw.textbbox((0, 0), test_line, font=font)
+            if bbox[2] - bbox[0] > width - 80:  # Leave 40px margin on each side
+                if len(current_line) > 1:
+                    current_line.pop()
+                    lines.append(' '.join(current_line))
+                    current_line = [word]
+                else:
+                    lines.append(word)
+                    current_line = []
         
-        draw.text((x, y), text, fill='white', font=font)
+        if current_line:
+            lines.append(' '.join(current_line))
         
-        # Save to BytesIO
-        img_buffer = BytesIO()
-        img.save(img_buffer, format='PNG')
-        img_buffer.seek(0)
+        # Center the text
+        total_height = len(lines) * 40
+        start_y = (height - total_height) // 2
         
-        # Save to Django model
-        image_name = f"{post.slug}_placeholder.png"
-        if post.featured_image:
-            post.featured_image.delete(save=False)
-        post.featured_image.save(
-            image_name, 
-            ContentFile(img_buffer.getvalue()), 
-            save=True
-        )
+        for i, line in enumerate(lines):
+            bbox = draw.textbbox((0, 0), line, font=font)
+            text_width = bbox[2] - bbox[0]
+            x = (width - text_width) // 2
+            y = start_y + i * 40
+            draw.text((x, y), line, fill='white', font=font)
         
-        print(f"✅ Placeholder image created and saved for post '{post.title}'.")
+        # Save the image
+        image_buffer = BytesIO()
+        image.save(image_buffer, format='PNG')
+        image_buffer.seek(0)
+        
+        image_name = f"{post.slug}.png"
+        content_file = ContentFile(image_buffer.getvalue(), name=image_name)
+        post.featured_image.save(image_name, content_file, save=True)
+        
+        print(f"✅ Placeholder image (1080x720) created and saved to post '{post.title}'.")
         
     except Exception as e:
-        print(f"⚠️  Could not create placeholder image: {e}")
+        print(f"❌ Could not generate or save the placeholder image. Error: {e}")
 
+# Alternative: Use a free image generation API
+def generate_image_with_free_api(post: Post, prompt: str):
+    """
+    Use free image generation API as second fallback.
+    Returns True if successful, False if failed.
+    """
+    print(f"🎨 Generating image with free API for prompt: '{prompt}'...")
+    try:
+        # Using Pollinations.ai (free, no API key required)
+        encoded_prompt = requests.utils.quote(prompt)
+        image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1080&height=720&nologo=true"
+        
+        # Add a small delay to be respectful to the free service
+        time.sleep(2)
+        
+        response = requests.get(image_url, timeout=60)
+        if response.status_code == 200:
+            image_name = f"{post.slug}.jpg"
+            content_file = ContentFile(response.content, name=image_name)
+            post.featured_image.save(image_name, content_file, save=True)
+            print(f"✅ Free API image (1080x720) generated and saved to post '{post.title}'.")
+            return True
+        else:
+            print(f"❌ Free API failed. Status code: {response.status_code}")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Could not generate image with free API. Error: {e}")
+        return False
+
+# --- DJANGO MANAGEMENT COMMAND ---
 
 class Command(BaseCommand):
-    help = 'Uses Gemini AI to generate blog content and optionally a featured image.'
+    help = 'Uses AI to generate a complete blog post with a featured image (optimized for free tier).'
 
     def add_arguments(self, parser):
-        subparsers = parser.add_subparsers(dest="command", required=True)
-        parser_create = subparsers.add_parser("create_post", help="Create a new blog post using AI.")
-        parser_create.add_argument('--topic', type=str, help='(Optional) The topic for the AI to write about.')
-        parser_create.add_argument('--author', type=str, help='(Optional) Username of the author.')
-        parser_create.add_argument('--count', type=int, default=1, help='Number of posts to create.')
-        parser_create.add_argument('--publish', action='store_true', help='Publish the post(s) immediately.')
-        parser_create.add_argument('--no-image', action='store_true', help='Skip the image generation step.')
-        parser_update = subparsers.add_parser("update_image", help="Regenerate the featured image for an existing post.")
-        parser_update.add_argument('--slug', type=str, required=True, help='The slug of the blog post to update.')
+        parser.add_argument('command', type=str, choices=['create_post'])
+        parser.add_argument('--topic', type=str, help='(Optional) The topic for the AI to write about.')
+        parser.add_argument('--author', type=str, help='(Optional) Username of the author. Defaults to the first superuser.')
+        parser.add_argument('--count', type=int, default=1, help='Number of posts to create in one run.')
+        parser.add_argument('--publish', action='store_true', help='If set, the generated post(s) will be published immediately.')
+        parser.add_argument('--no-image', action='store_true', help='If set, skips the image generation step.')
+
 
     def handle(self, *args, **options):
-        command = options['command']
-        if command == 'create_post':
-            self.create_post_workflow(options)
-        elif command == 'update_image':
-            self.update_post_image(options['slug'])
-            
-    def create_post_workflow(self, options):
         count = options['count']
-        self.stdout.write(self.style.HTTP_INFO(f"🚀 Starting AI content pipeline for {count} post(s)..."))
-        # This set will track titles generated within this single run
-        generated_titles_this_run = set()
-        successful_posts = 0
         
+        # Limit count for free tier to avoid hitting rate limits
+        if count > 5:
+            self.stdout.write(self.style.WARNING(f"Limiting count to 5 posts to respect free tier limits. You requested {count}."))
+            count = 5
+            
+        self.stdout.write(self.style.HTTP_INFO(f"🚀 Starting AI content creation process for {count} post(s)..."))
+
         for i in range(count):
             self.stdout.write(self.style.HTTP_INFO(f"\n--- Generating post {i + 1} of {count} ---"))
             try:
-                # Pass the set of titles to the creation function
-                new_title = self.create_post(options, generated_titles_this_run)
-                if new_title:
-                    generated_titles_this_run.add(new_title)
-                    successful_posts += 1
+                self.create_single_post(options)
+                # Add delay between posts to respect rate limits
+                if i < count - 1:  # Don't sleep after the last post
+                    self.stdout.write("⏳ Waiting 5 seconds before next post (rate limiting)...")
+                    time.sleep(5)
             except (CommandError, Exception) as e:
                 self.stderr.write(self.style.ERROR(f"Failed to create post {i + 1}: {e}"))
-                
-        self.stdout.write(self.style.SUCCESS(f"\n✅ Successfully created {successful_posts} out of {count} requested posts."))
 
-    def create_post(self, options, generated_titles_this_run):
+    def create_single_post(self, options):
         User = get_user_model()
         try:
-            author = User.objects.get(username=options.get('author')) if options.get('author') else User.objects.filter(is_superuser=True).first()
-            if not author: 
-                raise CommandError("No author found. Please specify --author or ensure a superuser exists.")
+            author_username = options.get('author')
+            if author_username:
+                author = User.objects.get(username=author_username)
+            else:
+                author = User.objects.filter(is_superuser=True).order_by('pk').first()
+            if not author:
+                raise CommandError("No author found. Create a superuser or specify one with --author.")
             self.stdout.write(f"✍️  Author set to: {author.username}")
         except User.DoesNotExist:
-            raise CommandError(f"Author '{options.get('author')}' not found.")
-
-        # Get recent post titles from DB to avoid duplication across runs
-        db_titles = set(Post.objects.order_by('-created_at').values_list('title', flat=True)[:50])
-        # Combine with titles generated in this specific run
-        all_existing_titles = db_titles.union(generated_titles_this_run)
+            raise CommandError(f"Author with username '{options.get('author')}' not found.")
 
         existing_categories = list(Category.objects.values_list('name', flat=True))
-        ai_data = get_ai_generated_content(existing_categories, options.get('topic'), list(all_existing_titles))
-        
+        ai_data = get_ai_generated_content(existing_categories, options.get('topic'))
+
         post_title = ai_data['title']
         if Post.objects.filter(title__iexact=post_title).exists():
-            raise CommandError(f"Post with title '{post_title}' already exists. The AI failed to generate a unique topic.")
+            # Add timestamp to make title unique
+            import datetime
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+            post_title = f"{post_title} ({timestamp})"
+            self.stdout.write(self.style.WARNING(f"Post title already exists. Modified to: '{post_title}'"))
 
-        # Use get_or_create with case-insensitive lookup
+        category_name = ai_data['category']
         category, created = Category.objects.get_or_create(
-            name__iexact=ai_data['category'], 
-            defaults={'name': ai_data['category']}
+            name__iexact=category_name, defaults={'name': category_name}
         )
         if created:
-            self.stdout.write(f"📁 Created new category: '{category.name}'")
-        
-        post_status = 'draft' if options['publish'] else 'draft'
+            self.stdout.write(self.style.SUCCESS(f"Created new category: '{category.name}'"))
+        else:
+            self.stdout.write(f"Using existing category: '{category.name}'")
+
+        post_status = 'published' if options['publish'] else 'draft'
         new_post = Post.objects.create(
-            title=post_title, 
-            author=author, 
+            title=post_title,
+            author=author,
             content=ai_data['content'],
-            excerpt=ai_data['excerpt'], 
+            excerpt=ai_data['excerpt'],
             status=post_status
         )
         new_post.categories.add(category)
-        
-        self.stdout.write(self.style.SUCCESS(f"📝 Successfully created new {post_status.upper()} post: '{new_post.title}'"))
-        
-        if not options.get('no_image', False):
-            try:
-                # For now, create a placeholder image
-                create_placeholder_image(new_post, ai_data['image_prompt'])
-            except Exception as e:
-                self.stdout.write(self.style.WARNING(f"⚠️  Image generation failed: {e}"))
-                self.stdout.write(self.style.WARNING("   Continuing without featured image..."))
-        else:
-            self.stdout.write(self.style.WARNING("🖼️  Skipping image generation as per --no-image flag."))
-        
-        return new_post.title # Return the new title to be added to the set for this run
 
-    def update_post_image(self, slug: str):
-        self.stdout.write(self.style.HTTP_INFO(f"🔄 Updating image for post with slug: {slug}"))
-        try:
-            post = Post.objects.get(slug=slug)
-        except Post.DoesNotExist:
-            raise CommandError(f"Post with slug '{slug}' not found.")
-        
-        prompt = f"An artistic, abstract, high-resolution image for a tech blog post titled '{post.title}'. The style should be modern and clean."
-        
-        try:
-            create_placeholder_image(post, prompt)
-            self.stdout.write(self.style.SUCCESS("✅ Image update process complete."))
-        except Exception as e:
-            self.stdout.write(self.style.ERROR(f"❌ Image update failed: {e}"))
+        self.stdout.write(self.style.SUCCESS(f"Successfully created new {post_status.upper()} post: '{new_post.title}'"))
+
+        if not options['no_image']:
+            generate_and_save_real_image(new_post, ai_data['image_prompt'])
+        else:
+            self.stdout.write(self.style.WARNING("Skipping image generation as per --no-image flag."))
