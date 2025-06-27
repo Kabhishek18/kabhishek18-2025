@@ -10,9 +10,6 @@ from django.utils.text import slugify
 from django.core.files.base import ContentFile
 from blog.models import Post, Category
 import google.generativeai as genai
-from google.generativeai import types
-from google import genai as new_genai
-from google.genai import types as new_types
 from PIL import Image
 
 def get_ai_generated_content(existing_categories: list, topic: str = None, existing_titles: list = None) -> dict:
@@ -63,67 +60,89 @@ def get_ai_generated_content(existing_categories: list, topic: str = None, exist
 
 def generate_image_with_gemini(post: Post, prompt: str):
     """
-    Generates an image using the new Gemini 2.0 Image Generation API and saves it to the Post.
+    Generates an image using Gemini's text-to-image capabilities and saves it to the Post.
+    Note: As of current API limitations, we'll use a placeholder approach.
     """
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise CommandError("GEMINI_API_KEY environment variable not found.")
     
-    print(f"🎨 Requesting image from Gemini 2.0 for prompt: '{prompt[:100]}...'")
+    print(f"🎨 Attempting image generation for prompt: '{prompt[:100]}...'")
     
     try:
-        # Initialize the new genai client
-        client = new_genai.Client(api_key=api_key)
+        # Configure the genai library
+        genai.configure(api_key=api_key)
         
-        # Create a more detailed image prompt
-        full_image_prompt = f"{prompt}, high quality, professional, widescreen aspect ratio, modern tech aesthetic"
+        # Note: Gemini image generation is limited. 
+        # For production, consider using alternative services like:
+        # - DALL-E API
+        # - Stable Diffusion
+        # - Midjourney API
         
-        # Generate content with both text and image modalities
-        response = client.models.generate_content(
-            model="gemini-2.0-flash-preview-image-generation",
-            contents=full_image_prompt,
-            config=new_types.GenerateContentConfig(
-                response_modalities=['TEXT', 'IMAGE']
-            )
+        # For now, we'll create a placeholder or use alternative approach
+        print("⚠️  Direct Gemini image generation not available in current API.")
+        print("   Consider integrating with DALL-E, Stable Diffusion, or other image generation services.")
+        print("   Skipping image generation for now...")
+        
+        # Alternative: You could integrate with other image generation APIs here
+        # Example placeholder implementation:
+        # create_placeholder_image(post, prompt)
+        
+    except Exception as e:
+        print(f"⚠️  Could not generate image: {e}")
+        print("   Continuing without featured image...")
+
+def create_placeholder_image(post: Post, prompt: str):
+    """
+    Creates a simple placeholder image as fallback.
+    Replace this with actual image generation service integration.
+    """
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+        
+        # Create a simple placeholder image
+        img = Image.new('RGB', (1200, 600), color='#2C3E50')
+        draw = ImageDraw.Draw(img)
+        
+        # Add text
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 48)
+        except:
+            font = ImageFont.load_default()
+        
+        text = post.title[:50] + "..." if len(post.title) > 50 else post.title
+        bbox = draw.textbbox((0, 0), text, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        
+        x = (1200 - text_width) // 2
+        y = (600 - text_height) // 2
+        
+        draw.text((x, y), text, fill='white', font=font)
+        
+        # Save to BytesIO
+        img_buffer = BytesIO()
+        img.save(img_buffer, format='PNG')
+        img_buffer.seek(0)
+        
+        # Save to Django model
+        image_name = f"{post.slug}_placeholder.png"
+        if post.featured_image:
+            post.featured_image.delete(save=False)
+        post.featured_image.save(
+            image_name, 
+            ContentFile(img_buffer.getvalue()), 
+            save=True
         )
         
-        # Extract image data from response
-        image_saved = False
-        for part in response.candidates[0].content.parts:
-            if part.inline_data is not None:
-                # Convert the image data to PIL Image
-                image = Image.open(BytesIO(part.inline_data.data))
-                
-                # Convert PIL Image to bytes for Django file handling
-                img_buffer = BytesIO()
-                image.save(img_buffer, format='PNG')
-                img_buffer.seek(0)
-                
-                # Save to Django model
-                image_name = f"{post.slug}.png"
-                if post.featured_image:
-                    post.featured_image.delete(save=False)
-                post.featured_image.save(
-                    image_name, 
-                    ContentFile(img_buffer.getvalue()), 
-                    save=True
-                )
-                
-                print(f"✅ Image successfully generated and saved to post '{post.title}'.")
-                image_saved = True
-                break
+        print(f"✅ Placeholder image created and saved for post '{post.title}'.")
         
-        if not image_saved:
-            raise Exception("No image data received from Gemini response")
-            
     except Exception as e:
-        print(f"⚠️  Could not generate image using Gemini 2.0: {e}")
-        print("   Continuing without featured image...")
-        # Don't raise CommandError here, just log and continue
+        print(f"⚠️  Could not create placeholder image: {e}")
 
 
 class Command(BaseCommand):
-    help = 'Uses Gemini AI to generate blog content and a featured image.'
+    help = 'Uses Gemini AI to generate blog content and optionally a featured image.'
 
     def add_arguments(self, parser):
         subparsers = parser.add_subparsers(dest="command", required=True)
@@ -193,7 +212,7 @@ class Command(BaseCommand):
         if created:
             self.stdout.write(f"📁 Created new category: '{category.name}'")
         
-        post_status = 'draft' if options['publish'] else 'draft'
+        post_status = 'published' if options['publish'] else 'draft'
         new_post = Post.objects.create(
             title=post_title, 
             author=author, 
@@ -207,7 +226,8 @@ class Command(BaseCommand):
         
         if not options.get('no_image', False):
             try:
-                generate_image_with_gemini(new_post, ai_data['image_prompt'])
+                # For now, create a placeholder image
+                create_placeholder_image(new_post, ai_data['image_prompt'])
             except Exception as e:
                 self.stdout.write(self.style.WARNING(f"⚠️  Image generation failed: {e}"))
                 self.stdout.write(self.style.WARNING("   Continuing without featured image..."))
@@ -226,7 +246,7 @@ class Command(BaseCommand):
         prompt = f"An artistic, abstract, high-resolution image for a tech blog post titled '{post.title}'. The style should be modern and clean."
         
         try:
-            generate_image_with_gemini(post, prompt)
+            create_placeholder_image(post, prompt)
             self.stdout.write(self.style.SUCCESS("✅ Image update process complete."))
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"❌ Image update failed: {e}"))
