@@ -41,14 +41,14 @@
     "categories": ["portfolio", "developer", "ai", "technology"],
     "screenshots": [
         {
-            "src": "screenshot-wide.png",
+            "src": "screenshots/home.png",
             "sizes": "1280x720",
             "type": "image/png",
             "form_factor": "wide",
             "label": "Kumar Abhishek's Digital Portfolio - Desktop View"
         },
         {
-            "src": "screenshot-narrow.png",
+            "src": "screenshots/blog.png",
             "sizes": "640x1136",
             "type": "image/png",
             "form_factor": "narrow",

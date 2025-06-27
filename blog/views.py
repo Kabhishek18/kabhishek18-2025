@@ -70,6 +70,7 @@ def blog_detail(request, slug):
         'post': post,
         'related_posts': related_posts,
         'title': post.title,
+        'meta_data': post.meta_data,
         'meta_details': post.excerpt or post.content[:160],
     }
     return render(request, 'blog/blog_detail.html', context)

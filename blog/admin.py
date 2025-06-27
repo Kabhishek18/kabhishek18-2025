@@ -23,6 +23,15 @@ class PostAdmin(ModelAdmin):
     formfield_overrides = {
         models.TextField: {"widget": WysiwygWidget},
     }
+    
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        # Use normal textarea for meta_data field instead of WYSIWYG
+        if db_field.name == 'meta_data':
+            kwargs['widget'] = admin.widgets.AdminTextareaWidget(attrs={
+                'placeholder': 'Enter links and metadata (one per line)\nExample:\nhttps://example.com - Source Article\nhttps://github.com/repo - Related Code'
+            })
+            return db_field.formfield(**kwargs)
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
 
     fieldsets = (
         ("Main Content", {
@@ -33,7 +42,7 @@ class PostAdmin(ModelAdmin):
         }),
         ("SEO & Meta", {
             'classes': ('collapse',), # Make this section collapsible
-            'fields': ('read_time', 'view_count')
+            'fields': ('read_time', 'view_count', 'meta_data')
         }),
     )
     
