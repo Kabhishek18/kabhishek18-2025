@@ -77,6 +77,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'kabhishek18.wsgi.application'
+APPEND_SLASH = True
 
 
 # Database
