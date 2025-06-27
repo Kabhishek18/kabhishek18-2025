@@ -212,7 +212,7 @@ class Command(BaseCommand):
         if created:
             self.stdout.write(f"📁 Created new category: '{category.name}'")
         
-        post_status = 'published' if options['publish'] else 'draft'
+        post_status = 'draft' if options['publish'] else 'draft'
         new_post = Post.objects.create(
             title=post_title, 
             author=author, 
