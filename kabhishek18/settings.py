@@ -46,7 +46,8 @@ INSTALLED_APPS = [
 
     #Custom Modules
     'core',
-    'blog'
+    'blog',
+    'api'
 ]
 
 MIDDLEWARE = [
