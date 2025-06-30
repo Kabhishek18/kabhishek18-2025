@@ -1,13 +1,13 @@
-/* static/admin/css/script_runner.css - Django Unfold Compatible */
+/* static/admin/css/script_runner.css */
 
-/* Script code textarea styling */
+/* Script code editor styling */
 #id_script_code {
-    font-family: 'JetBrains Mono', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
     font-size: 14px !important;
     line-height: 1.6 !important;
     background-color: #1e1e1e !important;
     color: #d4d4d4 !important;
-    border: 1px solid #404040 !important;
+    border: 2px solid #404040 !important;
     border-radius: 8px !important;
     padding: 16px !important;
     width: 100% !important;
@@ -16,14 +16,19 @@
     tab-size: 4 !important;
 }
 
-/* Output textarea styling */
+#id_script_code:focus {
+    border-color: #0078d4 !important;
+    outline: none !important;
+}
+
+/* Output display styling */
 #id_output {
-    font-family: 'JetBrains Mono', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
     font-size: 13px !important;
     line-height: 1.5 !important;
     background-color: #0d1117 !important;
     color: #58a6ff !important;
-    border: 1px solid #21262d !important;
+    border: 2px solid #21262d !important;
     border-radius: 8px !important;
     padding: 16px !important;
     min-height: 300px !important;
@@ -31,20 +36,38 @@
     overflow-x: auto !important;
 }
 
-/* Dark theme compatibility */
-[data-theme="dark"] #id_script_code {
-    background-color: #1e1e1e !important;
-    color: #d4d4d4 !important;
-    border-color: #404040 !important;
+/* Status styling */
+.field-get_status .readonly {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-weight: bold;
+    font-size: 12px;
 }
 
-[data-theme="dark"] #id_output {
-    background-color: #0d1117 !important;
-    color: #58a6ff !important;
-    border-color: #21262d !important;
+/* Action buttons */
+.actions select {
+    margin-right: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
 }
 
-/* Light theme compatibility */
+.actions .button {
+    background-color: #0969da !important;
+    color: white !important;
+    border: none !important;
+    padding: 8px 16px !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    font-weight: 500 !important;
+    margin-left: 8px !important;
+}
+
+.actions .button:hover {
+    background-color: #0550ae !important;
+}
+
+/* Light theme adjustments */
 [data-theme="light"] #id_script_code {
     background-color: #f6f8fa !important;
     color: #24292f !important;
@@ -57,39 +80,12 @@
     border-color: #d0d7de !important;
 }
 
-/* Unfold form field styling */
-.field-script_code .form-row {
-    margin-bottom: 20px;
-}
-
-.field-output .form-row {
-    margin-bottom: 20px;
-}
-
-/* Action button styling for Unfold */
-.actions select {
-    margin-right: 10px;
-}
-
-.actions .button {
-    background-color: #0969da;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 500;
-}
-
-.actions .button:hover {
-    background-color: #0550ae;
-}
-
 /* Responsive design */
 @media (max-width: 768px) {
     #id_script_code,
     #id_output {
         font-size: 12px !important;
         padding: 12px !important;
+        min-height: 250px !important;
     }
 }

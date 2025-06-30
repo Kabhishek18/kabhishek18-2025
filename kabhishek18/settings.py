@@ -43,7 +43,9 @@ INSTALLED_APPS = [
     #celery
     'django_celery_beat',
     'django_celery_results',
-
+    # Drf
+    'rest_framework',
+    'drf_yasg',
     #Custom Modules
     'core',
     'blog',
@@ -270,6 +272,18 @@ UNFOLD = {
                         "title": _("Categories"),
                         "icon": "folder",
                         "link": reverse_lazy("admin:blog_category_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                ],
+            },
+            {
+                "title": _("API Management"),
+                "separator": True,
+                "items": [
+                    {
+                        "title": _("Script"),
+                        "icon": "settings",
+                        "link": reverse_lazy("admin:api_scriptrunner_changelist"),
                         "permission": lambda request: request.user.is_superuser,
                     },
                 ],
