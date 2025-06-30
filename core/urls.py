@@ -1,9 +1,15 @@
+# core/urls.py
+
 from django.urls import path
 from .views import PageRequest, custom_404
 
-handler404 = 'core.views.custom_404'
+# Define the app namespace
+app_name = 'core'
 
 urlpatterns = [
-    path('', PageRequest.as_view(), name="home_page"),  # Home page
-    path('<slug:slug>/', PageRequest.as_view(), name="generic_page"),  # Catch all other pages
+    # Homepage - exact match for empty path
+    path('', PageRequest.as_view(), name="home_page"),
+    
+    # Generic catch-all for custom pages - MUST be last
+    path('<slug:slug>/', PageRequest.as_view(), name="generic_page"),
 ]
