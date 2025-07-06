@@ -1,4 +1,4 @@
-import os,re
+import os
 import json
 import time
 from io import BytesIO
@@ -19,334 +19,58 @@ from blog.models import Post, Category
 import google.generativeai as genai
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-# Dynamic content configuration - can be stored in DB or external config
-class ContentTopicsManager:
-    """
-    Dynamic content topics manager that fetches trending topics from various sources
-    """
-    
-    def __init__(self):
-        self.cache_duration = 3600  # 1 hour cache
-        self.last_update = None
-        self.cached_topics = {}
-        
-    def get_trending_topics_from_web(self):
-        """
-        Fetch trending topics from various tech sources
-        """
-        trending_data = {}
-        
-        try:
-            # GitHub Trending Topics
-            github_trends = self.fetch_github_trends()
-            if github_trends:
-                trending_data['github_trends'] = github_trends
-                
-            # Hacker News Trending
-            hn_trends = self.fetch_hackernews_trends()
-            if hn_trends:
-                trending_data['hackernews_trends'] = hn_trends
-                
-            # Reddit Programming Trends
-            reddit_trends = self.fetch_reddit_programming_trends()
-            if reddit_trends:
-                trending_data['reddit_trends'] = reddit_trends
-                
-            # Stack Overflow Trends
-            so_trends = self.fetch_stackoverflow_trends()
-            if so_trends:
-                trending_data['stackoverflow_trends'] = so_trends
-                
-        except Exception as e:
-            print(f"⚠️ Error fetching web trends: {e}")
-            
-        return trending_data
-    
-    def fetch_github_trends(self):
-        """Fetch trending repositories and topics from GitHub"""
-        try:
-            # GitHub trending repositories API
-            url = "https://api.github.com/search/repositories?q=created:>2024-01-01&sort=stars&order=desc&per_page=20"
-            response = requests.get(url, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                topics = []
-                
-                for repo in data.get('items', [])[:10]:
-                    # Extract topics from repo description and topics
-                    repo_topics = repo.get('topics', [])
-                    topics.extend(repo_topics)
-                    
-                    # Extract keywords from description
-                    description = repo.get('description', '')
-                    if description:
-                        # Simple keyword extraction
-                        keywords = self.extract_tech_keywords(description)
-                        topics.extend(keywords)
-                
-                return list(set(topics))[:15]  # Return unique topics
-                
-        except Exception as e:
-            print(f"GitHub trends fetch error: {e}")
-            return []
-    
-    def fetch_hackernews_trends(self):
-        """Fetch trending topics from Hacker News"""
-        try:
-            # HN Top Stories API
-            url = "https://hacker-news.firebaseio.com/v0/topstories.json"
-            response = requests.get(url, timeout=10)
-            
-            if response.status_code == 200:
-                story_ids = response.json()[:20]  # Top 20 stories
-                topics = []
-                
-                for story_id in story_ids[:10]:  # Limit to 10 to avoid rate limits
-                    story_url = f"https://hacker-news.firebaseio.com/v0/item/{story_id}.json"
-                    story_response = requests.get(story_url, timeout=5)
-                    
-                    if story_response.status_code == 200:
-                        story = story_response.json()
-                        title = story.get('title', '')
-                        
-                        # Extract tech keywords from title
-                        keywords = self.extract_tech_keywords(title)
-                        topics.extend(keywords)
-                    
-                    time.sleep(0.1)  # Rate limiting
-                
-                return list(set(topics))[:10]
-                
-        except Exception as e:
-            print(f"Hacker News trends fetch error: {e}")
-            return []
-    
-    def fetch_reddit_programming_trends(self):
-        """Fetch trending topics from Reddit programming communities"""
-        try:
-            # Reddit hot posts (no auth needed for public endpoints)
-            subreddits = ['programming', 'MachineLearning', 'webdev', 'Python', 'javascript']
-            topics = []
-            
-            for subreddit in subreddits:
-                url = f"https://www.reddit.com/r/{subreddit}/hot.json?limit=10"
-                headers = {'User-Agent': 'BlogGenerator/1.0'}
-                response = requests.get(url, headers=headers, timeout=10)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    posts = data.get('data', {}).get('children', [])
-                    
-                    for post in posts:
-                        title = post.get('data', {}).get('title', '')
-                        keywords = self.extract_tech_keywords(title)
-                        topics.extend(keywords)
-                
-                time.sleep(0.5)  # Rate limiting
-            
-            return list(set(topics))[:15]
-            
-        except Exception as e:
-            print(f"Reddit trends fetch error: {e}")
-            return []
-    
-    def fetch_stackoverflow_trends(self):
-        """Fetch trending tags from Stack Overflow"""
-        try:
-            # Stack Overflow API for trending tags
-            url = "https://api.stackexchange.com/2.3/tags?order=desc&sort=popular&site=stackoverflow&pagesize=30"
-            response = requests.get(url, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                tags = []
-                
-                for item in data.get('items', []):
-                    tag_name = item.get('name', '')
-                    if self.is_tech_relevant(tag_name):
-                        tags.append(tag_name.replace('-', ' ').title())
-                
-                return tags[:20]
-                
-        except Exception as e:
-            print(f"Stack Overflow trends fetch error: {e}")
-            return []
-    
-    def extract_tech_keywords(self, text):
-        """Extract technology-related keywords from text"""
-        tech_patterns = [
-            r'\b(AI|ML|Machine Learning|Deep Learning|Neural Network)\b',
-            r'\b(React|Vue|Angular|Node\.js|Django|Flask|FastAPI)\b',
-            r'\b(AWS|Azure|GCP|Docker|Kubernetes|Jenkins)\b',
-            r'\b(Python|JavaScript|TypeScript|Rust|Go|Java)\b',
-            r'\b(Blockchain|Cryptocurrency|DeFi|NFT|Web3)\b',
-            r'\b(DevOps|CI/CD|Microservices|Serverless|API)\b',
-            r'\b(Quantum|IoT|Edge Computing|5G|AR|VR)\b',
-            r'\b(Cybersecurity|Privacy|GDPR|Compliance)\b'
-        ]
-        
-        keywords = []
-        for pattern in tech_patterns:
-            matches = re.findall(pattern, text, re.IGNORECASE)
-            keywords.extend(matches)
-        
-        return [kw.strip() for kw in keywords if len(kw.strip()) > 2]
-    
-    def is_tech_relevant(self, tag):
-        """Check if a tag is technology-relevant"""
-        tech_keywords = {
-            'python', 'javascript', 'java', 'c++', 'rust', 'go', 'typescript',
-            'react', 'vue', 'angular', 'node.js', 'django', 'flask',
-            'docker', 'kubernetes', 'aws', 'azure', 'gcp',
-            'machine-learning', 'ai', 'deep-learning', 'neural-networks',
-            'blockchain', 'cryptocurrency', 'web3', 'defi',
-            'cybersecurity', 'privacy', 'devops', 'cicd'
-        }
-        
-        return tag.lower() in tech_keywords or any(kw in tag.lower() for kw in tech_keywords)
-    
-    def get_ai_generated_topics(self):
-        """
-        Use AI to generate trending topics based on current tech landscape
-        """
-        try:
-            api_key = os.getenv("GEMINI_API_KEY")
-            if not api_key:
-                return {}
-                
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            
-            current_date = datetime.now().strftime("%Y-%m-%d")
-            
-            prompt = f"""
-            Based on the current tech landscape as of {current_date}, generate trending topics for a tech blog.
-            
-            Consider these areas:
-            1. Latest AI/ML developments and breakthroughs
-            2. Emerging programming languages and frameworks
-            3. Cloud computing and DevOps trends
-            4. Web3 and blockchain innovations
-            5. Cybersecurity and privacy concerns
-            6. Mobile and web development trends
-            7. IoT and edge computing
-            8. Sustainable tech and green computing
-            
-            Return a JSON object with categories and trending topics:
-            {{
-                "ai_ml": ["topic1", "topic2", ...],
-                "web_dev": ["topic1", "topic2", ...],
-                "cloud_devops": ["topic1", "topic2", ...],
-                "blockchain": ["topic1", "topic2", ...],
-                "cybersecurity": ["topic1", "topic2", ...],
-                "emerging_tech": ["topic1", "topic2", ...]
-            }}
-            
-            Focus on topics that are:
-            - Currently trending (last 3-6 months)
-            - Practically relevant to developers
-            - Not basic tutorials but advanced insights
-            - Industry-focused and valuable
-            """
-            
-            response = model.generate_content(prompt)
-            
-            if response.text:
-                try:
-                    clean_text = response.text.strip()
-                    if clean_text.startswith("```json"):
-                        clean_text = clean_text[7:]
-                    if clean_text.endswith("```"):
-                        clean_text = clean_text[:-3]
-                    
-                    ai_topics = json.loads(clean_text.strip())
-                    return ai_topics
-                    
-                except json.JSONDecodeError:
-                    print("⚠️ Failed to parse AI-generated topics")
-                    return {}
-            
-        except Exception as e:
-            print(f"⚠️ AI topic generation error: {e}")
-            return {}
-    
-    def get_dynamic_topics(self, force_refresh=False):
-        """
-        Get trending topics from multiple sources with caching
-        """
-        current_time = time.time()
-        
-        # Check cache validity
-        if (not force_refresh and 
-            self.last_update and 
-            current_time - self.last_update < self.cache_duration and 
-            self.cached_topics):
-            print("📋 Using cached trending topics")
-            return self.cached_topics
-        
-        print("🔄 Fetching fresh trending topics...")
-        
-        # Combine multiple sources
-        all_topics = {}
-        
-        # 1. Web scraping trends
-        web_trends = self.get_trending_topics_from_web()
-        if web_trends:
-            all_topics.update(web_trends)
-        
-        # 2. AI-generated trends
-        ai_trends = self.get_ai_generated_topics()
-        if ai_trends:
-            all_topics.update(ai_trends)
-        
-        # 3. Fallback to curated topics if all else fails
-        if not all_topics:
-            all_topics = self.get_fallback_topics()
-        
-        # Cache the results
-        self.cached_topics = all_topics
-        self.last_update = current_time
-        
-        return all_topics
-    
-    def get_fallback_topics(self):
-        """Fallback curated topics when dynamic fetching fails"""
-        return {
-            'ai_ml': [
-                'Large Language Models in Production', 'AI Ethics and Bias Mitigation',
-                'Generative AI for Code Development', 'Machine Learning Operations at Scale',
-                'Neural Architecture Search Advances', 'AI-Powered Developer Tools'
-            ],
-            'web_dev': [
-                'Server-Side Rendering Evolution', 'Progressive Web Apps 2024',
-                'Frontend Performance Optimization', 'API Design Best Practices',
-                'Modern CSS Architecture', 'JavaScript Runtime Innovations'
-            ],
-            'cloud_devops': [
-                'Multi-Cloud Strategy Implementation', 'Serverless Architecture Patterns',
-                'Container Security Best Practices', 'Infrastructure as Code Evolution',
-                'DevOps Culture Transformation', 'Cost Optimization Strategies'
-            ],
-            'blockchain': [
-                'Enterprise Blockchain Applications', 'DeFi Security Auditing',
-                'NFT Technology Beyond Art', 'Blockchain Scalability Solutions',
-                'Web3 Development Frameworks', 'Cryptocurrency Integration'
-            ],
-            'cybersecurity': [
-                'Zero Trust Architecture Implementation', 'Cloud Security Posture',
-                'AI-Powered Threat Detection', 'DevSecOps Integration',
-                'Privacy-Preserving Technologies', 'Incident Response Automation'
-            ],
-            'emerging_tech': [
-                'Quantum Computing Applications', 'Edge AI Development',
-                'IoT Security Challenges', 'Sustainable Software Architecture',
-                'Augmented Reality in Enterprise', 'Voice Interface Evolution'
-            ]
-        }
+# Enhanced content categories with trending topics
+CONTENT_CATEGORIES = {
+    'emerging_tech': [
+        'AI/ML Breakthroughs', 'Quantum Computing', 'Blockchain Innovation', 
+        'IoT Evolution', 'Edge Computing', 'Augmented Reality', 'Virtual Reality',
+        'Robotics Advances', 'Biotechnology', 'Nanotechnology'
+    ],
+    'industry_insights': [
+        'Tech Industry Analysis', 'Startup Ecosystem', 'Tech Investment Trends',
+        'Digital Transformation', 'Remote Work Evolution', 'Cybersecurity Landscape',
+        'Data Privacy Regulations', 'Open Source Movement', 'Tech Leadership'
+    ],
+    'practical_guides': [
+        'Architecture Patterns', 'Performance Optimization', 'Security Best Practices',
+        'Scalability Solutions', 'DevOps Strategies', 'Testing Methodologies',
+        'Code Quality', 'Database Design', 'API Development'
+    ],
+    'deep_dives': [
+        'Technology Comparisons', 'Case Studies', 'Research Analysis',
+        'Historical Perspectives', 'Future Predictions', 'Technical Investigations',
+        'Performance Benchmarks', 'Architecture Reviews'
+    ],
+    'career_growth': [
+        'Skill Development', 'Career Transitions', 'Leadership Growth',
+        'Technical Interviews', 'Salary Negotiations', 'Personal Branding',
+        'Networking Strategies', 'Continuous Learning'
+    ]
+}
 
-# Initialize the dynamic content manager
-content_manager = ContentTopicsManager()
+# Trending topics and themes
+TRENDING_TOPICS = {
+    'ai_revolution': [
+        'Large Language Models Impact', 'AI Ethics in Practice', 'Generative AI Applications',
+        'AI-Human Collaboration', 'Machine Learning Operations', 'AI Democratization',
+        'Prompt Engineering Mastery', 'AI Safety Measures', 'Neural Architecture Search'
+    ],
+    'cloud_native': [
+        'Serverless Architecture Evolution', 'Container Orchestration', 'Multi-Cloud Strategies',
+        'Cloud Security Posture', 'Cost Optimization Techniques', 'Cloud-Native Development',
+        'Microservices Patterns', 'Event-Driven Architecture', 'Infrastructure as Code'
+    ],
+    'web3_blockchain': [
+        'Decentralized Applications', 'Smart Contract Security', 'DeFi Innovation',
+        'NFT Technology Beyond Art', 'Blockchain Scalability', 'Cryptocurrency Integration',
+        'Web3 Development Stack', 'Tokenization Strategies', 'DAO Governance'
+    ],
+    'sustainability_tech': [
+        'Green Computing Practices', 'Energy-Efficient Development', 'Carbon Footprint Reduction',
+        'Sustainable Software Architecture', 'Clean Technology Solutions', 'Circular Economy Tech',
+        'Environmental Impact Assessment', 'Renewable Energy Integration'
+    ]
+}
 
 # Content depth levels
 CONTENT_DEPTHS = {
@@ -371,30 +95,10 @@ CONTENT_DEPTHS = {
 }
 
 def get_trending_topic():
-    """Get a dynamic trending topic from various sources"""
-    try:
-        # Get dynamic topics
-        dynamic_topics = content_manager.get_dynamic_topics()
-        
-        if dynamic_topics:
-            # Choose a random category
-            category = random.choice(list(dynamic_topics.keys()))
-            topics_list = dynamic_topics[category]
-            
-            if topics_list:
-                topic = random.choice(topics_list)
-                return topic, category
-        
-        # Fallback to curated topics
-        fallback_topics = content_manager.get_fallback_topics()
-        category = random.choice(list(fallback_topics.keys()))
-        topic = random.choice(fallback_topics[category])
-        return topic, category
-        
-    except Exception as e:
-        print(f"⚠️ Error getting trending topic: {e}")
-        # Ultimate fallback
-        return "Advanced Software Architecture Patterns", "practical_guides"
+    """Get a random trending topic from various categories"""
+    category = random.choice(list(TRENDING_TOPICS.keys()))
+    topic = random.choice(TRENDING_TOPICS[category])
+    return topic, category
 
 def get_content_angle():
     """Get a unique content angle to avoid repetitive content"""
@@ -820,22 +524,9 @@ class Command(BaseCommand):
         parser.add_argument('--depth', type=str, choices=['beginner', 'intermediate', 'advanced'], 
                           help='Force specific content depth level')
         parser.add_argument('--trending', action='store_true', help='Use only trending topics')
-        parser.add_argument('--refresh-topics', action='store_true', help='Force refresh of trending topics cache')
-        parser.add_argument('--source', type=str, choices=['web', 'ai', 'mixed'], default='mixed',
-                          help='Source for trending topics: web scraping, AI generation, or mixed')
 
     def handle(self, *args, **options):
         count = min(options['count'], 10)  # Limit to 10 for safety
-        
-        # Refresh topics cache if requested
-        if options.get('refresh_topics'):
-            self.stdout.write(self.style.HTTP_INFO("🔄 Refreshing trending topics cache..."))
-            content_manager.get_dynamic_topics(force_refresh=True)
-            self.stdout.write(self.style.SUCCESS("✅ Topics cache refreshed!"))
-        
-        # Show current trending topics
-        if options.get('trending') or options.get('refresh_topics'):
-            self.show_trending_topics()
         
         self.stdout.write(self.style.HTTP_INFO(f"🚀 Creating {count} high-quality blog post(s)..."))
         
@@ -856,20 +547,6 @@ class Command(BaseCommand):
                 self.stderr.write(self.style.ERROR(f"Failed to create post {i + 1}: {e}"))
         
         self.stdout.write(self.style.SUCCESS(f"\n✅ Successfully created {successful_posts} out of {count} posts!"))
-
-    def show_trending_topics(self):
-        """Display current trending topics"""
-        try:
-            topics = content_manager.get_dynamic_topics()
-            
-            self.stdout.write(self.style.HTTP_INFO("\n📈 Current Trending Topics:"))
-            for category, topic_list in topics.items():
-                self.stdout.write(f"\n🏷️  {category.replace('_', ' ').title()}:")
-                for topic in topic_list[:5]:  # Show top 5
-                    self.stdout.write(f"   • {topic}")
-            
-        except Exception as e:
-            self.stdout.write(self.style.WARNING(f"⚠️ Could not display trending topics: {e}"))
 
     def create_single_post(self, options):
         User = get_user_model()
@@ -915,7 +592,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f"✨ Created new category: '{category.name}'"))
 
         # Create post
-        post_status = 'published' if options['publish'] else 'draft'
+        post_status = 'draft' if options['publish'] else 'draft'
         new_post = Post.objects.create(
             title=post_title,
             author=author,

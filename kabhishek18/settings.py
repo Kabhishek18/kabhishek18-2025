@@ -34,6 +34,8 @@ INSTALLED_APPS = [
     "unfold.contrib.guardian",  # optional, if django-guardian package is used
     "unfold.contrib.simple_history",  # optional, if django-simple-history package is used
 
+    'ckeditor',
+    'ckeditor_uploader',     
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -326,8 +328,22 @@ UNFOLD = {
         ],
     },
 }
-print("BROKER_URL =", os.getenv("CELERY_BROKER_URL"))
+CKEDITOR_UPLOAD_PATH = "uploads/"
 
+CKEDITOR_CONFIGS = {
+    'default': {
+        'toolbar': 'full',
+        'height': 400,
+        'width': '100%',
+        'removePlugins': 'stylesheetparser',
+        'allowedContent': True,
+        'extraAllowedContent': 'iframe[*]',
+    },
+    'basic': {
+        'width': '100%',
+        'allowedContent': True,
+    }
+}
 
 # --- CELERY & CELERY BEAT CONFIGURATION ---
 # This section ensures Celery connects to Redis, not RabbitMQ.
