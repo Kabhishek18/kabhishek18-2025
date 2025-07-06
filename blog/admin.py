@@ -3,34 +3,30 @@ from django.db import models
 from unfold.admin import ModelAdmin
 from unfold.contrib.forms.widgets import WysiwygWidget
 from .models import Post, Category, NewsletterSubscriber
+from ckeditor.widgets import CKEditorWidget
+
 
 @admin.register(Post)
 class PostAdmin(ModelAdmin):
-    """
-    Admin configuration for Blog Posts, providing a rich interface
-    for content management with a WYSIWYG editor.
-    """
     list_display = ('title', 'author', 'status', 'is_featured', 'created_at')
     list_filter = ('status', 'is_featured', 'categories', 'author')
     search_fields = ('title', 'excerpt', 'content')
     prepopulated_fields = {'slug': ('title',)}
     list_editable = ('status', 'is_featured')
-    
-    # Use filter_horizontal for a better ManyToMany widget for categories
     filter_horizontal = ('categories',)
 
-    # Override the default TextField widget with Unfold's WYSIWYG editor
+    # Use CKEditor for content fields
     formfield_overrides = {
-        models.TextField: {"widget": WysiwygWidget},
+        models.TextField: {"widget": CKEditorWidget(config_name='default')},
     }
     
     def formfield_for_dbfield(self, db_field, request, **kwargs):
-        # Use normal textarea for meta_data field instead of WYSIWYG
-        if db_field.name == 'meta_data':
-            kwargs['widget'] = admin.widgets.AdminTextareaWidget(attrs={
-                'placeholder': 'Enter links and metadata (one per line)\nExample:\nhttps://example.com - Source Article\nhttps://github.com/repo - Related Code'
-            })
-            return db_field.formfield(**kwargs)
+        if db_field.name == 'content':
+            kwargs['widget'] = CKEditorWidget(config_name='default')
+        elif db_field.name == 'excerpt':
+            kwargs['widget'] = CKEditorWidget(config_name='basic')
+        elif db_field.name == 'meta_data':
+            kwargs['widget'] = admin.widgets.AdminTextareaWidget()
         return super().formfield_for_dbfield(db_field, request, **kwargs)
 
     fieldsets = (
@@ -41,12 +37,12 @@ class PostAdmin(ModelAdmin):
             'fields': ('categories', 'is_featured', 'featured_image')
         }),
         ("SEO & Meta", {
-            'classes': ('collapse',), # Make this section collapsible
+            'classes': ('collapse',),
             'fields': ('read_time', 'view_count', 'meta_data')
         }),
     )
     
-    readonly_fields = ('view_count',) # view_count should not be manually editable
+    readonly_fields = ('view_count',)
 
 @admin.register(Category)
 class CategoryAdmin(ModelAdmin):

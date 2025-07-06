@@ -40,7 +40,7 @@
             <a href="{% url 'blog:list' %}" class="nav-back"><i class="fas fa-arrow-left"></i><span>Back to Blog</span></a>
             <div class="nav-actions">
                 <button class="share-btn" id="shareBtn"><i class="fas fa-share-alt"></i><span>Share</span></button>
-                <button class="bookmark-btn" id="bookmarkBtn"><i class="fas fa-bookmark"></i><span>Save</span></button>
+                <!-- <button class="bookmark-btn" id="bookmarkBtn"><i class="fas fa-bookmark"></i><span>Save</span></button> -->
             </div>
         </div>
     </nav>
@@ -314,6 +314,145 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 break;
         }
+    }
+});
+
+// Copy Button Functionality for Code Blocks
+function initializeCopyButtons() {
+    // Find all pre elements (code blocks)
+    const codeBlocks = document.querySelectorAll('pre');
+    
+    codeBlocks.forEach((pre, index) => {
+        // Create copy button
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-btn';
+        copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+        copyBtn.setAttribute('data-index', index);
+        
+        // Style the button
+        copyBtn.style.cssText = `
+            position: absolute;
+            top: 0.8rem;
+            right: 1rem;
+            background: rgba(0, 255, 255, 0.1);
+            color: #00ffff;
+            padding: 0.3rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-family: 'Orbitron', sans-serif;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+        `;
+        
+        // Add hover effect
+        copyBtn.addEventListener('mouseenter', () => {
+            copyBtn.style.background = 'rgba(0, 255, 255, 0.2)';
+            copyBtn.style.transform = 'scale(1.05)';
+        });
+        
+        copyBtn.addEventListener('mouseleave', () => {
+            copyBtn.style.background = 'rgba(0, 255, 255, 0.1)';
+            copyBtn.style.transform = 'scale(1)';
+        });
+        
+        // Add click event
+        copyBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            
+            // Get the code text
+            const codeText = pre.textContent || pre.innerText;
+            
+            try {
+                // Try modern clipboard API first
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(codeText);
+                } else {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = codeText;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-999999px';
+                    textArea.style.top = '-999999px';
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    document.execCommand('copy');
+                    textArea.remove();
+                }
+                
+                // Show success feedback
+                copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                copyBtn.style.background = 'rgba(0, 255, 0, 0.2)';
+                copyBtn.style.color = '#00ff00';
+                
+                // Show notification if your notification system exists
+                if (typeof showNotification === 'function') {
+                    showNotification('Code copied to clipboard!', 'success');
+                }
+                
+                // Reset button after 2 seconds
+                setTimeout(() => {
+                    copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+                    copyBtn.style.background = 'rgba(0, 255, 255, 0.1)';
+                    copyBtn.style.color = '#00ffff';
+                }, 2000);
+                
+            } catch (err) {
+                console.error('Copy failed:', err);
+                copyBtn.innerHTML = '<i class="fas fa-times"></i> Failed';
+                copyBtn.style.background = 'rgba(255, 0, 0, 0.2)';
+                copyBtn.style.color = '#ff0000';
+                
+                setTimeout(() => {
+                    copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+                    copyBtn.style.background = 'rgba(0, 255, 255, 0.1)';
+                    copyBtn.style.color = '#00ffff';
+                }, 2000);
+            }
+        });
+        
+        // Make sure the pre element has relative positioning
+        pre.style.position = 'relative';
+        
+        // Append button to the pre element
+        pre.appendChild(copyBtn);
+    });
+}
+
+// Initialize copy buttons when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Your existing DOMContentLoaded code here...
+    
+    // Initialize copy buttons
+    initializeCopyButtons();
+    
+    // Re-initialize if content is dynamically loaded
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                // Check if any new pre elements were added
+                const hasNewCodeBlocks = Array.from(mutation.addedNodes).some(node => 
+                    node.nodeType === 1 && (node.tagName === 'PRE' || node.querySelector('pre'))
+                );
+                
+                if (hasNewCodeBlocks) {
+                    // Small delay to ensure content is fully rendered
+                    setTimeout(initializeCopyButtons, 100);
+                }
+            }
+        });
+    });
+    
+    // Start observing the article content for changes
+    const articleContent = document.querySelector('.article-content');
+    if (articleContent) {
+        observer.observe(articleContent, {
+            childList: true,
+            subtree: true
+        });
     }
 });
     </script>
