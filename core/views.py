@@ -50,12 +50,10 @@ class PageRequest(View):
             }
 
             # Handle template vs content rendering
-            if page.template and page.template.files.exists():
+            if page.template:
                 # Use template files
                 template_files = page.template.files.all().order_by('id')
-                context['template_includes'] = [
-                    f.get_include_path() for f in template_files
-                ]
+                context['template_includes'] = [component.content for component in template_files]
             else:
                 # Use manual content
                 context['page_content'] = page.content

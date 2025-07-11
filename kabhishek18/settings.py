@@ -245,7 +245,7 @@ UNFOLD = {
     },
     "SIDEBAR": {
         "show_search": True,
-        "show_all_applications": False, # We will define our own navigation
+        "show_all_applications": True, # We will define our own navigation
         "navigation": [
             {
                 "title": _("Navigation"),
@@ -288,9 +288,9 @@ UNFOLD = {
                         "permission": lambda request: request.user.is_superuser,
                     },
                     {
-                        "title": _("Template Files"),
+                        "title": _("Components"),
                         "icon": "html",
-                        "link": reverse_lazy("admin:core_templatefile_changelist"),
+                        "link": reverse_lazy("admin:core_component_changelist"),
                         "permission": lambda request: request.user.is_superuser,
                     },
                 ],
@@ -342,6 +342,14 @@ CKEDITOR_CONFIGS = {
     'basic': {
         'width': '100%',
         'allowedContent': True,
+    },
+    'source_only': {
+        'toolbar': [['Source']],
+        'height': 400,
+        'width': '100%',
+        'removePlugins': 'stylesheetparser',
+        'allowedContent': True,
+        'extraPlugins': 'sourcearea',
     }
 }
 

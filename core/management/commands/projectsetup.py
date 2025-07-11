@@ -15,8 +15,7 @@ from django.core.management.base import BaseCommand
 from django.db import utils
 from dotenv import load_dotenv
 
-# Import the model needed for syncing
-from core.models import TemplateFile
+
 
 # Load environment variables from .env file
 load_dotenv()
@@ -83,8 +82,6 @@ class Command(BaseCommand):
             self.reset_database()
         elif command == "resetapp":
             self.reset_app(options["app_label"])
-        elif command == "synctemplates":
-            self.sync_templates()
 
     def init_project(self):
         """
@@ -94,7 +91,7 @@ class Command(BaseCommand):
         db_name = settings.DATABASES['default']['NAME']
 
         # Step 1: Create the database
-        self.stdout.write(self.style.HTTP_INFO(f"\n[1/5] Creating database '{db_name}'..."))
+        self.stdout.write(self.style.HTTP_INFO(f"\n[1/4] Creating database '{db_name}'..."))
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -107,19 +104,15 @@ class Command(BaseCommand):
             return
 
         # Step 2: Run makemigrations
-        self.stdout.write(self.style.HTTP_INFO("\n[2/5] Creating new migrations..."))
+        self.stdout.write(self.style.HTTP_INFO("\n[2/4] Creating new migrations..."))
         call_command("makemigrations")
 
         # Step 3: Run migrate
-        self.stdout.write(self.style.HTTP_INFO("\n[3/5] Applying migrations..."))
+        self.stdout.write(self.style.HTTP_INFO("\n[3/4] Applying migrations..."))
         call_command("migrate")
 
-        # Step 4: Sync templates from filesystem to DB
-        self.stdout.write(self.style.HTTP_INFO("\n[4/5] Syncing templates..."))
-        self.sync_templates()
-
         # Step 5: Create superuser from environment variables
-        self.stdout.write(self.style.HTTP_INFO("\n[5/5] Creating superuser..."))
+        self.stdout.write(self.style.HTTP_INFO("\n[4/4] Creating superuser..."))
         self.create_superuser()
 
         self.stdout.write(self.style.SUCCESS("\n🎉 Project initialization complete!"))
@@ -154,10 +147,6 @@ class Command(BaseCommand):
         # Step 2: Run migrate
         self.stdout.write(self.style.HTTP_INFO("\n[2/3] Applying migrations to the new database..."))
         call_command("migrate")
-
-        # Step 3: Sync templates
-        self.stdout.write(self.style.HTTP_INFO("\n[3/3] Syncing templates..."))
-        self.sync_templates()
         
         self.stdout.write(self.style.SUCCESS("\n🎉 Database reset complete!"))
         self.stdout.write(self.style.WARNING("Don't forget to create a new superuser with 'python manage.py projectsetup init' or 'python manage.py createsuperuser'."))
@@ -204,17 +193,3 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f"Superuser '{username}' created successfully."))
         else:
             self.stdout.write(self.style.WARNING(f"Superuser '{username}' already exists. Skipping creation."))
-
-    def sync_templates(self):
-        """
-        Handles the 'synctemplates' command.
-        """
-        self.stdout.write(self.style.HTTP_INFO('Starting template synchronization...'))
-        try:
-            created_count = TemplateFile.sync_from_filesystem()
-            if created_count > 0:
-                self.stdout.write(self.style.SUCCESS(f'Successfully created {created_count} new template(s).'))
-            else:
-                self.stdout.write(self.style.SUCCESS('No new templates to create. Database is up to date.'))
-        except Exception as e:
-            self.stderr.write(self.style.ERROR(f"An error occurred during template sync: {e}"))

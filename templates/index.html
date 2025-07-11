@@ -99,19 +99,13 @@
 {% endblock navbar %}
 
 {% block content %}
-    {% if template_includes %}
-        {# If a list of template paths is provided, loop and include them #}
-        {% for template_path in template_includes %}
-            {% include template_path %}
-        {% endfor %}
+   {% if template_includes %}
+    {# Loop through the list of component HTML provided by the view #}
+    {% for component_html in template_includes %}
+        {{ component_html|safe }}
+    {% endfor %}
     {% elif page_content %}
-        {# Otherwise, if there is raw page content, render it safely #}
-        <div class="container main-container">
-            {{ page_content|safe }}
-        </div>
-    {% else %}
-        <div class="container main-container">
-            <p>This page has no content or template assigned.</p>
-        </div>
+        {# Display manual page content if no template is used #}
+        {{ page_content|safe }}
     {% endif %}
 {% endblock %}
