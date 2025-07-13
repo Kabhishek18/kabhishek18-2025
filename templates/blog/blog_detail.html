@@ -73,11 +73,47 @@
 
         <div class="author-section">
             <div class="author-avatar">
-                 {% if post.author.first_name %}{{ post.author.first_name|first }}{{ post.author.last_name|first }}{% else %}{{ post.author.username|first|upper }}{% endif %}
+                {% if post.author.profile.profile_picture %}
+                    <img src="{{ post.author.profile.profile_picture.url }}" 
+                        alt="{{ post.author.get_full_name }}'s profile" 
+                        class="profile-image">
+                {% else %}
+                    <!-- Fallback to initials if no profile image -->
+                    <div class="profile-initials">
+                        {% if post.author.first_name %}{{ post.author.first_name|first }}{{ post.author.last_name|first }}{% else %}{{ post.author.username|first|upper }}{% endif %}
+                    </div>
+                {% endif %}
             </div>
             <div class="author-info">
                 <h3>{{ post.author.get_full_name|default:post.author.username }}</h3>
-                <p class="author-bio">Full Stack Software Developer with 9+ years of experience in Python, PHP, and ReactJS. Passionate about AI, machine learning, and the intersection of technology and human creativity.</p>
+                
+                {% if post.author.profile.about %}
+                    <p class="author-bio">{{ post.author.profile.about }}</p>
+                {% else %}
+                    <p class="author-bio">Full Stack Developer | AI Enthusiast | Digital Architect</p>
+                {% endif %}
+                
+                <!-- Only show social media section if get_social_media exists -->
+                {% if post.author.get_social_media %}
+                    {% with social=post.author.get_social_media %}
+                        {% if social.twitter or social.linkedin or social.instagram or social.website %}
+                            <div class="author-social">
+                                {% if social.website %}
+                                    <a href="{{ social.website }}" target="_blank">🌐 Website</a>
+                                {% endif %}
+                                {% if social.twitter %}
+                                    <a href="{{ social.twitter }}" target="_blank">🐦 Twitter</a>
+                                {% endif %}
+                                {% if social.linkedin %}
+                                    <a href="{{ social.linkedin }}" target="_blank">💼 LinkedIn</a>
+                                {% endif %}
+                                {% if social.instagram %}
+                                    <a href="{{ social.instagram }}" target="_blank">📸 Instagram</a>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+                {% endif %}
             </div>
         </div>
         <amp-auto-ads type="adsense"

@@ -27,7 +27,7 @@ def blog_list(request, category_slug=None):
         ).distinct()
 
     # Pagination - Show 6 posts per page
-    paginator = Paginator(posts_list, 9)
+    paginator = Paginator(posts_list, 10)
     page_number = request.GET.get('page')
     try:
         posts = paginator.page(page_number)
@@ -57,6 +57,11 @@ def blog_detail(request, slug):
     """
     post = get_object_or_404(Post, slug=slug, status='published')
     
+    print(f"Author first_name: '{post.author.first_name}'")
+    print(f"Author last_name: '{post.author.last_name}'")
+    print(f"Author username: '{post.author.username}'")
+    print(f"Author post.author.profile.profile_picture.url : '{post.author.profile.profile_picture.url }'")
+
     # Increment the view count
     Post.objects.filter(pk=post.pk).update(view_count=F('view_count') + 1)
     post.refresh_from_db() 

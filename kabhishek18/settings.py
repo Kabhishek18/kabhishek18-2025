@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     #Custom Modules
+    'users',
     'core',
     'blog',
     'api'
