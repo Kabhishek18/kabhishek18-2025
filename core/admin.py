@@ -69,3 +69,5 @@ class PageAdmin(ModelAdmin):
             'fields': ('is_published', 'is_homepage', 'navbar_type')
         }),
     )
+
+    

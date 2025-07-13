@@ -1,0 +1,449 @@
+{% extends "unfold/layouts/base.html" %}
+{% load i18n unfold %}
+
+{% block title %}Dashboard | {{ site_header }}{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .metric-card {
+        background: linear-gradient(135deg, var(--primary-50) 0%, var(--primary-100) 100%);
+        border: 1px solid var(--primary-200);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        border-color: var(--primary-300);
+    }
+    
+    .metric-icon {
+        background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%);
+        transition: all 0.3s ease;
+    }
+    
+    .metric-card:hover .metric-icon {
+        transform: scale(1.1);
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 320px;
+        background: var(--surface-primary);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    
+    .recent-posts-container {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .recent-posts-container::-webkit-scrollbar {
+        width: 4px;
+    }
+    
+    .recent-posts-container::-webkit-scrollbar-track {
+        background: var(--surface-secondary);
+        border-radius: 2px;
+    }
+    
+    .recent-posts-container::-webkit-scrollbar-thumb {
+        background: var(--primary-400);
+        border-radius: 2px;
+    }
+    
+    .post-item {
+        transition: all 0.2s ease;
+        border-left: 3px solid transparent;
+        padding-left: 12px;
+        margin-left: -12px;
+    }
+    
+    .post-item:hover {
+        background: var(--surface-secondary);
+        border-left-color: var(--primary-500);
+        border-radius: 6px;
+    }
+    
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .status-published {
+        background: var(--success-100);
+        color: var(--success-700);
+    }
+    
+    .status-draft {
+        background: var(--warning-100);
+        color: var(--warning-700);
+    }
+    
+    .welcome-header {
+        background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+        color: white;
+        padding: 24px;
+        border-radius: 16px;
+        margin-bottom: 32px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .welcome-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        animation: shimmer 3s ease-in-out infinite;
+    }
+    
+    @keyframes shimmer {
+        0%, 100% { transform: rotate(0deg); }
+        50% { transform: rotate(180deg); }
+    }
+    
+    .dashboard-grid {
+        display: grid;
+        gap: 24px;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+    
+    .chart-grid {
+        display: grid;
+        gap: 24px;
+        grid-template-columns: 2fr 1fr;
+    }
+    
+    @media (max-width: 1024px) {
+        .chart-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .loading-skeleton {
+        background: linear-gradient(90deg, var(--surface-secondary) 25%, var(--surface-primary) 50%, var(--surface-secondary) 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+        border-radius: 4px;
+    }
+    
+    @keyframes loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+    <!-- Welcome Header -->
+    <div class="welcome-header">
+        <div class="relative z-10">
+            <h1 class="text-3xl font-bold mb-2">
+                {% trans "Welcome back" %}, {{ request.user.get_full_name|default:request.user.username }}!
+            </h1>
+            <p class="text-lg opacity-90">
+                {% trans "Here's your site overview and recent activity" %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Metrics Grid -->
+    <div class="dashboard-grid">
+        {% for metric in metrics %}
+        <div class="metric-card p-6 rounded-2xl">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                        {{ metric.label }}
+                    </p>
+                    <p class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+                        {{ metric.value|floatformat:0 }}
+                    </p>
+                    <div class="flex items-center space-x-2">
+                        {% if metric.change %}
+                        <span class="text-xs px-2 py-1 rounded-full {% if metric.change > 0 %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
+                            {% if metric.change > 0 %}+{% endif %}{{ metric.change }}%
+                        </span>
+                        {% endif %}
+                        <span class="text-xs text-gray-500 dark:text-gray-400">
+                            {% trans "" %}
+                        </span>
+                    </div>
+                </div>
+                <div class="metric-icon w-14 h-14 flex items-center justify-center rounded-2xl text-white">
+                    <span class="material-symbols-outlined text-2xl">{{ metric.icon|default:'monitoring' }}</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Charts and Recent Activity -->
+    <div class="chart-grid">
+        <!-- Content Overview Chart -->
+        <div class="p-6 bg-white dark:bg-gray-800/50 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700/50">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                    {% trans "Content Overview" %}
+                </h3>
+                <div class="flex items-center space-x-2">
+                    <button class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <span class="material-symbols-outlined text-lg">refresh</span>
+                    </button>
+                    <button class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <span class="material-symbols-outlined text-lg">more_vert</span>
+                    </button>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="contentChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Recent Posts -->
+        <div class="p-6 bg-white dark:bg-gray-800/50 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700/50">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                    {% trans "Recent Posts" %}
+                </h3>
+                <a href="{% url 'admin:blog_post_changelist' %}" class="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors">
+                    {% trans "View all" %}
+                </a>
+            </div>
+            <div class="recent-posts-container space-y-4">
+                {% for post in recent_posts %}
+                <div class="post-item p-3 rounded-lg">
+                    <div class="flex items-start space-x-3">
+                        <div class="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 text-white">
+                            <span class="material-symbols-outlined text-lg">{% if post.status == 'published' %}visibility{% else %}edit{% endif %}</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between mb-1">
+                                <a href="{% url 'admin:blog_post_change' post.id %}" class="text-sm font-semibold text-gray-900 dark:text-gray-100 hover:text-primary-600 dark:hover:text-primary-400 transition-colors line-clamp-1">
+                                    {{ post.title }}
+                                </a>
+                                <span class="status-badge status-{% if post.status == 'published' %}published{% else %}draft{% endif %}">
+                                    {{ post.status }}
+                                </span>
+                            </div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                {% if post.status == 'published' %}
+                                    {% trans "Published" %} {{ post.published_at|date:"M d, Y" }}
+                                {% else %}
+                                    {% trans "Updated" %} {{ post.updated_at|date:"M d, Y" }}
+                                {% endif %}
+                            </p>
+                            {% if post.excerpt %}
+                            <p class="text-xs text-gray-600 dark:text-gray-300 mt-1 line-clamp-2">
+                                {{ post.excerpt|truncatewords:15 }}
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-8">
+                    <span class="material-symbols-outlined text-4xl text-gray-400 mb-2">article</span>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                        {% trans "No posts found. Create your first post!" %}
+                    </p>
+                    <a href="{% url 'admin:blog_post_add' %}" class="inline-flex items-center mt-3 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors">
+                        <span class="material-symbols-outlined text-sm mr-2">add</span>
+                        {% trans "Create Post" %}
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="p-6 bg-white dark:bg-gray-800/50 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700/50">
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            {% trans "Quick Actions" %}
+        </h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            <a href="{% url 'admin:blog_post_add' %}" class="flex flex-col items-center p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group">
+                <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-blue-600 dark:text-blue-400">add</span>
+                </div>
+                <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{% trans "New Post" %}</span>
+            </a>
+            <a href="{% url 'admin:blog_category_changelist' %}" class="flex flex-col items-center p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group">
+                <div class="w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-green-600 dark:text-green-400">folder</span>
+                </div>
+                <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{% trans "Categories" %}</span>
+            </a>
+            <a href="{% url 'admin:core_page_changelist' %}" class="flex flex-col items-center p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group">
+                <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-purple-600 dark:text-purple-400">layers</span>
+                </div>
+                <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{% trans "Pages" %}</span>
+            </a>
+            <a href="{% url 'admin:auth_user_changelist' %}" class="flex flex-col items-center p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group">
+                <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/50 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-orange-600 dark:text-orange-400">group</span>
+                </div>
+                <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{% trans "Users" %}</span>
+            </a>
+            <a href="{% url 'admin:core_template_changelist' %}" class="flex flex-col items-center p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group">
+                <div class="w-12 h-12 bg-red-100 dark:bg-red-900/50 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-red-600 dark:text-red-400">dashboard_customize</span>
+                </div>
+                <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{% trans "Templates" %}</span>
+            </a>
+            <a href="{% url 'admin:index' %}" class="flex flex-col items-center p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group">
+                <div class="w-12 h-12 bg-gray-100 dark:bg-gray-600 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-gray-600 dark:text-gray-400">settings</span>
+                </div>
+                <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{% trans "Settings" %}</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('contentChart')?.getContext('2d');
+    if (!ctx) return;
+
+    // Detect dark mode
+    const isDarkMode = document.documentElement.classList.contains('dark') || 
+                       document.documentElement.getAttribute('data-theme') === 'dark';
+
+    // Enhanced color scheme
+    const colors = {
+        primary: isDarkMode ? '#60A5FA' : '#3B82F6',
+        secondary: isDarkMode ? '#34D399' : '#10B981',
+        accent: isDarkMode ? '#F59E0B' : '#F59E0B',
+        surface: isDarkMode ? '#1F2937' : '#FFFFFF',
+        text: isDarkMode ? '#E5E7EB' : '#374151',
+        grid: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+    };
+
+    // Create gradient
+    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, colors.primary);
+    gradient.addColorStop(1, colors.primary + '40');
+
+    // Chart configuration
+    const chartData = {
+        labels: {{ chart_data.labels|safe }},
+        datasets: [{
+            label: '{% trans "Count" %}',
+            data: {{ chart_data.values|safe }},
+            backgroundColor: gradient,
+            borderColor: colors.primary,
+            borderWidth: 2,
+            borderRadius: 8,
+            borderSkipped: false,
+            hoverBackgroundColor: colors.primary + 'CC',
+            hoverBorderColor: colors.primary,
+            hoverBorderWidth: 3,
+        }]
+    };
+
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+            intersect: false,
+            mode: 'index',
+        },
+        plugins: {
+            legend: { 
+                display: false 
+            },
+            tooltip: {
+                backgroundColor: colors.surface,
+                titleColor: colors.text,
+                bodyColor: colors.text,
+                borderColor: colors.grid,
+                borderWidth: 1,
+                padding: 12,
+                cornerRadius: 12,
+                titleFont: { size: 14, weight: 'bold' },
+                bodyFont: { size: 13 },
+                usePointStyle: true,
+                callbacks: {
+                    label: function(context) {
+                        return `${context.dataset.label}: ${context.parsed.y.toLocaleString()}`;
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: {
+                    color: colors.grid,
+                    lineWidth: 1,
+                },
+                ticks: {
+                    color: colors.text,
+                    font: { size: 12 },
+                    callback: function(value) {
+                        return value.toLocaleString();
+                    }
+                }
+            },
+            x: {
+                grid: {
+                    display: false,
+                },
+                ticks: {
+                    color: colors.text,
+                    font: { size: 12 },
+                    maxRotation: 45,
+                }
+            }
+        },
+        elements: {
+            bar: {
+                borderRadius: 8,
+            }
+        },
+        animation: {
+            duration: 1000,
+            easing: 'easeOutQuart',
+        }
+    };
+
+    // Create chart
+    new Chart(ctx, {
+        type: 'bar',
+        data: chartData,
+        options: chartOptions
+    });
+
+    // Add loading states and error handling
+    const refreshButton = document.querySelector('[data-action="refresh"]');
+    if (refreshButton) {
+        refreshButton.addEventListener('click', function() {
+            // Add loading state
+            this.innerHTML = '<span class="material-symbols-outlined animate-spin">refresh</span>';
+            
+            // Simulate refresh (replace with actual refresh logic)
+            setTimeout(() => {
+                this.innerHTML = '<span class="material-symbols-outlined">refresh</span>';
+            }, 1000);
+        });
+    }
+});
+</script>
+{% endblock %}

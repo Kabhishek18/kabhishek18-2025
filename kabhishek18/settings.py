@@ -258,6 +258,11 @@ UNFOLD = {
                         "link": reverse_lazy("admin:index"),
                         # No permission needed, visible to all staff
                     },
+                       {
+                        "title": "System Health",
+                        "icon": "health_and_safety",
+                        "link": "/core/dashboard/health/",
+                    },
                     {
                         "title": _("Users"),
                         "icon": "people",
@@ -328,6 +333,9 @@ UNFOLD = {
             },
         ],
     },
+    
+    "DASHBOARD_CALLBACK": "core.views.dashboard_callback",
+
 }
 CKEDITOR_UPLOAD_PATH = "uploads/"
 
