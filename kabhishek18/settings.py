@@ -258,11 +258,7 @@ UNFOLD = {
                         "link": reverse_lazy("admin:index"),
                         # No permission needed, visible to all staff
                     },
-                       {
-                        "title": "System Health",
-                        "icon": "health_and_safety",
-                        "link": "/core/dashboard/health/",
-                    },
+
                     {
                         "title": _("Users"),
                         "icon": "people",
@@ -371,3 +367,147 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+# API Authentication Settings
+API_KEY_EXPIRATION_HOURS = int(os.getenv('API_KEY_EXPIRATION_HOURS', 24))
+API_RATE_LIMIT_PER_MINUTE = int(os.getenv('API_RATE_LIMIT_PER_MINUTE', 60))
+API_RATE_LIMIT_PER_HOUR = int(os.getenv('API_RATE_LIMIT_PER_HOUR', 1000))
+API_ENABLE_IP_WHITELIST = os.getenv('API_ENABLE_IP_WHITELIST', 'False').lower() == 'true'
+API_REQUIRE_HTTPS = os.getenv('API_REQUIRE_HTTPS', 'True').lower() == 'true'
+API_KEY_EXPIRATION_WARNING_HOURS = int(os.getenv('API_KEY_EXPIRATION_WARNING_HOURS', 2))
+
+# Django REST Framework Configuration
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'api.authentication.CombinedAPIAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',
+        'user': '1000/hour'
+    },
+    'EXCEPTION_HANDLER': 'api.exceptions.custom_exception_handler',
+}
+
+# Swagger/OpenAPI Documentation Settings
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'ClientAPIKey': {
+            'type': 'apiKey',
+            'name': 'X-Client-ID',
+            'in': 'header'
+        },
+        'APIKey': {
+            'type': 'apiKey',
+            'name': 'X-API-Key',
+            'in': 'header'
+        },
+        'EncryptionKey': {
+            'type': 'apiKey',
+            'name': 'X-Encryption-Key',
+            'in': 'header'
+        }
+    },
+    'USE_SESSION_AUTH': False,
+    'JSON_EDITOR': True,
+    'SUPPORTED_SUBMIT_METHODS': [
+        'get',
+        'post',
+        'put',
+        'delete',
+        'patch'
+    ],
+    'OPERATIONS_SORTER': 'alpha',
+    'TAGS_SORTER': 'alpha',
+    'DOC_EXPANSION': 'none',
+    'DEEP_LINKING': True,
+    'SHOW_EXTENSIONS': True,
+    'SHOW_COMMON_EXTENSIONS': True,
+}
+
+REDOC_SETTINGS = {
+    'LAZY_RENDERING': False,
+    'HIDE_HOSTNAME': False,
+    'EXPAND_RESPONSES': 'all',
+}
+
+# Cache Configuration for API Rate Limiting
+# Use Redis if available, otherwise fall back to database cache
+REDIS_URL = os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1')
+
+try:
+    import redis
+    # Test Redis connection
+    r = redis.from_url(REDIS_URL)
+    r.ping()
+    # If Redis is available, use it
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': REDIS_URL,
+            'KEY_PREFIX': 'kabhishek18_api',
+            'TIMEOUT': 300,
+        }
+    }
+except (ImportError, redis.ConnectionError, redis.RedisError):
+    # Fall back to database cache if Redis is not available
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+            'LOCATION': 'cache_table',
+        }
+    }
+
+# API Logging Configuration
+LOGGING['loggers'].update({
+    'api.authentication': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+        'propagate': False,
+    },
+    'api.views': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+        'propagate': False,
+    },
+    'api.utils': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+        'propagate': False,
+    },
+})
+
+# CORS Settings (if needed for frontend integration)
+CORS_ALLOWED_ORIGINS = [
+    origin.strip() for origin in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',') if origin.strip()
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'x-client-id',
+    'x-api-key',
+    'x-encryption-key',
+]

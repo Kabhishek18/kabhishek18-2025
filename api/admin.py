@@ -1,5 +1,10 @@
 # admin.py 
+# API Authentication Admin
 
+from .models import APIClient, APIKey, APIUsageLog
+from django.utils.html import format_html
+from django.urls import reverse
+from django.utils.safestring import mark_safe
 from django.contrib import admin
 from django.contrib import messages
 from django.utils import timezone
@@ -250,3 +255,159 @@ class ScriptRunnerAdmin(ModelAdmin):
             'all': ('admin/css/script_runner.css',)
         }
         js = ('admin/js/script_runner.js',)
+
+@admin.register(APIClient)
+class APIClientAdmin(ModelAdmin):
+    list_display = ['name', 'get_status', 'client_id', 'created_by', 'get_permissions', 'get_rate_limits', 'created_at']
+    list_filter = ['is_active', 'can_read_posts', 'can_write_posts', 'can_delete_posts', 'created_at']
+    search_fields = ['name', 'description', 'client_id']
+    readonly_fields = ['client_id', 'created_at', 'updated_at']
+    
+    fieldsets = (
+        ("🔧 Client Information", {
+            'fields': ('name', 'description', 'client_id', 'is_active', 'created_by'),
+            'description': 'Basic client configuration'
+        }),
+        ("🔐 Permissions", {
+            'fields': (
+                'can_read_posts', 'can_write_posts', 'can_delete_posts',
+                'can_manage_categories', 'can_access_users', 'can_access_pages'
+            ),
+            'description': 'Set what this client can access'
+        }),
+        ("⚡ Rate Limiting", {
+            'fields': ('requests_per_minute', 'requests_per_hour'),
+            'description': 'Control request frequency'
+        }),
+        ("🌐 Security", {
+            'fields': ('allowed_ips',),
+            'description': 'IP restrictions (comma-separated, leave blank for no restriction)'
+        }),
+        ("📅 Timestamps", {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',),
+        }),
+    )
+    
+    def get_status(self, obj):
+        if obj.is_active:
+            return format_html('<span style="color: green;">🟢 Active</span>')
+        return format_html('<span style="color: red;">🔴 Inactive</span>')
+    get_status.short_description = 'Status'
+    
+    def get_permissions(self, obj):
+        perms = []
+        if obj.can_read_posts: perms.append('Read')
+        if obj.can_write_posts: perms.append('Write')
+        if obj.can_delete_posts: perms.append('Delete')
+        if obj.can_manage_categories: perms.append('Categories')
+        if obj.can_access_users: perms.append('Users')
+        if obj.can_access_pages: perms.append('Pages')
+        return ', '.join(perms) if perms else 'None'
+    get_permissions.short_description = 'Permissions'
+    
+    def get_rate_limits(self, obj):
+        return f"{obj.requests_per_minute}/min, {obj.requests_per_hour}/hr"
+    get_rate_limits.short_description = 'Rate Limits'
+    
+    def save_model(self, request, obj, form, change):
+        if not change:  # New object
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+@admin.register(APIKey)
+class APIKeyAdmin(ModelAdmin):
+    list_display = ['client', 'get_status', 'created_at', 'expires_at', 'get_usage', 'last_used_at']
+    list_filter = ['is_active', 'created_at', 'expires_at']
+    search_fields = ['client__name', 'key_hash']
+    readonly_fields = ['key_hash', 'encryption_key', 'created_at', 'last_used_at', 'usage_count']
+    
+    fieldsets = (
+        ("🔑 Key Information", {
+            'fields': ('client', 'is_active'),
+            'description': 'API key configuration'
+        }),
+        ("🔐 Security Details", {
+            'fields': ('key_hash', 'encryption_key', 'expires_at'),
+            'classes': ('collapse',),
+            'description': 'Key security information (read-only)'
+        }),
+        ("📊 Usage Statistics", {
+            'fields': ('usage_count', 'last_used_at'),
+            'classes': ('collapse',),
+        }),
+        ("📅 Timestamps", {
+            'fields': ('created_at',),
+            'classes': ('collapse',),
+        }),
+    )
+    
+    def get_status(self, obj):
+        if not obj.is_active:
+            return format_html('<span style="color: red;">🔴 Inactive</span>')
+        elif obj.is_expired():
+            return format_html('<span style="color: orange;">⏰ Expired</span>')
+        else:
+            return format_html('<span style="color: green;">🟢 Active</span>')
+    get_status.short_description = 'Status'
+    
+    def get_usage(self, obj):
+        return f"{obj.usage_count} times"
+    get_usage.short_description = 'Usage'
+    
+    actions = ['generate_new_keys']
+    
+    def generate_new_keys(self, request, queryset):
+        """Generate new API keys for selected clients"""
+        for api_key in queryset:
+            try:
+                # Generate new key pair
+                key_data = APIKey.generate_key_pair(api_key.client)
+                messages.success(
+                    request, 
+                    f"🔑 New API key generated for {api_key.client.name}. "
+                    f"Key: {key_data['api_key'][:8]}... (save this key securely!)"
+                )
+            except Exception as e:
+                messages.error(request, f"❌ Failed to generate key for {api_key.client.name}: {str(e)}")
+    
+    generate_new_keys.short_description = "🔄 Generate New Keys"
+
+@admin.register(APIUsageLog)
+class APIUsageLogAdmin(ModelAdmin):
+    list_display = ['client', 'endpoint', 'method', 'get_status_code', 'response_time', 'timestamp', 'ip_address']
+    list_filter = ['method', 'status_code', 'timestamp', 'client']
+    search_fields = ['client__name', 'endpoint', 'ip_address', 'user_agent']
+    readonly_fields = ['client', 'api_key', 'endpoint', 'method', 'status_code', 'response_time', 
+                      'timestamp', 'ip_address', 'user_agent', 'request_size', 'response_size', 'error_message']
+    
+    fieldsets = (
+        ("📡 Request Information", {
+            'fields': ('client', 'api_key', 'endpoint', 'method', 'ip_address', 'user_agent'),
+        }),
+        ("📊 Response Details", {
+            'fields': ('status_code', 'response_time', 'request_size', 'response_size'),
+        }),
+        ("❌ Error Information", {
+            'fields': ('error_message',),
+            'classes': ('collapse',),
+        }),
+        ("📅 Timestamp", {
+            'fields': ('timestamp',),
+        }),
+    )
+    
+    def get_status_code(self, obj):
+        if 200 <= obj.status_code < 300:
+            return format_html('<span style="color: green;">✅ {}</span>', obj.status_code)
+        elif 400 <= obj.status_code < 500:
+            return format_html('<span style="color: orange;">⚠️ {}</span>', obj.status_code)
+        else:
+            return format_html('<span style="color: red;">❌ {}</span>', obj.status_code)
+    get_status_code.short_description = 'Status'
+    
+    def has_add_permission(self, request):
+        return False  # Usage logs are created automatically
+    
+    def has_change_permission(self, request, obj=None):
+        return False  # Usage logs are read-only

@@ -25,8 +25,8 @@ urlpatterns = [
     # Admin URLs
     path('open/admin/', admin.site.urls),
     
-    # API URLs - specific prefix
-    path('api/', include('api.urls')),
+    # API URLs - specific prefix with versioning
+    path('api/v1/', include('api.urls')),
     
     # Blog URLs - specific prefix
     path('blog/', include('blog.urls', namespace='blog')),
