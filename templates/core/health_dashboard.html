@@ -1,0 +1,974 @@
+{% extends "unfold/layouts/base.html" %}
+{% load i18n %}
+
+{% block title %}System Health Dashboard | {{ site_header }}{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    /* Health Dashboard Styles using Unfold CSS variables */
+    .health-header {
+        background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+        color: var(--white);
+        padding: 24px;
+        border-radius: 16px;
+        margin-bottom: 32px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .health-card {
+        background-color: var(--body-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.3s ease;
+    }
+
+    .health-card:hover {
+        border-color: var(--primary-500);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px -5px var(--primary-500-shadow);
+    }
+
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 8px;
+    }
+
+    .status-healthy { background-color: #10B981; }
+    .status-warning { background-color: #F59E0B; }
+    .status-critical { background-color: #EF4444; }
+    .status-unknown { background-color: #6B7280; }
+
+    .metric-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: var(--primary-600);
+    }
+
+    .metric-label {
+        font-size: 0.875rem;
+        color: var(--gray-500);
+        margin-bottom: 4px;
+    }
+
+    .response-time {
+        font-size: 0.75rem;
+        color: var(--gray-400);
+    }
+
+    .alert-card {
+        border-left: 4px solid;
+        padding: 16px;
+        margin-bottom: 12px;
+        border-radius: 8px;
+        background-color: var(--body-bg);
+    }
+
+    .alert-critical { border-left-color: #EF4444; }
+    .alert-warning { border-left-color: #F59E0B; }
+    .alert-info { border-left-color: #3B82F6; }
+
+    .refresh-indicator {
+        display: inline-block;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    .connection-status {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        z-index: 1000;
+        transition: all 0.3s ease;
+    }
+
+    .connection-online {
+        background-color: #10B981;
+        color: white;
+    }
+
+    .connection-offline {
+        background-color: #EF4444;
+        color: white;
+    }
+
+    .chart-container {
+        height: 200px;
+        margin-top: 16px;
+    }
+
+    .details-toggle {
+        cursor: pointer;
+        color: var(--primary-600);
+        font-size: 0.875rem;
+        margin-top: 8px;
+    }
+
+    .details-content {
+        margin-top: 12px;
+        padding: 12px;
+        background-color: var(--gray-50);
+        border-radius: 8px;
+        font-size: 0.875rem;
+        display: none;
+    }
+
+    .dark .details-content {
+        background-color: var(--gray-800);
+    }
+
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background-color: var(--gray-200);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 8px;
+    }
+
+    .dark .progress-bar {
+        background-color: var(--gray-700);
+    }
+
+    .progress-fill {
+        height: 100%;
+        transition: width 0.3s ease;
+    }
+
+    .progress-healthy { background-color: #10B981; }
+    .progress-warning { background-color: #F59E0B; }
+    .progress-critical { background-color: #EF4444; }
+    
+    /* Animations for better UX */
+    .fade-in {
+        animation: fadeIn 0.5s ease-in;
+    }
+    
+    .fade-out {
+        animation: fadeOut 0.5s ease-out;
+        opacity: 0;
+    }
+    
+    .text-pulse {
+        animation: textPulse 1s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes fadeOut {
+        from { opacity: 1; transform: translateY(0); }
+        to { opacity: 0; transform: translateY(10px); }
+    }
+    
+    @keyframes textPulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); color: #EF4444; }
+        100% { transform: scale(1); }
+    }
+    
+    /* Performance optimizations */
+    .health-card {
+        will-change: transform;
+        contain: content;
+    }
+    
+    .status-indicator {
+        will-change: background-color;
+    }
+    
+    .progress-fill {
+        will-change: width;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+    <!-- Connection Status Indicator -->
+    <div id="connectionStatus" class="connection-status connection-online">
+        <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">wifi</span>
+        Connected
+    </div>
+
+    <!-- Header -->
+    <div class="health-header">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold mb-1">System Health Dashboard</h1>
+                <p class="text-lg opacity-90">Real-time monitoring and system status</p>
+            </div>
+            <div class="text-right">
+                <button id="refreshBtn" class="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-colors">
+                    <span class="material-symbols-outlined" style="font-size: 20px; vertical-align: middle;">refresh</span>
+                    Refresh
+                </button>
+                <p class="text-sm opacity-75 mt-2">
+                    Last updated: <span id="lastUpdated">{{ health_summary.last_updated|date:"H:i:s" }}</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Health Summary -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="health-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="metric-label">Overall Status</div>
+                    <div class="flex items-center">
+                        <span class="status-indicator status-{{ system_health.overall_status }}"></span>
+                        <span class="text-lg font-semibold capitalize">{{ system_health.overall_status }}</span>
+                    </div>
+                </div>
+                <div class="text-3xl">
+                    <span class="material-symbols-outlined text-primary-600">
+                        {% if system_health.overall_status == 'healthy' %}health_and_safety
+                        {% elif system_health.overall_status == 'warning' %}warning
+                        {% else %}error{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="health-card">
+            <div class="metric-label">Total Checks</div>
+            <div id="totalChecks" class="metric-value">{{ health_summary.total_checks }}</div>
+            <div class="text-sm text-gray-500">System components</div>
+        </div>
+
+        <div class="health-card">
+            <div class="metric-label">Healthy Services</div>
+            <div id="healthyChecks" class="metric-value text-green-600">{{ health_summary.healthy_checks }}</div>
+            <div class="progress-bar">
+                <div id="healthyProgress" class="progress-fill progress-healthy" style="width: {% widthratio health_summary.healthy_checks health_summary.total_checks 100 %}%"></div>
+            </div>
+        </div>
+
+        <div class="health-card">
+            <div class="metric-label">Issues Found</div>
+            <div id="issuesFound" class="metric-value text-red-600">{{ health_summary.warning_checks|add:health_summary.critical_checks }}</div>
+            <div class="text-sm">
+                <span id="warningCount" class="text-yellow-600">{{ health_summary.warning_checks }} warnings</span> • 
+                <span id="criticalCount" class="text-red-600">{{ health_summary.critical_checks }} critical</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Health Checks -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {% for check_name, check_data in system_health.checks.items %}
+        <div id="check-{{ check_name }}" class="health-card">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center">
+                    <span class="status-indicator status-{{ check_data.status }}"></span>
+                    <h3 class="text-lg font-semibold capitalize">{{ check_name|title }}</h3>
+                </div>
+                <div class="text-right">
+                    {% if check_data.response_time %}
+                    <div class="response-time">{{ check_data.response_time|floatformat:0 }}ms</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <p class="text-gray-700 dark:text-gray-300 mb-2 check-message">{{ check_data.message }}</p>
+            
+            {% if check_data.details %}
+            <div class="details-toggle" onclick="toggleDetails('{{ check_name }}')">
+                <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">expand_more</span>
+                View Details
+            </div>
+            <div id="details-{{ check_name }}" class="details-content">
+                {% for key, value in check_data.details.items %}
+                    {% if key != 'error' %}
+                    <div class="flex justify-between py-1">
+                        <span class="font-medium">{{ key|title }}:</span>
+                        <span>
+                            {% if value|floatformat:2 != value %}
+                                {{ value|floatformat:2 }}
+                                {% if 'percent' in key %}%{% endif %}
+                                {% if 'gb' in key %}GB{% endif %}
+                            {% else %}
+                                {{ value }}
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Active Alerts -->
+    {% if active_alerts %}
+    <div class="health-card">
+        <h3 class="text-xl font-semibold mb-4">Active Alerts</h3>
+        <div id="activeAlerts">
+            {% for alert in active_alerts %}
+            <div class="alert-card alert-{{ alert.severity }}" data-alert-id="{{ alert.id }}">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <h4 class="font-semibold">{{ alert.title }}</h4>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">{{ alert.message }}</p>
+                        <p class="text-xs text-gray-500 mt-2">
+                            {{ alert.created_at|timesince }} ago • {{ alert.alert_type|title }}
+                        </p>
+                    </div>
+                    <button class="text-gray-400 hover:text-gray-600" onclick="resolveAlert({{ alert.id }})">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Metrics -->
+    <div class="health-card">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-semibold">Recent Health Metrics</h3>
+            <select id="metricTypeFilter" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+                <option value="">All Types</option>
+                <option value="database">Database</option>
+                <option value="cache">Cache</option>
+                <option value="memory">Memory</option>
+                <option value="disk">Disk</option>
+                <option value="api">API</option>
+                <option value="system_load">System Load</option>
+            </select>
+        </div>
+        
+        <div id="recentMetrics" class="space-y-2 max-h-96 overflow-y-auto">
+            {% for metric in recent_metrics %}
+            <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div class="flex items-center">
+                    <span class="status-indicator status-{{ metric.status }}"></span>
+                    <div>
+                        <div class="font-medium">{{ metric.metric_name|title }}</div>
+                        <div class="text-sm text-gray-500">{{ metric.message }}</div>
+                    </div>
+                </div>
+                <div class="text-right text-sm text-gray-500">
+                    <div>{{ metric.timestamp|date:"H:i:s" }}</div>
+                    {% if metric.response_time %}
+                    <div>{{ metric.response_time|floatformat:0 }}ms</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-center text-gray-500 py-8">No recent metrics available</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let refreshInterval;
+    let isRefreshing = false;
+    let refreshAttempts = 0;
+    let maxRefreshAttempts = 5;
+    let refreshBackoffTime = 5000; // Start with 5 seconds backoff
+    let lastRefreshTime = Date.now();
+    let refreshStats = {
+        successCount: 0,
+        failureCount: 0,
+        avgResponseTime: 0,
+        lastResponseTime: 0
+    };
+    
+    // Auto-refresh functionality with adaptive timing
+    function startAutoRefresh() {
+        // Use adaptive refresh interval based on system health
+        const baseInterval = {{ refresh_interval|default:30000 }};
+        const healthStatus = document.querySelector('.status-indicator').classList.contains('status-critical') ? 'critical' : 
+                            document.querySelector('.status-indicator').classList.contains('status-warning') ? 'warning' : 'healthy';
+        
+        // Adjust refresh interval based on health status
+        let interval = baseInterval;
+        if (healthStatus === 'critical') {
+            interval = Math.max(5000, baseInterval / 2); // Refresh more frequently for critical status, but not less than 5 seconds
+        } else if (healthStatus === 'warning') {
+            interval = Math.max(10000, baseInterval * 0.75); // Slightly more frequent for warnings
+        }
+        
+        // Clear any existing interval
+        stopAutoRefresh();
+        
+        // Set new interval
+        refreshInterval = setInterval(refreshDashboard, interval);
+        
+        // Log refresh schedule
+        console.log(`Auto-refresh scheduled every ${interval/1000} seconds based on ${healthStatus} status`);
+    }
+    
+    function stopAutoRefresh() {
+        if (refreshInterval) {
+            clearInterval(refreshInterval);
+        }
+    }
+    
+    // Manual refresh with debounce
+    const refreshBtn = document.getElementById('refreshBtn');
+    refreshBtn.addEventListener('click', function() {
+        // Prevent rapid clicking (debounce)
+        const now = Date.now();
+        if (now - lastRefreshTime < 2000) { // 2 second debounce
+            return;
+        }
+        
+        if (!isRefreshing) {
+            refreshDashboard();
+            lastRefreshTime = now;
+        }
+    });
+    
+    // Refresh dashboard data with improved error handling and performance monitoring
+    async function refreshDashboard() {
+        if (isRefreshing) return;
+        
+        isRefreshing = true;
+        const refreshIcon = refreshBtn.querySelector('.material-symbols-outlined');
+        
+        refreshIcon.classList.add('refresh-indicator');
+        const startTime = performance.now();
+        
+        try {
+            // Use AbortController to set a timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+            
+            const response = await retryRequest('{% url "core:health_dashboard_api" %}', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Cache-Control': 'no-cache'
+                },
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            // Update performance stats
+            const endTime = performance.now();
+            refreshStats.lastResponseTime = endTime - startTime;
+            refreshStats.successCount++;
+            refreshStats.avgResponseTime = ((refreshStats.avgResponseTime * (refreshStats.successCount - 1)) + 
+                                          refreshStats.lastResponseTime) / refreshStats.successCount;
+            
+            // Reset error counters on success
+            refreshAttempts = 0;
+            refreshBackoffTime = 5000;
+            
+            // Update the dashboard
+            updateDashboard(data);
+            updateConnectionStatus(true);
+            
+            // Reset any error states
+            clearErrorMessages();
+            
+            // Log performance stats every 5 successful refreshes
+            if (refreshStats.successCount % 5 === 0) {
+                console.log(`Dashboard refresh stats: ${refreshStats.successCount} successes, ${refreshStats.failureCount} failures, avg response time: ${refreshStats.avgResponseTime.toFixed(2)}ms`);
+            }
+            
+        } catch (error) {
+            console.error('Refresh failed:', error);
+            refreshStats.failureCount++;
+            refreshAttempts++;
+            
+            updateConnectionStatus(false);
+            
+            // Show appropriate error message based on error type
+            if (error.name === 'AbortError') {
+                showErrorMessage('Dashboard refresh timed out. Retrying...');
+            } else if (error.message.includes('NetworkError') || !navigator.onLine) {
+                showErrorMessage('Network connection lost. Reconnecting...');
+            } else {
+                showErrorMessage(`Failed to refresh dashboard data: ${error.message}`);
+            }
+            
+            // Implement exponential backoff for repeated failures
+            if (refreshAttempts >= maxRefreshAttempts) {
+                stopAutoRefresh();
+                refreshBackoffTime *= 2; // Double the backoff time
+                
+                // Cap at 2 minutes
+                refreshBackoffTime = Math.min(refreshBackoffTime, 120000);
+                
+                showErrorMessage(`Too many refresh failures. Trying again in ${refreshBackoffTime/1000} seconds.`);
+                
+                // Schedule a single retry after backoff
+                setTimeout(() => {
+                    startAutoRefresh();
+                    refreshDashboard();
+                }, refreshBackoffTime);
+            }
+            
+        } finally {
+            isRefreshing = false;
+            refreshIcon.classList.remove('refresh-indicator');
+            
+            // Update last refresh time display
+            document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+        }
+    }
+    
+    // Show error message to user
+    function showErrorMessage(message) {
+        let errorEl = document.getElementById('errorMessage');
+        if (!errorEl) {
+            errorEl = document.createElement('div');
+            errorEl.id = 'errorMessage';
+            errorEl.className = 'fixed top-16 right-20 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-1000';
+            document.body.appendChild(errorEl);
+        }
+        errorEl.textContent = message;
+        errorEl.style.display = 'block';
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            if (errorEl) {
+                errorEl.style.display = 'none';
+            }
+        }, 5000);
+    }
+    
+    // Clear error messages
+    function clearErrorMessages() {
+        const errorEl = document.getElementById('errorMessage');
+        if (errorEl) {
+            errorEl.style.display = 'none';
+        }
+    }
+    
+    // Update dashboard with new data - optimized for performance
+    function updateDashboard(data) {
+        // Use requestAnimationFrame for smoother UI updates
+        requestAnimationFrame(() => {
+            // Update last updated time
+            document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+            
+            // Update health summary with optimized DOM operations
+            if (data.health_summary) {
+                const summary = data.health_summary;
+                
+                // Update overall status - use direct element selection instead of querySelectorAll
+                const overallStatusIndicator = document.querySelector('.health-card:first-child .status-indicator');
+                const overallStatusText = overallStatusIndicator?.nextElementSibling;
+                
+                if (overallStatusIndicator && overallStatusText) {
+                    // Update class in one operation
+                    overallStatusIndicator.className = `status-indicator status-${summary.overall_status}`;
+                    overallStatusText.textContent = summary.overall_status.charAt(0).toUpperCase() + summary.overall_status.slice(1);
+                    
+                    // Update page title to reflect status (for browser tab)
+                    document.title = `System Health: ${summary.overall_status.toUpperCase()} | Dashboard`;
+                }
+                
+                // Update metric counts - use direct IDs instead of searching
+                const totalChecksElement = document.getElementById('totalChecks');
+                const healthyChecksElement = document.getElementById('healthyChecks');
+                const issuesFoundElement = document.getElementById('issuesFound');
+                const healthyProgressElement = document.getElementById('healthyProgress');
+                
+                if (totalChecksElement) totalChecksElement.textContent = summary.total_checks;
+                if (healthyChecksElement) healthyChecksElement.textContent = summary.healthy_checks;
+                
+                if (issuesFoundElement) {
+                    const issuesCount = summary.warning_checks + summary.critical_checks;
+                    issuesFoundElement.textContent = issuesCount;
+                    
+                    // Add visual indicator if issues increased
+                    const previousCount = parseInt(issuesFoundElement.dataset.previousCount || '0');
+                    if (issuesCount > previousCount) {
+                        issuesFoundElement.classList.add('text-pulse');
+                        setTimeout(() => issuesFoundElement.classList.remove('text-pulse'), 2000);
+                    }
+                    issuesFoundElement.dataset.previousCount = issuesCount;
+                }
+                
+                if (healthyProgressElement && summary.total_checks > 0) {
+                    const percentage = (summary.healthy_checks / summary.total_checks) * 100;
+                    healthyProgressElement.style.width = `${percentage}%`;
+                }
+                
+                // Update performance stats if available
+                if (summary.performance_stats) {
+                    const perfStats = summary.performance_stats;
+                    console.log(`Server performance: ${perfStats.avg_execution_time_ms.toFixed(2)}ms avg, ${perfStats.total_checks_performed} checks`);
+                }
+            }
+            
+            // Update system checks if provided
+            if (data.system_health && data.system_health.checks) {
+                updateSystemChecks(data.system_health.checks);
+            }
+            
+            // Update recent metrics if provided
+            if (data.recent_metrics) {
+                updateRecentMetrics(data.recent_metrics);
+            }
+            
+            // Update active alerts if provided
+            if (data.active_alerts) {
+                updateActiveAlerts(data.active_alerts);
+            }
+            
+            // Adjust refresh interval based on system health
+            startAutoRefresh();
+        });
+    }
+    
+    // Update system health checks
+    function updateSystemChecks(checks) {
+        // Only update changed elements to minimize DOM operations
+        Object.entries(checks).forEach(([name, check]) => {
+            const checkElement = document.getElementById(`check-${name}`);
+            if (!checkElement) return;
+            
+            // Update status indicator
+            const statusIndicator = checkElement.querySelector('.status-indicator');
+            if (statusIndicator) {
+                statusIndicator.className = `status-indicator status-${check.status}`;
+            }
+            
+            // Update message
+            const messageElement = checkElement.querySelector('.check-message');
+            if (messageElement && messageElement.textContent !== check.message) {
+                messageElement.textContent = check.message;
+            }
+            
+            // Update response time
+            const responseTimeElement = checkElement.querySelector('.response-time');
+            if (responseTimeElement && check.response_time) {
+                responseTimeElement.textContent = `${Math.round(check.response_time)}ms`;
+            }
+        });
+    }
+    
+    // Update active alerts
+    function updateActiveAlerts(alerts) {
+        const alertsContainer = document.getElementById('activeAlerts');
+        if (!alertsContainer) return;
+        
+        // Get current alert IDs
+        const currentAlertIds = Array.from(
+            alertsContainer.querySelectorAll('.alert-card')
+        ).map(el => parseInt(el.dataset.alertId));
+        
+        // Get new alert IDs
+        const newAlertIds = alerts.map(alert => alert.id);
+        
+        // Remove alerts that are no longer active
+        currentAlertIds.forEach(id => {
+            if (!newAlertIds.includes(id)) {
+                const alertElement = alertsContainer.querySelector(`.alert-card[data-alert-id="${id}"]`);
+                if (alertElement) {
+                    alertElement.classList.add('fade-out');
+                    setTimeout(() => alertElement.remove(), 500);
+                }
+            }
+        });
+        
+        // Add new alerts
+        alerts.forEach(alert => {
+            if (!currentAlertIds.includes(alert.id)) {
+                const alertElement = createAlertElement(alert);
+                alertsContainer.insertBefore(alertElement, alertsContainer.firstChild);
+                alertElement.classList.add('fade-in');
+                setTimeout(() => alertElement.classList.remove('fade-in'), 500);
+            }
+        });
+    }
+    
+    // Create alert element
+    function createAlertElement(alert) {
+        const alertElement = document.createElement('div');
+        alertElement.className = `alert-card alert-${alert.severity}`;
+        alertElement.dataset.alertId = alert.id;
+        
+        alertElement.innerHTML = `
+            <div class="flex items-start justify-between">
+                <div>
+                    <h4 class="font-semibold">${alert.title}</h4>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">${alert.message}</p>
+                    <p class="text-xs text-gray-500 mt-2">
+                        ${formatTimeAgo(new Date(alert.created_at))} • ${alert.alert_type || 'Alert'}
+                    </p>
+                </div>
+                <button class="text-gray-400 hover:text-gray-600" onclick="resolveAlert(${alert.id})">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+        `;
+        
+        return alertElement;
+    }
+    
+    // Format time ago
+    function formatTimeAgo(date) {
+        const seconds = Math.floor((new Date() - date) / 1000);
+        
+        let interval = Math.floor(seconds / 31536000);
+        if (interval > 1) return interval + ' years ago';
+        
+        interval = Math.floor(seconds / 2592000);
+        if (interval > 1) return interval + ' months ago';
+        
+        interval = Math.floor(seconds / 86400);
+        if (interval > 1) return interval + ' days ago';
+        
+        interval = Math.floor(seconds / 3600);
+        if (interval > 1) return interval + ' hours ago';
+        
+        interval = Math.floor(seconds / 60);
+        if (interval > 1) return interval + ' minutes ago';
+        
+        return Math.floor(seconds) + ' seconds ago';
+    }
+    
+    // Update recent metrics section
+    function updateRecentMetrics(metrics) {
+        const container = document.getElementById('recentMetrics');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        
+        if (metrics.length === 0) {
+            container.innerHTML = '<p class="text-center text-gray-500 py-8">No recent metrics available</p>';
+            return;
+        }
+        
+        metrics.forEach(metric => {
+            const metricEl = document.createElement('div');
+            metricEl.className = 'flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg';
+            metricEl.innerHTML = `
+                <div class="flex items-center">
+                    <span class="status-indicator status-${metric.status}"></span>
+                    <div>
+                        <div class="font-medium">${metric.metric_name}</div>
+                        <div class="text-sm text-gray-500">${metric.message}</div>
+                    </div>
+                </div>
+                <div class="text-right text-sm text-gray-500">
+                    <div>${new Date(metric.timestamp).toLocaleTimeString()}</div>
+                    ${metric.response_time ? `<div>${Math.round(metric.response_time)}ms</div>` : ''}
+                </div>
+            `;
+            container.appendChild(metricEl);
+        });
+    }
+    
+    // Update connection status
+    function updateConnectionStatus(isOnline) {
+        const statusEl = document.getElementById('connectionStatus');
+        const icon = statusEl.querySelector('.material-symbols-outlined');
+        
+        if (isOnline) {
+            statusEl.className = 'connection-status connection-online';
+            statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">wifi</span> Connected';
+        } else {
+            statusEl.className = 'connection-status connection-offline';
+            statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">wifi_off</span> Disconnected';
+        }
+    }
+    
+    // Toggle details visibility
+    window.toggleDetails = function(checkName) {
+        const detailsEl = document.getElementById('details-' + checkName);
+        const toggleEl = document.querySelector(`[onclick="toggleDetails('${checkName}')"]`);
+        const icon = toggleEl.querySelector('.material-symbols-outlined');
+        
+        if (detailsEl.style.display === 'none' || !detailsEl.style.display) {
+            detailsEl.style.display = 'block';
+            icon.textContent = 'expand_less';
+        } else {
+            detailsEl.style.display = 'none';
+            icon.textContent = 'expand_more';
+        }
+    };
+    
+    // Resolve alert
+    window.resolveAlert = async function(alertId) {
+        try {
+            const response = await fetch('{% url "core:system_alerts_api" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    alert_id: alertId,
+                    action: 'resolve'
+                })
+            });
+            
+            if (response.ok) {
+                // Remove alert from DOM
+                const alertEl = document.querySelector(`[onclick="resolveAlert(${alertId})"]`).closest('.alert-card');
+                alertEl.remove();
+            }
+        } catch (error) {
+            console.error('Failed to resolve alert:', error);
+        }
+    };
+    
+    // Get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Handle page visibility changes
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            // Page is hidden, reduce refresh frequency
+            stopAutoRefresh();
+            refreshInterval = setInterval(refreshDashboard, {{ refresh_interval|default:30000 }} * 2);
+        } else {
+            // Page is visible, restore normal refresh frequency and refresh immediately
+            stopAutoRefresh();
+            startAutoRefresh();
+            refreshDashboard();
+        }
+    });
+    
+    // Handle network status changes
+    window.addEventListener('online', function() {
+        updateConnectionStatus(true);
+        refreshDashboard();
+    });
+    
+    window.addEventListener('offline', function() {
+        updateConnectionStatus(false);
+    });
+    
+    // Add retry mechanism for failed requests
+    async function retryRequest(url, options, maxRetries = 3) {
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                const response = await fetch(url, options);
+                if (response.ok) {
+                    return response;
+                }
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            } catch (error) {
+                if (i === maxRetries - 1) {
+                    throw error;
+                }
+                // Wait before retrying (exponential backoff)
+                await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+            }
+        }
+    }
+    
+    // Metric type filter functionality
+    document.getElementById('metricTypeFilter').addEventListener('change', function() {
+        const selectedType = this.value;
+        filterMetrics(selectedType);
+    });
+    
+    function filterMetrics(type) {
+        const metrics = document.querySelectorAll('#recentMetrics > div');
+        metrics.forEach(metric => {
+            if (!type) {
+                metric.style.display = 'flex';
+            } else {
+                const metricName = metric.querySelector('.font-medium').textContent.toLowerCase();
+                if (metricName.includes(type.toLowerCase())) {
+                    metric.style.display = 'flex';
+                } else {
+                    metric.style.display = 'none';
+                }
+            }
+        });
+    }
+    
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + R to refresh
+        if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+            e.preventDefault();
+            refreshDashboard();
+        }
+        
+        // Escape to close details
+        if (e.key === 'Escape') {
+            const openDetails = document.querySelectorAll('.details-content[style*="block"]');
+            openDetails.forEach(detail => {
+                detail.style.display = 'none';
+                const toggleIcon = detail.previousElementSibling.querySelector('.material-symbols-outlined');
+                if (toggleIcon) {
+                    toggleIcon.textContent = 'expand_more';
+                }
+            });
+        }
+    });
+    
+    // Add performance monitoring
+    let performanceMetrics = {
+        refreshCount: 0,
+        totalRefreshTime: 0,
+        lastRefreshTime: 0
+    };
+    
+    function updatePerformanceMetrics(startTime) {
+        const endTime = performance.now();
+        const refreshTime = endTime - startTime;
+        
+        performanceMetrics.refreshCount++;
+        performanceMetrics.totalRefreshTime += refreshTime;
+        performanceMetrics.lastRefreshTime = refreshTime;
+        
+        // Log performance every 10 refreshes
+        if (performanceMetrics.refreshCount % 10 === 0) {
+            const avgTime = performanceMetrics.totalRefreshTime / performanceMetrics.refreshCount;
+            console.log(`Dashboard Performance: ${performanceMetrics.refreshCount} refreshes, avg ${avgTime.toFixed(2)}ms`);
+        }
+    }
+    
+    // Start auto-refresh
+    startAutoRefresh();
+    
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function() {
+        stopAutoRefresh();
+    });
+});
+</script>
+{% endblock %}

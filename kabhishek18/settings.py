@@ -320,9 +320,51 @@ UNFOLD = {
                 "separator": True,
                 "items": [
                     {
-                        "title": _("Script"),
-                        "icon": "settings",
+                        "title": _("API Clients"),
+                        "icon": "key",
+                        "link": reverse_lazy("admin:api_apiclient_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": _("API Keys"),
+                        "icon": "vpn_key",
+                        "link": reverse_lazy("admin:api_apikey_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": _("Usage Logs"),
+                        "icon": "analytics",
+                        "link": reverse_lazy("admin:api_apiusagelog_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": _("Script Runner"),
+                        "icon": "code",
                         "link": reverse_lazy("admin:api_scriptrunner_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                ],
+            },
+            {
+                "title": _("System Monitoring"),
+                "separator": True,
+                "items": [
+                    {
+                        "title": _("System Health"),
+                        "icon": "health_and_safety",
+                        "link": reverse_lazy("core:health_dashboard"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": _("Health Metrics"),
+                        "icon": "monitoring",
+                        "link": reverse_lazy("admin:core_healthmetric_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": _("System Alerts"),
+                        "icon": "warning",
+                        "link": reverse_lazy("admin:core_systemalert_changelist"),
                         "permission": lambda request: request.user.is_superuser,
                     },
                 ],

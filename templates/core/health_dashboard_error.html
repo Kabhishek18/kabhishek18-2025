@@ -1,0 +1,205 @@
+{% extends "unfold/layouts/base.html" %}
+{% load i18n %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    .error-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 60vh;
+        text-align: center;
+        padding: 2rem;
+    }
+    
+    .error-icon {
+        font-size: 4rem;
+        color: var(--red-500);
+        margin-bottom: 1rem;
+    }
+    
+    .error-title {
+        font-size: 2rem;
+        font-weight: bold;
+        color: var(--gray-900);
+        margin-bottom: 1rem;
+    }
+    
+    .dark .error-title {
+        color: var(--gray-100);
+    }
+    
+    .error-message {
+        font-size: 1.125rem;
+        color: var(--gray-600);
+        margin-bottom: 2rem;
+        max-width: 600px;
+    }
+    
+    .dark .error-message {
+        color: var(--gray-400);
+    }
+    
+    .error-details {
+        background-color: var(--gray-100);
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+        font-family: monospace;
+        font-size: 0.875rem;
+        color: var(--gray-700);
+        max-width: 800px;
+        word-break: break-all;
+    }
+    
+    .dark .error-details {
+        background-color: var(--gray-800);
+        border-color: var(--gray-600);
+        color: var(--gray-300);
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary {
+        background-color: var(--primary-600);
+        color: white;
+        border: none;
+    }
+    
+    .btn-primary:hover {
+        background-color: var(--primary-700);
+        transform: translateY(-1px);
+    }
+    
+    .btn-secondary {
+        background-color: var(--gray-200);
+        color: var(--gray-700);
+        border: 1px solid var(--gray-300);
+    }
+    
+    .dark .btn-secondary {
+        background-color: var(--gray-700);
+        color: var(--gray-200);
+        border-color: var(--gray-600);
+    }
+    
+    .btn-secondary:hover {
+        background-color: var(--gray-300);
+        transform: translateY(-1px);
+    }
+    
+    .dark .btn-secondary:hover {
+        background-color: var(--gray-600);
+    }
+    
+    .retry-info {
+        margin-top: 1rem;
+        padding: 1rem;
+        background-color: var(--blue-50);
+        border: 1px solid var(--blue-200);
+        border-radius: 8px;
+        color: var(--blue-800);
+    }
+    
+    .dark .retry-info {
+        background-color: var(--blue-900-alpha);
+        border-color: var(--blue-700);
+        color: var(--blue-200);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="error-container">
+    <div class="error-icon">
+        <span class="material-symbols-outlined" style="font-size: inherit;">error</span>
+    </div>
+    
+    <h1 class="error-title">System Health Dashboard Error</h1>
+    
+    <p class="error-message">
+        {{ error_message|default:"The health dashboard is temporarily unavailable. Please try again in a few moments." }}
+    </p>
+    
+    {% if error_details %}
+    <details class="error-details">
+        <summary style="cursor: pointer; margin-bottom: 0.5rem;">Technical Details</summary>
+        <pre>{{ error_details }}</pre>
+    </details>
+    {% endif %}
+    
+    <div class="retry-info">
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <span class="material-symbols-outlined" style="font-size: 1.25rem;">info</span>
+            <strong>What you can do:</strong>
+        </div>
+        <ul style="text-align: left; margin: 0; padding-left: 1.5rem;">
+            <li>Wait a few moments and try refreshing the page</li>
+            <li>Check if the system services are running properly</li>
+            <li>Contact the system administrator if the problem persists</li>
+        </ul>
+    </div>
+    
+    <div class="action-buttons">
+        <button onclick="window.location.reload()" class="btn btn-primary">
+            <span class="material-symbols-outlined" style="font-size: 1rem; vertical-align: middle; margin-right: 0.5rem;">refresh</span>
+            Try Again
+        </button>
+        
+        <a href="{% url 'admin:index' %}" class="btn btn-secondary">
+            <span class="material-symbols-outlined" style="font-size: 1rem; vertical-align: middle; margin-right: 0.5rem;">dashboard</span>
+            Back to Admin
+        </a>
+        
+        <a href="/" class="btn btn-secondary">
+            <span class="material-symbols-outlined" style="font-size: 1rem; vertical-align: middle; margin-right: 0.5rem;">home</span>
+            Home Page
+        </a>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-retry after 30 seconds
+    setTimeout(function() {
+        const retryInfo = document.querySelector('.retry-info');
+        if (retryInfo) {
+            const autoRetryMsg = document.createElement('div');
+            autoRetryMsg.style.marginTop = '1rem';
+            autoRetryMsg.style.fontStyle = 'italic';
+            autoRetryMsg.innerHTML = '<span class="material-symbols-outlined" style="font-size: 1rem; vertical-align: middle; margin-right: 0.5rem;">schedule</span>Auto-retrying in 30 seconds...';
+            retryInfo.appendChild(autoRetryMsg);
+            
+            setTimeout(function() {
+                window.location.reload();
+            }, 30000);
+        }
+    }, 30000);
+    
+    // Add keyboard shortcut for retry
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'r' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            window.location.reload();
+        }
+    });
+});
+</script>
+{% endblock %}

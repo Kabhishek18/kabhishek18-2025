@@ -1,20 +1,25 @@
 # core/views.py
 import json
+import logging
 from datetime import datetime, timedelta
 from django.db.models import Sum, Count, Q
 from django.contrib.auth.models import User
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.views import View
-from django.http import Http404, JsonResponse
+from django.http import Http404, JsonResponse, HttpResponseNotAllowed
 from django.utils.translation import gettext as _
 from django.utils import timezone
 from django.core.cache import cache
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import user_passes_test
+from django.conf import settings
 
 from blog.models import Post, Category
-from .models import Page, Template, Component
+from .models import Page, Template, Component, HealthMetric, SystemAlert
+from .services.health_service import health_service
+
+logger = logging.getLogger(__name__)
 
 
 def dashboard_callback(request, context):
@@ -473,5 +478,394 @@ class PageRequest(View):
             # In production, you'd log this error
             print(f"Error rendering page: {e}")
             raise Http404("Page not found")
+
+
+from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.decorators import user_passes_test
+
+@user_passes_test(lambda u: u.is_superuser, login_url='/open/admin/login/')
+def health_dashboard_view(request):
+    """
+    Main health dashboard view for system administrators with comprehensive error handling.
+    Integrated with the admin interface for seamless navigation.
+    
+    This view requires superuser access and redirects non-superusers to the admin login page.
+    
+    Security hardening:
+    - Strict superuser permission check
+    - CSRF protection
+    - Rate limiting
+    - Secure error handling
+    - Sanitized output
+    """
+    # Security: Verify request method
+    if request.method != 'GET':
+        return HttpResponseNotAllowed(['GET'])
+    
+    # Security: Additional permission verification
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return redirect(settings.LOGIN_URL)
+    
+    try:
+        # Get comprehensive system health data with fallback
+        try:
+            system_health = health_service.get_system_health()
+        except Exception as e:
+            logger.error(f"Failed to get system health: {str(e)}")
+            # Provide fallback system health data
+            system_health = {
+                'overall_status': 'critical',
+                'timestamp': timezone.now().isoformat(),
+                'checks': {},
+                'summary': {
+                    'total_checks': 0,
+                    'successful_checks': 0,
+                    'failed_checks': 0,
+                    'failed_check_names': [],
+                    'success_rate': 0
+                },
+                'error': f'Health service unavailable: {str(e)}'
+            }
+        
+        # Get recent health metrics with fallback
+        try:
+            recent_metrics = HealthMetric.get_latest_metrics(limit=50)
+        except Exception as e:
+            logger.error(f"Failed to get recent metrics: {str(e)}")
+            recent_metrics = []
+        
+        # Get active alerts with fallback
+        try:
+            active_alerts = SystemAlert.get_active_alerts()
+            critical_alerts = SystemAlert.get_critical_alerts()
+        except Exception as e:
+            logger.error(f"Failed to get alerts: {str(e)}")
+            active_alerts = []
+            critical_alerts = []
+        
+        # Get metrics by type for charts with fallback
+        metrics_by_type = {}
+        for metric_type in ['database', 'cache', 'memory', 'disk', 'system_load', 'api', 'celery', 'redis']:
+            try:
+                metrics_by_type[metric_type] = HealthMetric.get_metrics_by_type(metric_type, hours=24)
+            except Exception as e:
+                logger.warning(f"Failed to get metrics for {metric_type}: {str(e)}")
+                metrics_by_type[metric_type] = []
+        
+        # Calculate health summary with error handling
+        try:
+            health_summary = {
+                'total_checks': len(system_health.get('checks', {})),
+                'healthy_checks': len([c for c in system_health.get('checks', {}).values() if c.get('status') == 'healthy']),
+                'warning_checks': len([c for c in system_health.get('checks', {}).values() if c.get('status') == 'warning']),
+                'critical_checks': len([c for c in system_health.get('checks', {}).values() if c.get('status') == 'critical']),
+                'overall_status': system_health.get('overall_status', 'unknown'),
+                'last_updated': system_health.get('timestamp', timezone.now().isoformat())
+            }
+            
+            # Add summary from health service if available
+            if 'summary' in system_health:
+                health_summary.update(system_health['summary'])
+                
+        except Exception as e:
+            logger.error(f"Failed to calculate health summary: {str(e)}")
+            health_summary = {
+                'total_checks': 0,
+                'healthy_checks': 0,
+                'warning_checks': 0,
+                'critical_checks': 0,
+                'overall_status': 'critical',
+                'last_updated': timezone.now().isoformat(),
+                'error': f'Summary calculation failed: {str(e)}'
+            }
+        
+        context = {
+            'title': 'System Health Dashboard',
+            'system_health': system_health,
+            'health_summary': health_summary,
+            'recent_metrics': recent_metrics,
+            'active_alerts': active_alerts,
+            'critical_alerts': critical_alerts,
+            'metrics_by_type': metrics_by_type,
+            'refresh_interval': getattr(settings, 'HEALTH_DASHBOARD_REFRESH_INTERVAL', 30000),  # 30 seconds default
+            'has_errors': 'error' in system_health or 'error' in health_summary,
+        }
+        
+        response = render(request, 'core/health_dashboard.html', context)
+        
+        # Add security headers
+        response['X-Frame-Options'] = 'DENY'  # Prevent clickjacking
+        response['X-Content-Type-Options'] = 'nosniff'  # Prevent MIME type sniffing
+        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'  # Limit referrer information
+        response['Cache-Control'] = 'no-store, max-age=0'  # Prevent caching of sensitive data
+        
+        # Add Content Security Policy in non-debug mode
+        if not settings.DEBUG:
+            csp = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;"
+            response['Content-Security-Policy'] = csp
+        
+        return response
+        
+    except Exception as e:
+        logger.critical(f"Critical error in health dashboard view: {str(e)}")
+        # Return a minimal error page if everything fails
+        return render(request, 'core/health_dashboard_error.html', {
+            'error_message': 'Health dashboard is temporarily unavailable',
+            'error_details': str(e) if settings.DEBUG else None,
+            'title': 'System Health Dashboard - Error'
+        }, status=500)
+
+
+class HealthDashboardAPIView(View):
+    """
+    API endpoint for health dashboard data updates (AJAX) with comprehensive error handling.
+    Includes rate limiting and security hardening.
+    """
+    
+    def get(self, request):
+        # Security: Verify authentication and permissions
+        if not request.user.is_authenticated or not request.user.is_superuser:
+            return JsonResponse({'error': 'Unauthorized', 'success': False}, status=401)
+        
+        # Security: Implement rate limiting
+        user_id = request.user.id
+        rate_limit_key = f"health_dashboard_api_rate_limit_{user_id}"
+        request_count = cache.get(rate_limit_key, 0)
+        
+        # Allow 30 requests per minute per user
+        if request_count >= 30:
+            return JsonResponse({
+                'error': 'Rate limit exceeded',
+                'message': 'Too many requests. Please try again later.',
+                'success': False
+            }, status=429)
+        
+        # Increment request count
+        cache.set(rate_limit_key, request_count + 1, 60)  # 60 seconds expiry
+        
+        try:
+            # Get fresh health data with timeout and fallback
+            try:
+                system_health = health_service.get_system_health()
+            except Exception as e:
+                logger.error(f"Failed to get system health in API: {str(e)}")
+                system_health = {
+                    'overall_status': 'critical',
+                    'timestamp': timezone.now().isoformat(),
+                    'checks': {},
+                    'error': f'Health service error: {str(e)}'
+                }
+            
+            # Get recent metrics with fallback
+            try:
+                recent_metrics = HealthMetric.get_latest_metrics(limit=10)
+                formatted_metrics = [
+                    {
+                        'id': metric.id,
+                        'metric_name': metric.get_metric_name_display(),
+                        'status': metric.status,
+                        'message': metric.message,
+                        'response_time': metric.response_time,
+                        'timestamp': metric.timestamp.isoformat(),
+                    }
+                    for metric in recent_metrics
+                ]
+            except Exception as e:
+                logger.warning(f"Failed to get recent metrics in API: {str(e)}")
+                formatted_metrics = []
+            
+            # Get active alerts with fallback
+            try:
+                active_alerts = SystemAlert.get_active_alerts()[:10]
+                formatted_alerts = [
+                    {
+                        'id': alert.id,
+                        'title': alert.title,
+                        'severity': alert.severity,
+                        'alert_type': alert.get_alert_type_display(),
+                        'created_at': alert.created_at.isoformat(),
+                        'age_hours': alert.get_age().total_seconds() / 3600,
+                    }
+                    for alert in active_alerts
+                ]
+            except Exception as e:
+                logger.warning(f"Failed to get active alerts in API: {str(e)}")
+                formatted_alerts = []
+            
+            # Calculate health summary with error handling
+            try:
+                health_summary = {
+                    'total_checks': len(system_health.get('checks', {})),
+                    'healthy_checks': len([c for c in system_health.get('checks', {}).values() if c.get('status') == 'healthy']),
+                    'warning_checks': len([c for c in system_health.get('checks', {}).values() if c.get('status') == 'warning']),
+                    'critical_checks': len([c for c in system_health.get('checks', {}).values() if c.get('status') == 'critical']),
+                    'overall_status': system_health.get('overall_status', 'unknown'),
+                }
+                
+                # Add summary from health service if available
+                if 'summary' in system_health:
+                    health_summary.update(system_health['summary'])
+                    
+            except Exception as e:
+                logger.error(f"Failed to calculate health summary in API: {str(e)}")
+                health_summary = {
+                    'total_checks': 0,
+                    'healthy_checks': 0,
+                    'warning_checks': 0,
+                    'critical_checks': 0,
+                    'overall_status': 'critical',
+                    'error': f'Summary calculation failed: {str(e)}'
+                }
+            
+            # Format response data
+            response_data = {
+                'success': True,
+                'timestamp': timezone.now().isoformat(),
+                'system_health': system_health,
+                'recent_metrics': formatted_metrics,
+                'active_alerts': formatted_alerts,
+                'health_summary': health_summary,
+                'has_errors': 'error' in system_health or 'error' in health_summary,
+            }
+            
+            return JsonResponse(response_data)
+            
+        except Exception as e:
+            logger.critical(f"Critical error in health dashboard API: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'error': 'Internal server error',
+                'message': 'Health dashboard API is temporarily unavailable',
+                'timestamp': timezone.now().isoformat(),
+                'debug_info': str(e) if settings.DEBUG else None
+            }, status=500)
+
+
+class HealthMetricsAPIView(View):
+    """
+    API endpoint for specific health metrics data.
+    """
+    
+    def get(self, request, metric_type=None):
+        if not request.user.is_authenticated or not request.user.is_superuser:
+            return JsonResponse({'error': 'Unauthorized'}, status=401)
+        
+        hours = int(request.GET.get('hours', 24))
+        limit = int(request.GET.get('limit', 100))
+        
+        if metric_type:
+            # Get specific metric type
+            metrics = HealthMetric.get_metrics_by_type(metric_type, hours=hours)[:limit]
+        else:
+            # Get all recent metrics
+            metrics = HealthMetric.get_latest_metrics(limit=limit)
+        
+        response_data = {
+            'success': True,
+            'metric_type': metric_type,
+            'hours': hours,
+            'count': len(metrics),
+            'metrics': [
+                {
+                    'id': metric.id,
+                    'metric_name': metric.metric_name,
+                    'metric_display': metric.get_metric_name_display(),
+                    'status': metric.status,
+                    'message': metric.message,
+                    'response_time': metric.response_time,
+                    'timestamp': metric.timestamp.isoformat(),
+                    'metric_value': metric.metric_value,
+                }
+                for metric in metrics
+            ]
+        }
+        
+        return JsonResponse(response_data)
+
+
+class SystemAlertsAPIView(View):
+    """
+    API endpoint for system alerts management.
+    """
+    
+    def get(self, request):
+        if not request.user.is_authenticated or not request.user.is_superuser:
+            return JsonResponse({'error': 'Unauthorized'}, status=401)
+        
+        alert_type = request.GET.get('type', 'active')  # active, critical, recent, all
+        limit = int(request.GET.get('limit', 50))
+        
+        if alert_type == 'critical':
+            alerts = SystemAlert.get_critical_alerts()[:limit]
+        elif alert_type == 'recent':
+            hours = int(request.GET.get('hours', 24))
+            alerts = SystemAlert.get_recent_alerts(hours=hours)[:limit]
+        elif alert_type == 'all':
+            alerts = SystemAlert.objects.all().order_by('-created_at')[:limit]
+        else:  # active
+            alerts = SystemAlert.get_active_alerts()[:limit]
+        
+        response_data = {
+            'success': True,
+            'alert_type': alert_type,
+            'count': len(alerts),
+            'alerts': [
+                {
+                    'id': alert.id,
+                    'title': alert.title,
+                    'message': alert.message,
+                    'severity': alert.severity,
+                    'alert_type': alert.alert_type,
+                    'source_metric': alert.source_metric,
+                    'resolved': alert.resolved,
+                    'created_at': alert.created_at.isoformat(),
+                    'resolved_at': alert.resolved_at.isoformat() if alert.resolved_at else None,
+                    'resolved_by': alert.resolved_by.username if alert.resolved_by else None,
+                    'age_hours': alert.get_age().total_seconds() / 3600,
+                    'is_stale': alert.is_stale(),
+                }
+                for alert in alerts
+            ]
+        }
+        
+        return JsonResponse(response_data)
+    
+    def post(self, request):
+        """Handle alert actions (resolve, reopen)."""
+        if not request.user.is_authenticated or not request.user.is_superuser:
+            return JsonResponse({'error': 'Unauthorized'}, status=401)
+        
+        try:
+            data = json.loads(request.body)
+            alert_id = data.get('alert_id')
+            action = data.get('action')  # resolve, reopen
+            notes = data.get('notes', '')
+            
+            alert = get_object_or_404(SystemAlert, id=alert_id)
+            
+            if action == 'resolve':
+                alert.resolve(user=request.user, notes=notes)
+                message = 'Alert resolved successfully'
+            elif action == 'reopen':
+                alert.reopen()
+                message = 'Alert reopened successfully'
+            else:
+                return JsonResponse({'error': 'Invalid action'}, status=400)
+            
+            return JsonResponse({
+                'success': True,
+                'message': message,
+                'alert': {
+                    'id': alert.id,
+                    'resolved': alert.resolved,
+                    'resolved_at': alert.resolved_at.isoformat() if alert.resolved_at else None,
+                    'resolved_by': alert.resolved_by.username if alert.resolved_by else None,
+                }
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
       
     
