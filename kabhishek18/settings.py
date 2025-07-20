@@ -52,7 +52,8 @@ INSTALLED_APPS = [
     'users',
     'core',
     'blog',
-    'api'
+    'api',
+    'site_files'
 ]
 
 MIDDLEWARE = [
