@@ -1,0 +1,95 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:blog_socialshare_changelist' %}">Social Shares</a>
+&rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="module">
+    <h2>Social Share Analytics</h2>
+    
+    <div class="results">
+        <h3>Platform Performance</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Platform</th>
+                    <th>Total Shares</th>
+                    <th>Posts Shared</th>
+                    <th>Avg Shares/Post</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in platform_stats %}
+                <tr class="{% cycle 'row1' 'row2' %}">
+                    <td>{{ stat.platform|capfirst }}</td>
+                    <td>{{ stat.total_shares|default:0 }}</td>
+                    <td>{{ stat.post_count }}</td>
+                    <td>{{ stat.total_shares|default:0|floatformat:1 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p><strong>Total Shares Across All Platforms:</strong> {{ total_shares }}</p>
+    </div>
+    
+    {% if most_shared_posts %}
+    <div class="results">
+        <h3>Most Shared Posts</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Post Title</th>
+                    <th>Total Shares</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for post in most_shared_posts %}
+                <tr class="{% cycle 'row1' 'row2' %}">
+                    <td><a href="{% url 'admin:blog_post_change' post.id %}">{{ post.title }}</a></td>
+                    <td>{{ post.total_shares|default:0 }}</td>
+                    <td>
+                        <a href="{% url 'admin:blog_socialshare_changelist' %}?post__id__exact={{ post.id }}">View Shares</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    
+    {% if recent_activity %}
+    <div class="results">
+        <h3>Recent Activity (Last 7 Days)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Platform</th>
+                    <th>Recent Shares</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for activity in recent_activity %}
+                <tr class="{% cycle 'row1' 'row2' %}">
+                    <td>{{ activity.platform|capfirst }}</td>
+                    <td>{{ activity.recent_shares|default:0 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    
+    <div class="submit-row">
+        <a href="{% url 'admin:blog_socialshare_changelist' %}" class="default">Back to Social Shares</a>
+    </div>
+</div>
+{% endblock %}

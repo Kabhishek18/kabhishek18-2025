@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Unsubscribe from Newsletter</h4>
+                </div>
+                <div class="card-body">
+                    <p>Are you sure you want to unsubscribe from our newsletter?</p>
+                    <p><strong>Email:</strong> {{ subscriber.email }}</p>
+
+                    <div class="alert alert-info">
+                        <strong>You'll miss out on:</strong>
+                        <ul class="mb-0">
+                            <li>New blog post notifications</li>
+                            <li>Exclusive content and insights</li>
+                            <li>Updates about new features and projects</li>
+                        </ul>
+                    </div>
+
+                    <form method="post" class="mt-3">
+                        {% csrf_token %}
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-danger">
+                                Yes, Unsubscribe Me
+                            </button>
+                            <a href="{% url 'blog:list' %}" class="btn btn-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

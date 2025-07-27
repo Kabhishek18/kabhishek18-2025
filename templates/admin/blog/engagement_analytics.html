@@ -1,0 +1,215 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="module">
+    <h2>Blog Engagement Analytics Dashboard</h2>
+    
+    <div class="results">
+        <h3>Overall Statistics</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Total</th>
+                    <th>Last 30 Days</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="row1">
+                    <td><strong>Published Posts</strong></td>
+                    <td>{{ total_posts }}</td>
+                    <td>{{ recent_posts }}</td>
+                </tr>
+                <tr class="row2">
+                    <td><strong>Approved Comments</strong></td>
+                    <td>{{ total_comments }}</td>
+                    <td>{{ recent_comments }}</td>
+                </tr>
+                <tr class="row1">
+                    <td><strong>Confirmed Subscribers</strong></td>
+                    <td>{{ total_subscribers }}</td>
+                    <td>{{ recent_subscribers }}</td>
+                </tr>
+                <tr class="row2">
+                    <td><strong>Social Shares</strong></td>
+                    <td>{{ total_shares }}</td>
+                    <td>{{ recent_shares }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="results">
+        <h3>Top Posts by Views</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Post Title</th>
+                    <th>Views</th>
+                    <th>Author</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for post in top_posts_by_views %}
+                <tr class="{% cycle 'row1' 'row2' %}">
+                    <td><a href="{% url 'admin:blog_post_change' post.id %}">{{ post.title }}</a></td>
+                    <td>{{ post.view_count }}</td>
+                    <td>{{ post.author.get_full_name|default:post.author.username }}</td>
+                    <td>
+                        <a href="{% url 'admin:blog_comment_changelist' %}?post__id__exact={{ post.id }}">Comments</a> |
+                        <a href="{% url 'admin:blog_socialshare_changelist' %}?post__id__exact={{ post.id }}">Shares</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="results">
+        <h3>Top Posts by Comments</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Post Title</th>
+                    <th>Comments</th>
+                    <th>Author</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for post in top_posts_by_comments %}
+                <tr class="{% cycle 'row1' 'row2' %}">
+                    <td><a href="{% url 'admin:blog_post_change' post.id %}">{{ post.title }}</a></td>
+                    <td>{{ post.comment_count }}</td>
+                    <td>{{ post.author.get_full_name|default:post.author.username }}</td>
+                    <td>
+                        <a href="{% url 'admin:blog_comment_changelist' %}?post__id__exact={{ post.id }}">View Comments</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if top_posts_by_shares %}
+    <div class="results">
+        <h3>Top Posts by Social Shares</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Post Title</th>
+                    <th>Total Shares</th>
+                    <th>Author</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for post in top_posts_by_shares %}
+                <tr class="{% cycle 'row1' 'row2' %}">
+                    <td><a href="{% url 'admin:blog_post_change' post.id %}">{{ post.title }}</a></td>
+                    <td>{{ post.share_count|default:0 }}</td>
+                    <td>{{ post.author.get_full_name|default:post.author.username }}</td>
+                    <td>
+                        <a href="{% url 'admin:blog_socialshare_changelist' %}?post__id__exact={{ post.id }}">View Shares</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    
+    <div class="results">
+        <h3>Category Performance</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Posts</th>
+                    <th>Total Views</th>
+                    <th>Comments</th>
+                    <th>Shares</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for category in category_stats %}
+                <tr class="{% cycle 'row1' 'row2' %}">
+                    <td><a href="{% url 'admin:blog_category_change' category.id %}">{{ category.name }}</a></td>
+                    <td>{{ category.post_count }}</td>
+                    <td>{{ category.total_views|default:0 }}</td>
+                    <td>{{ category.total_comments|default:0 }}</td>
+                    <td>{{ category.total_shares|default:0 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="results">
+        <h3>Author Performance</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Author</th>
+                    <th>Posts</th>
+                    <th>Total Views</th>
+                    <th>Comments</th>
+                    <th>Shares</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for author in author_stats %}
+                <tr class="{% cycle 'row1' 'row2' %}">
+                    <td>{{ author.get_full_name|default:author.username }}</td>
+                    <td>{{ author.post_count }}</td>
+                    <td>{{ author.total_views|default:0 }}</td>
+                    <td>{{ author.total_comments|default:0 }}</td>
+                    <td>{{ author.total_shares|default:0 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="results">
+        <h3>Social Media Platform Performance</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Platform</th>
+                    <th>Total Shares</th>
+                    <th>Posts Shared</th>
+                    <th>Avg Shares/Post</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for platform in platform_performance %}
+                <tr class="{% cycle 'row1' 'row2' %}">
+                    <td>{{ platform.platform|capfirst }}</td>
+                    <td>{{ platform.total_shares|default:0 }}</td>
+                    <td>{{ platform.post_count }}</td>
+                    <td>{{ platform.avg_shares_per_post|default:0|floatformat:1 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="submit-row">
+        <a href="{% url 'admin:blog_comment_moderation' %}" class="default">Comment Moderation</a>
+        <a href="{% url 'admin:blog_socialshare_analytics' %}" class="default">Social Share Analytics</a>
+        <a href="{% url 'admin:blog_newslettersubscriber_stats' %}" class="default">Subscriber Stats</a>
+    </div>
+</div>
+{% endblock %}

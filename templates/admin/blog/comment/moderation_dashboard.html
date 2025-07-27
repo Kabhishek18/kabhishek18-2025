@@ -1,0 +1,113 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:blog_comment_changelist' %}">Comments</a>
+&rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="module">
+    <h2>Comment Moderation Dashboard</h2>
+    
+    <div class="results">
+        <h3>Overview Statistics</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="row1">
+                    <td><strong>Total Comments</strong></td>
+                    <td>{{ total_comments }}</td>
+                </tr>
+                <tr class="row2">
+                    <td><strong>Pending Approval</strong></td>
+                    <td><span style="color: red; font-weight: bold;">{{ pending_comments }}</span></td>
+                </tr>
+                <tr class="row1">
+                    <td><strong>Approved Comments</strong></td>
+                    <td><span style="color: green; font-weight: bold;">{{ approved_comments }}</span></td>
+                </tr>
+                <tr class="row2">
+                    <td><strong>Approval Rate</strong></td>
+                    <td>{{ approval_rate|floatformat:1 }}%</td>
+                </tr>
+                <tr class="row1">
+                    <td><strong>Comments (Last 24 Hours)</strong></td>
+                    <td>{{ recent_comments }}</td>
+                </tr>
+                <tr class="row2">
+                    <td><strong>Pending (Last 24 Hours)</strong></td>
+                    <td>{{ recent_pending }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    {% if top_commenters %}
+    <div class="results">
+        <h3>Top Commenters</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Author</th>
+                    <th>Email</th>
+                    <th>Total Comments</th>
+                    <th>Approved</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for commenter in top_commenters %}
+                <tr class="{% cycle 'row1' 'row2' %}">
+                    <td>{{ commenter.author_name }}</td>
+                    <td>{{ commenter.author_email }}</td>
+                    <td>{{ commenter.comment_count }}</td>
+                    <td>{{ commenter.approved_count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    
+    {% if top_commented_posts %}
+    <div class="results">
+        <h3>Most Commented Posts</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Post Title</th>
+                    <th>Comment Count</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for post in top_commented_posts %}
+                <tr class="{% cycle 'row1' 'row2' %}">
+                    <td><a href="{% url 'admin:blog_post_change' post.id %}">{{ post.title }}</a></td>
+                    <td>{{ post.comment_count }}</td>
+                    <td>
+                        <a href="{% url 'admin:blog_comment_changelist' %}?post__id__exact={{ post.id }}">View Comments</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    
+    <div class="submit-row">
+        <a href="{% url 'admin:blog_comment_changelist' %}?is_approved__exact=0" class="default">View Pending Comments</a>
+        <a href="{% url 'admin:blog_comment_changelist' %}" class="default">Back to Comment List</a>
+    </div>
+</div>
+{% endblock %}

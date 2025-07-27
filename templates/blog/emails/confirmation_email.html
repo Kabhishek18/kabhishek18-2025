@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Your Newsletter Subscription</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007acc;
+            margin-bottom: 10px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .button {
+            display: inline-block;
+            background-color: #007acc;
+            color: #ffffff;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .button:hover {
+            background-color: #005a99;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .highlight {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-left: 4px solid #007acc;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">{{ site_name }}</div>
+            <h1>Confirm Your Newsletter Subscription</h1>
+        </div>
+        
+        <div class="content">
+            <p>Hello!</p>
+            
+            <p>Thank you for subscribing to our newsletter. To complete your subscription and start receiving our latest blog posts and updates, please confirm your email address by clicking the button below:</p>
+            
+            <div style="text-align: center;">
+                <a href="{{ confirmation_url }}" class="button">Confirm My Subscription</a>
+            </div>
+            
+            <div class="highlight">
+                <strong>What you'll receive:</strong>
+                <ul>
+                    <li>Notifications about new blog posts</li>
+                    <li>Exclusive content and insights</li>
+                    <li>Updates about new features and projects</li>
+                </ul>
+            </div>
+            
+            <p>If the button above doesn't work, you can copy and paste this link into your browser:</p>
+            <p style="word-break: break-all; color: #007acc;">{{ confirmation_url }}</p>
+            
+            <p><strong>Note:</strong> This confirmation link will expire in 7 days. If you didn't subscribe to our newsletter, you can safely ignore this email.</p>
+        </div>
+        
+        <div class="footer">
+            <p>This email was sent to {{ subscriber.email }}</p>
+            <p>&copy; {{ site_name }}. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,775 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block meta_data %}
+    <meta name="description" content="{{ meta_details }}">
+    <meta name="keywords" content="authors, writers, contributors, blog authors, Digital Codex">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="{{ request.build_absolute_uri }}">
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="{{ title }}">
+    <meta property="og:description" content="{{ meta_details }}">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{ title }}">
+    <meta name="twitter:description" content="{{ meta_details }}">
+{% endblock meta_data %}
+
+{% block title %}<title>{{ title }}</title>{% endblock title %}
+
+{% block content %}
+    <!-- Breadcrumb Navigation -->
+    <nav class="breadcrumb-nav">
+        <div class="container">
+            <ol class="breadcrumb">
+                {% for breadcrumb in breadcrumbs %}
+                    <li class="breadcrumb-item {% if breadcrumb.active %}active{% endif %}">
+                        {% if not breadcrumb.active %}
+                            <a href="{{ breadcrumb.url }}">{{ breadcrumb.name }}</a>
+                        {% else %}
+                            {{ breadcrumb.name }}
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ol>
+        </div>
+    </nav>
+
+    <div class="authors-page-container">
+        <!-- Page Header -->
+        <header class="authors-page-header">
+            <div class="container">
+                <div class="header-content">
+                    <h1 class="page-title">Our Authors</h1>
+                    <p class="page-subtitle">Meet the talented writers and contributors who share their knowledge and insights</p>
+                    
+                    {% if total_results %}
+                        <div class="results-summary">
+                            <span class="results-count">{{ total_results }} author{{ total_results|pluralize }} found</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </header>
+
+        <!-- Search and Filters -->
+        <section class="authors-filters">
+            <div class="container">
+                <div class="filters-container">
+                    <!-- Search Form -->
+                    <form method="get" class="search-form">
+                        <div class="search-input-group">
+                            <input type="text" 
+                                   name="q" 
+                                   value="{{ query }}" 
+                                   placeholder="Search authors by name or bio..."
+                                   class="search-input">
+                            <button type="submit" class="search-btn">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Filter Options -->
+                        <div class="filter-options">
+                            <select name="type" class="filter-select" onchange="this.form.submit()">
+                                {% for value, label in filter_options.author_types %}
+                                    <option value="{{ value }}" {% if current_filters.type == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            
+                            <select name="per_page" class="filter-select" onchange="this.form.submit()">
+                                <option value="12" {% if current_filters.per_page == 12 %}selected{% endif %}>12 per page</option>
+                                <option value="6" {% if current_filters.per_page == 6 %}selected{% endif %}>6 per page</option>
+                                <option value="24" {% if current_filters.per_page == 24 %}selected{% endif %}>24 per page</option>
+                                <option value="48" {% if current_filters.per_page == 48 %}selected{% endif %}>48 per page</option>
+                            </select>
+                        </div>
+                        
+                        {% if query or current_filters.type != 'all' %}
+                            <a href="{% url 'blog:author_list' %}" class="clear-filters-btn">
+                                <i class="fas fa-times"></i>
+                                Clear Filters
+                            </a>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- Authors Grid -->
+        <section class="authors-grid-section">
+            <div class="container">
+                {% if authors %}
+                    <div class="authors-grid">
+                        {% for author in authors %}
+                            <div class="author-card">
+                                <div class="author-card-header">
+                                    <div class="author-avatar">
+                                        {% if author.author_profile.profile_picture %}
+                                            <img src="{{ author.author_profile.profile_picture.url }}" 
+                                                 alt="{{ author.author_profile.get_display_name }}'s profile" 
+                                                 class="profile-image">
+                                        {% else %}
+                                            <div class="profile-initials">
+                                                {% if author.first_name %}
+                                                    {{ author.first_name|first }}{{ author.last_name|first }}
+                                                {% else %}
+                                                    {{ author.username|first|upper }}
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                        
+                                        {% if author.author_profile.is_guest_author %}
+                                            <div class="guest-author-badge" title="Guest Author">
+                                                <i class="fas fa-user-friends"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="author-info">
+                                        <h3 class="author-name">
+                                            <a href="{% url 'blog:author_detail' author.username %}">
+                                                {{ author.author_profile.get_display_name }}
+                                            </a>
+                                        </h3>
+                                        
+                                        {% if author.author_profile.is_guest_author and author.author_profile.guest_author_company %}
+                                            <p class="author-company">{{ author.author_profile.guest_author_company }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="author-card-body">
+                                    {% if author.author_profile.bio %}
+                                        <p class="author-bio">{{ author.author_profile.get_short_bio:100 }}</p>
+                                    {% else %}
+                                        <p class="author-bio">
+                                            {% if author.author_profile.is_guest_author %}
+                                                Guest contributor sharing insights and expertise.
+                                            {% else %}
+                                                Author and contributor at Digital Codex.
+                                            {% endif %}
+                                        </p>
+                                    {% endif %}
+                                    
+                                    <!-- Author Stats -->
+                                    <div class="author-stats">
+                                        <div class="stat-item">
+                                            <i class="fas fa-edit"></i>
+                                            <span>{{ author.post_count }} post{{ author.post_count|pluralize }}</span>
+                                        </div>
+                                        {% if not author.author_profile.is_guest_author %}
+                                            <div class="stat-item">
+                                                <i class="fas fa-calendar"></i>
+                                                <span>Since {{ author.date_joined|date:"Y" }}</span>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Social Links (compact) -->
+                                    {% with social_links=author.author_profile.get_social_links %}
+                                        {% if social_links %}
+                                            <div class="author-social-compact">
+                                                {% for platform, link_data in social_links.items %}
+                                                    <a href="{{ link_data.url }}" 
+                                                       target="_blank" 
+                                                       rel="noopener noreferrer"
+                                                       class="social-link-compact"
+                                                       title="{{ link_data.display }}">
+                                                        <i class="{{ link_data.icon }}"></i>
+                                                    </a>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    {% endwith %}
+                                </div>
+                                
+                                <div class="author-card-footer">
+                                    <a href="{% url 'blog:author_detail' author.username %}" class="view-profile-btn">
+                                        <i class="fas fa-user"></i>
+                                        View Profile
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Pagination -->
+                    {% if authors.has_other_pages %}
+                        <nav class="pagination-nav">
+                            <ul class="pagination">
+                                {% if authors.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page=1{% if query %}&q={{ query }}{% endif %}{% if current_filters.type != 'all' %}&type={{ current_filters.type }}{% endif %}{% if current_filters.per_page != 12 %}&per_page={{ current_filters.per_page }}{% endif %}">
+                                            <i class="fas fa-angle-double-left"></i>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ authors.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if current_filters.type != 'all' %}&type={{ current_filters.type }}{% endif %}{% if current_filters.per_page != 12 %}&per_page={{ current_filters.per_page }}{% endif %}">
+                                            <i class="fas fa-angle-left"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                
+                                {% for num in authors.paginator.page_range %}
+                                    {% if authors.number == num %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ num }}</span>
+                                        </li>
+                                    {% elif num > authors.number|add:'-3' and num < authors.number|add:'3' %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if current_filters.type != 'all' %}&type={{ current_filters.type }}{% endif %}{% if current_filters.per_page != 12 %}&per_page={{ current_filters.per_page }}{% endif %}">{{ num }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if authors.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ authors.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if current_filters.type != 'all' %}&type={{ current_filters.type }}{% endif %}{% if current_filters.per_page != 12 %}&per_page={{ current_filters.per_page }}{% endif %}">
+                                            <i class="fas fa-angle-right"></i>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ authors.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}{% if current_filters.type != 'all' %}&type={{ current_filters.type }}{% endif %}{% if current_filters.per_page != 12 %}&per_page={{ current_filters.per_page }}{% endif %}">
+                                            <i class="fas fa-angle-double-right"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    {% endif %}
+                {% else %}
+                    <div class="no-authors">
+                        <i class="fas fa-users"></i>
+                        <h3>No Authors Found</h3>
+                        {% if query %}
+                            <p>No authors match your search for "{{ query }}". Try adjusting your search terms.</p>
+                            <a href="{% url 'blog:author_list' %}" class="browse-all-btn">
+                                <i class="fas fa-users"></i>
+                                View All Authors
+                            </a>
+                        {% else %}
+                            <p>No authors are currently available.</p>
+                            <a href="{% url 'blog:list' %}" class="browse-all-btn">
+                                <i class="fas fa-th-large"></i>
+                                Browse Articles
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+
+    <style>
+        /* Authors Page Styles */
+        .authors-page-container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+
+        .breadcrumb-nav {
+            background: #fff;
+            border-bottom: 1px solid #dee2e6;
+            padding: 1rem 0;
+        }
+
+        .breadcrumb {
+            display: flex;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            gap: 0.5rem;
+        }
+
+        .breadcrumb-item {
+            display: flex;
+            align-items: center;
+        }
+
+        .breadcrumb-item:not(:last-child)::after {
+            content: '/';
+            margin-left: 0.5rem;
+            color: #6c757d;
+        }
+
+        .breadcrumb-item a {
+            color: #007acc;
+            text-decoration: none;
+        }
+
+        .breadcrumb-item.active {
+            color: #6c757d;
+        }
+
+        .authors-page-header {
+            background: linear-gradient(135deg, #007acc 0%, #0056b3 100%);
+            color: white;
+            padding: 4rem 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .authors-page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.1;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .page-title {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .page-subtitle {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .results-summary {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            display: inline-block;
+            backdrop-filter: blur(10px);
+        }
+
+        .results-count {
+            font-weight: 500;
+        }
+
+        .authors-filters {
+            background: white;
+            padding: 2rem 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .filters-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .search-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .search-input-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 2px solid #dee2e6;
+            border-radius: 25px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #007acc;
+            box-shadow: 0 0 0 3px rgba(0, 122, 204, 0.1);
+        }
+
+        .search-btn {
+            padding: 0.75rem 1.5rem;
+            background: #007acc;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .search-btn:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        .filter-options {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-select {
+            padding: 0.5rem 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: 20px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #007acc;
+        }
+
+        .clear-filters-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #dc3545;
+            color: white;
+            text-decoration: none;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+        }
+
+        .clear-filters-btn:hover {
+            background: #c82333;
+            transform: translateY(-1px);
+        }
+
+        .authors-grid-section {
+            padding: 3rem 0;
+        }
+
+        .authors-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .author-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border: 1px solid #dee2e6;
+        }
+
+        .author-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .author-card-header {
+            padding: 2rem 1.5rem 1rem;
+            text-align: center;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+
+        .author-avatar {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+
+        .author-avatar .profile-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #fff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .profile-initials {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #007acc, #0056b3);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border: 3px solid #fff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .guest-author-badge {
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            width: 24px;
+            height: 24px;
+            background: #28a745;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.75rem;
+            border: 2px solid #fff;
+        }
+
+        .author-name {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .author-name a {
+            color: #212529;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .author-name a:hover {
+            color: #007acc;
+        }
+
+        .author-company {
+            font-size: 0.875rem;
+            color: #6c757d;
+            font-style: italic;
+            margin: 0;
+        }
+
+        .author-card-body {
+            padding: 1.5rem;
+        }
+
+        .author-bio {
+            color: #495057;
+            line-height: 1.6;
+            margin: 0 0 1rem 0;
+            font-size: 0.95rem;
+        }
+
+        .author-stats {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+
+        .stat-item i {
+            color: #007acc;
+            width: 14px;
+        }
+
+        .author-social-compact {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .social-link-compact {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #495057;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .social-link-compact:hover {
+            background: #007acc;
+            color: white;
+            border-color: #007acc;
+            transform: translateY(-1px);
+        }
+
+        .author-card-footer {
+            padding: 1rem 1.5rem;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .view-profile-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+            padding: 0.75rem;
+            background: #007acc;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .view-profile-btn:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        .no-authors {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #6c757d;
+        }
+
+        .no-authors i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            color: #dee2e6;
+        }
+
+        .no-authors h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #495057;
+        }
+
+        .browse-all-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem 2rem;
+            background: #007acc;
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: 500;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .browse-all-btn:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 122, 204, 0.3);
+        }
+
+        /* Pagination Styles */
+        .pagination-nav {
+            display: flex;
+            justify-content: center;
+            margin-top: 3rem;
+        }
+
+        .pagination {
+            display: flex;
+            list-style: none;
+            gap: 0.5rem;
+            margin: 0;
+            padding: 0;
+        }
+
+        .page-item {
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .page-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: white;
+            color: #007acc;
+            text-decoration: none;
+            border: 1px solid #dee2e6;
+            transition: all 0.3s ease;
+        }
+
+        .page-item.active .page-link {
+            background: #007acc;
+            color: white;
+            border-color: #007acc;
+        }
+
+        .page-link:hover {
+            background: #f8f9fa;
+            border-color: #007acc;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .page-title {
+                font-size: 2rem;
+            }
+
+            .authors-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .filter-options {
+                justify-content: center;
+            }
+
+            .search-form {
+                text-align: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .authors-page-header {
+                padding: 2rem 0;
+            }
+
+            .page-title {
+                font-size: 1.5rem;
+            }
+
+            .page-subtitle {
+                font-size: 1rem;
+            }
+
+            .search-input-group {
+                flex-direction: column;
+            }
+
+            .filter-options {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-select {
+                width: 100%;
+            }
+
+            .author-stats {
+                flex-direction: column;
+                align-items: center;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+{% endblock content %}

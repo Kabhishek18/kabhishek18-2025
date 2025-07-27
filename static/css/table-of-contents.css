@@ -1,0 +1,366 @@
+/* Table of Contents Styles */
+
+.table-of-contents {
+    background: rgba(0, 20, 40, 0.95);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    border-radius: 12px;
+    margin: 2rem 0;
+    padding: 0;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 255, 255, 0.1);
+    position: sticky;
+    top: 2rem;
+    z-index: 100;
+    max-height: 70vh;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.table-of-contents.collapsed {
+    max-height: 60px;
+}
+
+.toc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+    background: rgba(0, 255, 255, 0.05);
+    border-radius: 12px 12px 0 0;
+}
+
+.toc-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #00ffff;
+    font-family: 'Orbitron', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.toc-title i {
+    font-size: 1rem;
+    opacity: 0.8;
+}
+
+.toc-toggle {
+    background: none;
+    border: none;
+    color: #00ffff;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toc-toggle:hover {
+    background: rgba(0, 255, 255, 0.1);
+    transform: scale(1.1);
+}
+
+.toc-toggle i {
+    transition: transform 0.3s ease;
+}
+
+.table-of-contents.collapsed .toc-toggle i {
+    transform: rotate(180deg);
+}
+
+.toc-list {
+    list-style: none;
+    margin: 0;
+    padding: 1rem 0;
+    max-height: calc(70vh - 80px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 255, 255, 0.3) transparent;
+}
+
+.toc-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.toc-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.toc-list::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 255, 0.3);
+    border-radius: 2px;
+}
+
+.toc-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 255, 255, 0.5);
+}
+
+.toc-item {
+    margin: 0;
+    position: relative;
+}
+
+.toc-link {
+    display: block;
+    padding: 0.5rem 1.5rem;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    transition: all 0.3s ease;
+    border-left: 3px solid transparent;
+    position: relative;
+}
+
+.toc-link:hover {
+    color: #00ffff;
+    background: rgba(0, 255, 255, 0.05);
+    border-left-color: rgba(0, 255, 255, 0.3);
+    transform: translateX(4px);
+}
+
+.toc-link.active {
+    color: #00ffff;
+    background: rgba(0, 255, 255, 0.1);
+    border-left-color: #00ffff;
+    font-weight: 500;
+}
+
+.toc-link.active::before {
+    content: '';
+    position: absolute;
+    left: -3px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 6px;
+    background: #00ffff;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+/* Heading level indentation */
+.toc-level-1 .toc-link {
+    padding-left: 1.5rem;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.toc-level-2 .toc-link {
+    padding-left: 2rem;
+    font-size: 0.9rem;
+}
+
+.toc-level-3 .toc-link {
+    padding-left: 2.5rem;
+    font-size: 0.85rem;
+}
+
+.toc-level-4 .toc-link {
+    padding-left: 3rem;
+    font-size: 0.8rem;
+}
+
+.toc-level-5 .toc-link {
+    padding-left: 3.5rem;
+    font-size: 0.8rem;
+}
+
+.toc-level-6 .toc-link {
+    padding-left: 4rem;
+    font-size: 0.75rem;
+}
+
+/* Nested lists */
+.toc-sublist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* Heading anchor links */
+.heading-anchor {
+    color: rgba(0, 255, 255, 0.4);
+    text-decoration: none;
+    margin-right: 0.5rem;
+    font-size: 0.8em;
+    opacity: 0;
+    transition: all 0.3s ease;
+    font-weight: normal;
+}
+
+h1:hover .heading-anchor,
+h2:hover .heading-anchor,
+h3:hover .heading-anchor,
+h4:hover .heading-anchor,
+h5:hover .heading-anchor,
+h6:hover .heading-anchor {
+    opacity: 1;
+}
+
+.heading-anchor:hover {
+    color: #00ffff;
+    text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+}
+
+/* Responsive design */
+@media (max-width: 1200px) {
+    .table-of-contents {
+        position: relative;
+        top: 0;
+        max-height: none;
+    }
+    
+    .table-of-contents.collapsed {
+        max-height: 60px;
+    }
+    
+    .toc-list {
+        max-height: 400px;
+    }
+}
+
+@media (max-width: 768px) {
+    .table-of-contents {
+        margin: 1rem 0;
+        border-radius: 8px;
+    }
+    
+    .toc-header {
+        padding: 0.75rem 1rem;
+        border-radius: 8px 8px 0 0;
+    }
+    
+    .toc-title {
+        font-size: 1rem;
+    }
+    
+    .toc-link {
+        padding: 0.4rem 1rem;
+        font-size: 0.85rem;
+    }
+    
+    .toc-level-1 .toc-link {
+        padding-left: 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .toc-level-2 .toc-link {
+        padding-left: 1.5rem;
+    }
+    
+    .toc-level-3 .toc-link {
+        padding-left: 2rem;
+    }
+    
+    .toc-level-4 .toc-link {
+        padding-left: 2.5rem;
+    }
+    
+    .toc-level-5 .toc-link {
+        padding-left: 3rem;
+    }
+    
+    .toc-level-6 .toc-link {
+        padding-left: 3.5rem;
+    }
+}
+
+/* Animation for smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* TOC container in article */
+.article-toc-container {
+    margin: 2rem 0;
+}
+
+/* Desktop sidebar positioning (if using sidebar layout) */
+@media (min-width: 1200px) {
+    .article-with-toc {
+        display: grid;
+        grid-template-columns: 1fr 300px;
+        gap: 2rem;
+        align-items: start;
+    }
+    
+    .article-content-with-toc {
+        min-width: 0; /* Prevent grid overflow */
+    }
+    
+    .article-toc-sidebar {
+        position: sticky;
+        top: 2rem;
+        max-height: calc(100vh - 4rem);
+        overflow-y: auto;
+    }
+    
+    .article-toc-sidebar .table-of-contents {
+        margin: 0;
+        position: static;
+    }
+}
+
+/* Progress indicator for TOC */
+.toc-progress {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 3px;
+    background: linear-gradient(to bottom, #00ffff, rgba(0, 255, 255, 0.3));
+    border-radius: 0 2px 2px 0;
+    transition: height 0.3s ease;
+    z-index: 1;
+}
+
+/* Reading time indicators */
+.toc-reading-time {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin-left: 0.5rem;
+    font-weight: normal;
+}
+
+/* Accessibility improvements */
+.table-of-contents:focus-within {
+    outline: 2px solid rgba(0, 255, 255, 0.5);
+    outline-offset: 2px;
+}
+
+.toc-link:focus {
+    outline: 2px solid rgba(0, 255, 255, 0.5);
+    outline-offset: -2px;
+    background: rgba(0, 255, 255, 0.1);
+}
+
+/* Print styles */
+@media print {
+    .table-of-contents {
+        background: white;
+        border: 1px solid #ccc;
+        color: black;
+        box-shadow: none;
+        position: static;
+        max-height: none;
+        page-break-inside: avoid;
+    }
+    
+    .toc-title,
+    .toc-link {
+        color: black;
+    }
+    
+    .toc-toggle {
+        display: none;
+    }
+    
+    .heading-anchor {
+        display: none;
+    }
+}

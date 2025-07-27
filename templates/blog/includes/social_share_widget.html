@@ -1,0 +1,393 @@
+{% load static %}
+
+<!-- Enhanced Social Sharing Widget -->
+<div class="social-share-widget" id="socialShareWidget">
+    <div class="share-header">
+        <h3 class="share-title">
+            <i class="fas fa-share-alt"></i>
+            Share this article
+        </h3>
+        {% if total_shares > 0 %}
+            <span class="total-shares" id="totalSharesCount">{{ total_shares }} share{{ total_shares|pluralize }}</span>
+        {% endif %}
+    </div>
+    
+    <div class="share-buttons">
+        {% for platform, config in share_urls.items %}
+            <a href="{{ config.url }}" 
+               class="share-btn share-btn-{{ platform }}" 
+               data-platform="{{ platform }}"
+               data-post-slug="{{ post.slug }}"
+               target="_blank" 
+               rel="noopener noreferrer"
+               title="Share on {{ config.name }}"
+               style="--platform-color: {{ config.color }};">
+                <i class="{{ config.icon }}"></i>
+                <span class="share-text">{{ config.name }}</span>
+                {% for share_platform, count in share_counts.items %}
+                    {% if share_platform == platform and count > 0 %}
+                        <span class="share-count" data-platform="{{ platform }}">{{ count }}</span>
+                    {% endif %}
+                {% endfor %}
+            </a>
+        {% endfor %}
+        
+        <!-- Copy Link Button -->
+        <button class="share-btn share-btn-copy" 
+                id="copyLinkBtn" 
+                title="Copy link to clipboard"
+                style="--platform-color: #6c757d;">
+            <i class="fas fa-link"></i>
+            <span class="share-text">Copy Link</span>
+        </button>
+    </div>
+    
+    <!-- Mobile Share Button (uses Web Share API if available) -->
+    <button class="mobile-share-btn" id="mobileShareBtn" style="display: none;">
+        <i class="fas fa-share"></i>
+        <span>Share</span>
+    </button>
+</div>
+
+<style>
+.social-share-widget {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(0, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 2rem 0;
+    backdrop-filter: blur(10px);
+}
+
+.share-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.share-title {
+    color: #00ffff;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.total-shares {
+    color: #888;
+    font-size: 0.9rem;
+    background: rgba(0, 255, 255, 0.1);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    border: 1px solid rgba(0, 255, 255, 0.2);
+}
+
+.share-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+}
+
+.share-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.share-btn:hover {
+    background: var(--platform-color, #007acc);
+    border-color: var(--platform-color, #007acc);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    color: #fff;
+    text-decoration: none;
+}
+
+.share-btn i {
+    font-size: 1.1rem;
+}
+
+.share-text {
+    font-weight: 500;
+}
+
+.share-count {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: auto;
+}
+
+.mobile-share-btn {
+    display: none;
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(135deg, #007acc, #00ffff);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 1rem;
+}
+
+.mobile-share-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 122, 204, 0.4);
+}
+
+/* Platform-specific hover colors */
+.share-btn-facebook:hover { background: #1877f2; border-color: #1877f2; }
+.share-btn-twitter:hover { background: #1da1f2; border-color: #1da1f2; }
+.share-btn-linkedin:hover { background: #0077b5; border-color: #0077b5; }
+.share-btn-reddit:hover { background: #ff4500; border-color: #ff4500; }
+.share-btn-pinterest:hover { background: #bd081c; border-color: #bd081c; }
+.share-btn-whatsapp:hover { background: #25d366; border-color: #25d366; }
+.share-btn-copy:hover { background: #6c757d; border-color: #6c757d; }
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .share-buttons {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .share-text {
+        display: none;
+    }
+    
+    .share-btn {
+        padding: 0.75rem;
+        justify-content: center;
+    }
+    
+    .mobile-share-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .share-buttons {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .share-btn {
+        padding: 0.5rem;
+        font-size: 0.8rem;
+    }
+    
+    .share-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+}
+
+/* Loading animation for share counts */
+.share-count.loading {
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Success feedback */
+.share-btn.shared {
+    background: #28a745 !important;
+    border-color: #28a745 !important;
+}
+
+.share-btn.shared::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.2rem;
+    animation: checkmark 0.5s ease;
+}
+
+@keyframes checkmark {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+    100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Social sharing functionality
+    const shareButtons = document.querySelectorAll('.share-btn[data-platform]');
+    const copyLinkBtn = document.getElementById('copyLinkBtn');
+    const mobileShareBtn = document.getElementById('mobileShareBtn');
+    const postSlug = '{{ post.slug }}';
+    const currentUrl = window.location.href;
+    const postTitle = '{{ post.title|escapejs }}';
+    
+    // Track share clicks and update counts
+    shareButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            const platform = this.dataset.platform;
+            
+            // Track the share (fire and forget)
+            fetch(`/blog/${postSlug}/share/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: `platform=${platform}`
+            }).then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateShareCount(platform, data.share_count);
+                    updateTotalShares(data.total_shares);
+                }
+            }).catch(error => {
+                console.log('Share tracking failed:', error);
+            });
+            
+            // Visual feedback
+            this.classList.add('shared');
+            setTimeout(() => {
+                this.classList.remove('shared');
+            }, 1000);
+        });
+    });
+    
+    // Copy link functionality
+    if (copyLinkBtn) {
+        copyLinkBtn.addEventListener('click', function() {
+            navigator.clipboard.writeText(currentUrl).then(() => {
+                this.innerHTML = '<i class="fas fa-check"></i><span class="share-text">Copied!</span>';
+                this.classList.add('shared');
+                
+                setTimeout(() => {
+                    this.innerHTML = '<i class="fas fa-link"></i><span class="share-text">Copy Link</span>';
+                    this.classList.remove('shared');
+                }, 2000);
+                
+                showNotification('Link copied to clipboard!', 'success');
+            }).catch(err => {
+                console.error('Copy failed:', err);
+                showNotification('Failed to copy link', 'error');
+            });
+        });
+    }
+    
+    // Mobile Web Share API
+    if (mobileShareBtn && navigator.share) {
+        mobileShareBtn.style.display = 'flex';
+        mobileShareBtn.addEventListener('click', function() {
+            navigator.share({
+                title: postTitle,
+                url: currentUrl
+            }).catch(err => console.log('Share failed:', err));
+        });
+    }
+    
+    // Helper functions
+    function updateShareCount(platform, count) {
+        const countElement = document.querySelector(`.share-count[data-platform="${platform}"]`);
+        if (countElement) {
+            countElement.textContent = count;
+        } else if (count > 0) {
+            // Add count element if it doesn't exist
+            const button = document.querySelector(`.share-btn[data-platform="${platform}"]`);
+            if (button) {
+                const countSpan = document.createElement('span');
+                countSpan.className = 'share-count';
+                countSpan.dataset.platform = platform;
+                countSpan.textContent = count;
+                button.appendChild(countSpan);
+            }
+        }
+    }
+    
+    function updateTotalShares(total) {
+        const totalElement = document.querySelector('.total-shares');
+        if (totalElement) {
+            totalElement.textContent = `${total} share${total !== 1 ? 's' : ''}`;
+        } else if (total > 0) {
+            // Add total shares element if it doesn't exist
+            const shareHeader = document.querySelector('.share-header');
+            if (shareHeader) {
+                const totalSpan = document.createElement('span');
+                totalSpan.className = 'total-shares';
+                totalSpan.textContent = `${total} share${total !== 1 ? 's' : ''}`;
+                shareHeader.appendChild(totalSpan);
+            }
+        }
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    function showNotification(message, type = 'info') {
+        // Create notification if it doesn't exist
+        let notification = document.querySelector('.notification');
+        if (!notification) {
+            notification = document.createElement('div');
+            notification.className = 'notification';
+            document.body.appendChild(notification);
+        }
+        
+        notification.className = `notification notification-${type} show`;
+        notification.innerHTML = `
+            <div class="notification-content">
+                <i class="fas fa-${getNotificationIcon(type)}"></i>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        setTimeout(() => {
+            notification.classList.remove('show');
+        }, 3000);
+    }
+    
+    function getNotificationIcon(type) {
+        switch (type) {
+            case 'success': return 'check-circle';
+            case 'error': return 'exclamation-circle';
+            case 'warning': return 'exclamation-triangle';
+            default: return 'info-circle';
+        }
+    }
+});
+</script>

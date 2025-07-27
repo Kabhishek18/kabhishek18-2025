@@ -147,6 +147,18 @@
                 </div>
                 <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Users</span>
             </a>
+            <a href="{% url 'admin:blog_tag_changelist' %}" class="flex flex-col items-center p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                <div class="quick-action-icon w-12 h-12 rounded-lg flex items-center justify-center mb-2">
+                    <span class="material-symbols-outlined text-pink-500">tag</span>
+                </div>
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Tags</span>
+            </a>
+            <a href="{% url 'admin:blog_comment_changelist' %}" class="flex flex-col items-center p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                <div class="quick-action-icon w-12 h-12 rounded-lg flex items-center justify-center mb-2">
+                    <span class="material-symbols-oriented text-red-500">comment</span>
+                </div>
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Comments</span>
+            </a>
         </div>
     </div>
 </div>

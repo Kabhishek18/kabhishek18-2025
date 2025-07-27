@@ -1,32 +1,34 @@
 {% extends "base.html" %}
 {% load static %}
+{% load blog_extras %}
+{% load random_icons %}
+
+{% block extra_css %}
+    {% if toc_data.show_toc %}
+        <link rel="stylesheet" href="{% static 'css/table-of-contents.css' %}">
+    {% endif %}
+{% endblock extra_css %}
+
+{% block extra_js %}
+    <script src="{% static 'js/blog-detail.js' %}"></script>
+    <script src="{% static 'js/multimedia.js' %}"></script>
+    {% if toc_data.show_toc %}
+        <script src="{% static 'js/table-of-contents.js' %}"></script>
+    {% endif %}
+{% endblock extra_js %}
 
 {% block meta_data %}
     {% if meta_data %}
         {{ meta_data }}
     {% else %}
-
         <meta name="author" content="Kumar Abhishek">
         <meta name="keywords" content="Kumar Abhishek, Full Stack Developer, Software Engineer, AI, Machine Learning, Python, React, Portfolio, Digital Architect">
         <meta name="robots" content="index, follow">
         <meta name="description" content="{{ meta_details }}">
-        
-        <meta property="og:title" content="{{ title }}">
-        <meta property="og:description" content="{{ meta_details }}">
         <link rel="canonical" href="{{ request.build_absolute_uri }}">
-        <meta property="og:url" content="{{ request.build_absolute_uri }}">
-        <meta property="og:type" content="article">
-        <meta property="article:published_time" content="{{ post.created_at|date:'c' }}">
-        <meta property="article:author" content="{{ post.author.get_full_name|default:post.author.username }}">
-        <link rel="canonical" href="https://kabhishek18.com/">
-        <meta property="og:image" content="https://kabhishek18.com/static/web-app-manifest-512x512.png">
-        <meta property="og:site_name" content="The Digital Architect">
-        <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:title" content="{{ title }}">
-        <meta name="twitter:description" content="{{meta_details}}">
-        <meta name="twitter:image" content="https://kabhishek18.com/static/web-app-manifest-512x512.png">
-        <meta name="twitter:site" content="@kabhishek18">
-        <meta name="twitter:creator" content="@kabhishek18">
+        
+        <!-- Enhanced Social Media Meta Tags -->
+        {% social_meta_tags post request %}
      {% endif %}   
 {% endblock meta_data %}
 
@@ -55,15 +57,42 @@
                 <div class="meta-item"><i class="fas fa-clock"></i><span>{{ post.read_time }} min read</span></div>
                 <div class="meta-item"><i class="fas fa-eye"></i><span>{{ post.view_count }} views</span></div>
             </div>
+            
+            {% if post.tags.all %}
+                <div class="article-tags">
+                    <i class="fas fa-tags"></i>
+                    {% for tag in post.tags.all %}
+                        <a href="{% url 'blog:list_by_tag' tag.slug %}" 
+                           class="article-tag" 
+                           style="--tag-color: {{ tag.color }};">
+                            {{ tag.name }}
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </header>
 
         {% if post.featured_image %}
             <div class="article-image"><img src="{{ post.featured_image.url }}" alt="{{ post.title }}" style="width:100%; height:auto; border-radius:15px; margin-bottom: 2rem;"></div>
         {% endif %}
         
+        <!-- Table of Contents -->
+        {% if toc_data.show_toc %}
+            <div class="article-toc-container">
+                {{ toc_data.toc_html|safe }}
+            </div>
+        {% endif %}
+        
         <article class="article-content">
-            {{ post.content|safe }}
+            {% if toc_data.show_toc %}
+                {{ toc_data.content|safe }}
+            {% else %}
+                {{ post.content|safe }}
+            {% endif %}
         </article>
+
+        <!-- Social Sharing Widget -->
+        {% include 'blog/includes/social_share_widget.html' %}
 
         <!-- <div class="article-tags">
             {% for category in post.categories.all %}
@@ -71,67 +100,338 @@
             {% endfor %}
         </div> -->
 
-        <div class="author-section">
-            <div class="author-avatar">
-                {% if post.author.profile.profile_picture %}
-                    <img src="{{ post.author.profile.profile_picture.url }}" 
-                        alt="{{ post.author.get_full_name }}'s profile" 
-                        class="profile-image">
-                {% else %}
-                    <!-- Fallback to initials if no profile image -->
-                    <div class="profile-initials">
-                        {% if post.author.first_name %}{{ post.author.first_name|first }}{{ post.author.last_name|first }}{% else %}{{ post.author.username|first|upper }}{% endif %}
-                    </div>
-                {% endif %}
-            </div>
-            <div class="author-info">
-                <h3>{{ post.author.get_full_name|default:post.author.username }}</h3>
-                
-                {% if post.author.profile.about %}
-                    <p class="author-bio">{{ post.author.profile.about }}</p>
-                {% else %}
-                    <p class="author-bio">Full Stack Developer | AI Enthusiast | Digital Architect</p>
-                {% endif %}
-                
-                <!-- Only show social media section if get_social_media exists -->
-                {% if post.author.get_social_media %}
-                    {% with social=post.author.get_social_media %}
-                        {% if social.twitter or social.linkedin or social.instagram or social.website %}
-                            <div class="author-social">
-                                {% if social.website %}
-                                    <a href="{{ social.website }}" target="_blank">🌐 Website</a>
-                                {% endif %}
-                                {% if social.twitter %}
-                                    <a href="{{ social.twitter }}" target="_blank">🐦 Twitter</a>
-                                {% endif %}
-                                {% if social.linkedin %}
-                                    <a href="{{ social.linkedin }}" target="_blank">💼 LinkedIn</a>
-                                {% endif %}
-                                {% if social.instagram %}
-                                    <a href="{{ social.instagram }}" target="_blank">📸 Instagram</a>
-                                {% endif %}
-                            </div>
-                        {% endif %}
-                    {% endwith %}
-                {% endif %}
-            </div>
-        </div>
+        <!-- Enhanced Author Bio Widget -->
+        {% include 'blog/includes/author_bio_widget.html' %}
         <amp-auto-ads type="adsense"
             data-ad-client="ca-pub-6078293202282096">
         </amp-auto-ads>
-        <section class="related-posts">
-            <h2 class="related-title">Related Articles : {% for category in post.categories.all %} <a href="{% url 'blog:list_by_category' category.slug %}" class="article-tag">{{ category.name }}</a>{% endfor %}</h2>
-            <div class="related-grid">
-                {% for related_post in related_posts %}
-                    <div class="related-card" onclick="window.location.href='{% url 'blog:detail' related_post.slug %}'">
-                        <h4>{{ related_post.title }}</h4>
-                        <p>{{ related_post.excerpt|striptags|truncatechars:100 }}</p>
+        <!-- Comments Section -->
+        {% if post.allow_comments %}
+            <section class="comments-section" id="comments">
+                <div class="comments-header">
+                    <h2 class="comments-title">
+                        <i class="fas fa-comments"></i>
+                        Comments
+                        <span class="comments-count">({{ comments.count }})</span>
+                    </h2>
+                    {% if comments.count > 0 %}
+                        <div class="comments-sort">
+                            <label for="commentSort">Sort by:</label>
+                            <select id="commentSort" class="comment-sort-select">
+                                <option value="newest">Newest First</option>
+                                <option value="oldest">Oldest First</option>
+                            </select>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Comment Form -->
+                <div class="comment-form-container">
+                    <div class="comment-form-header">
+                        <h3>Join the Discussion</h3>
+                        <p class="comment-form-subtitle">Share your thoughts and engage with the community</p>
                     </div>
-                {% empty %}
-                    <p>No related articles found.</p>
-                {% endfor %}
-            </div>
-        </section>
+                    <form method="post" action="{% url 'blog:submit_comment' post.slug %}" class="comment-form" id="commentForm">
+                        {% csrf_token %}
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="id_author_name">Name *</label>
+                                {{ comment_form.author_name }}
+                                <div class="form-error" id="name-error"></div>
+                            </div>
+                            <div class="form-group">
+                                <label for="id_author_email">Email *</label>
+                                {{ comment_form.author_email }}
+                                <div class="form-error" id="email-error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="id_author_website">Website (optional)</label>
+                            {{ comment_form.author_website }}
+                        </div>
+                        <div class="form-group">
+                            <label for="id_content">Comment *</label>
+                            {{ comment_form.content }}
+                            <div class="character-count">
+                                <span id="charCount">0</span> / 2000 characters
+                            </div>
+                            <div class="form-error" id="content-error"></div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="comment-submit-btn" id="submitBtn">
+                                <i class="fas fa-paper-plane"></i>
+                                <span>Post Comment</span>
+                                <div class="btn-loader" style="display: none;">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                            </button>
+                            <button type="button" class="comment-preview-btn" id="previewBtn">
+                                <i class="fas fa-eye"></i>
+                                Preview
+                            </button>
+                        </div>
+                        <div class="comment-guidelines">
+                            <details>
+                                <summary>
+                                    <i class="fas fa-info-circle"></i>
+                                    Comment Guidelines
+                                </summary>
+                                <ul>
+                                    <li>Be respectful and constructive in your comments</li>
+                                    <li>Stay on topic and relevant to the article</li>
+                                    <li>No spam, self-promotion, or offensive content</li>
+                                    <li>Comments are moderated and may take time to appear</li>
+                                </ul>
+                            </details>
+                        </div>
+                    </form>
+                    
+                    <!-- Comment Preview -->
+                    <div class="comment-preview" id="commentPreview" style="display: none;">
+                        <h4>Preview</h4>
+                        <div class="preview-content"></div>
+                        <button type="button" class="close-preview-btn" id="closePreviewBtn">
+                            <i class="fas fa-times"></i>
+                            Close Preview
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Comments List -->
+                <div class="comments-list">
+                    {% for comment in comments %}
+                        <div class="comment" id="comment-{{ comment.id }}">
+                            <div class="comment-header">
+                                <div class="comment-author">
+                                    <div class="author-avatar">
+                                        {{ comment.author_name|first|upper }}
+                                    </div>
+                                    <div class="author-info">
+                                        <h4 class="author-name">
+                                            {% if comment.author_website %}
+                                                <a href="{{ comment.author_website }}" target="_blank" rel="nofollow">
+                                                    {{ comment.author_name }}
+                                                </a>
+                                            {% else %}
+                                                {{ comment.author_name }}
+                                            {% endif %}
+                                        </h4>
+                                        <span class="comment-date">
+                                            <i class="fas fa-clock"></i>
+                                            {{ comment.created_at|date:"F d, Y \a\t g:i A" }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <button class="reply-btn" onclick="toggleReplyForm({{ comment.id }})">
+                                    <i class="fas fa-reply"></i>
+                                    Reply
+                                </button>
+                            </div>
+                            
+                            <div class="comment-content">
+                                {{ comment.content|linebreaks }}
+                            </div>
+                            
+                            <!-- Reply Form (Hidden by default) -->
+                            <div class="reply-form-container" id="reply-form-{{ comment.id }}" style="display: none;">
+                                <h4>Reply to {{ comment.author_name }}</h4>
+                                <form method="post" action="{% url 'blog:submit_reply' post.slug comment.id %}" class="reply-form">
+                                    {% csrf_token %}
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <input type="text" name="author_name" placeholder="Your Name *" required maxlength="100" class="comment-input">
+                                        </div>
+                                        <div class="form-group">
+                                            <input type="email" name="author_email" placeholder="Your Email *" required class="comment-input">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <input type="url" name="author_website" placeholder="Your Website (optional)" class="comment-input">
+                                    </div>
+                                    <div class="form-group">
+                                        <textarea name="content" placeholder="Write your reply here... *" required rows="3" maxlength="2000" class="comment-textarea"></textarea>
+                                    </div>
+                                    <div class="reply-form-actions">
+                                        <button type="submit" class="reply-submit-btn">
+                                            <i class="fas fa-paper-plane"></i>
+                                            Post Reply
+                                        </button>
+                                        <button type="button" class="cancel-reply-btn" onclick="toggleReplyForm({{ comment.id }})">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <!-- Replies -->
+                            {% if comment.get_replies %}
+                                <div class="replies">
+                                    {% for reply in comment.get_replies %}
+                                        <div class="reply" id="comment-{{ reply.id }}">
+                                            <div class="comment-header">
+                                                <div class="comment-author">
+                                                    <div class="author-avatar">
+                                                        {{ reply.author_name|first|upper }}
+                                                    </div>
+                                                    <div class="author-info">
+                                                        <h5 class="author-name">
+                                                            {% if reply.author_website %}
+                                                                <a href="{{ reply.author_website }}" target="_blank" rel="nofollow">
+                                                                    {{ reply.author_name }}
+                                                                </a>
+                                                            {% else %}
+                                                                {{ reply.author_name }}
+                                                            {% endif %}
+                                                        </h5>
+                                                        <span class="comment-date">
+                                                            <i class="fas fa-clock"></i>
+                                                            {{ reply.created_at|date:"F d, Y \a\t g:i A" }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="comment-content">
+                                                {{ reply.content|linebreaks }}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% empty %}
+                        <div class="no-comments">
+                            <i class="fas fa-comment-slash"></i>
+                            <p>No comments yet. Be the first to share your thoughts!</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+
+        <!-- Enhanced Related Posts Section -->
+        {% if related_posts %}
+            <section class="related-posts-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-lightbulb"></i>
+                        Related Articles
+                    </h2>
+                    <p class="section-subtitle">
+                        Discover more content based on 
+                        {% if post.categories.all %}
+                            {% for category in post.categories.all %}
+                                <a href="{% url 'blog:list_by_category' category.slug %}" class="category-link">{{ category.name }}</a>{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                        {% if post.tags.all and post.categories.all %} and {% endif %}
+                        {% if post.tags.all %}
+                            {% for tag in post.tags.all|slice:":3" %}
+                                <a href="{% url 'blog:list_by_tag' tag.slug %}" class="tag-link" style="--tag-color: {{ tag.color }};">{{ tag.name }}</a>{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    </p>
+                </div>
+                
+                <div class="related-posts-grid">
+                    {% for related_post in related_posts %}
+                        <article class="related-post-card">
+                            {% if related_post.featured_image %}
+                                <div class="related-post-image" style="background-image: url('{{ related_post.featured_image.url }}');"></div>
+                            {% else %}
+                                <div class="related-post-image related-post-placeholder">
+                                    <i class="{% random_icon %}"></i>
+                                </div>
+                            {% endif %}
+                            
+                            <div class="related-post-content">
+                                <div class="related-post-meta">
+                                    {% if related_post.categories.first %}
+                                        <span class="related-post-category">
+                                            {{ related_post.categories.first.name }}
+                                        </span>
+                                    {% endif %}
+                                    <span class="related-post-date">
+                                        {{ related_post.created_at|date:"M d, Y" }}
+                                    </span>
+                                </div>
+                                
+                                <h3 class="related-post-title">
+                                    <a href="{% url 'blog:detail' related_post.slug %}">
+                                        {{ related_post.title }}
+                                    </a>
+                                </h3>
+                                
+                                <p class="related-post-excerpt">
+                                    {{ related_post.excerpt|striptags|truncatechars:120 }}
+                                </p>
+                                
+                                {% if related_post.tags.all %}
+                                    <div class="related-post-tags">
+                                        {% for tag in related_post.tags.all|slice:":2" %}
+                                            <span class="related-post-tag" style="--tag-color: {{ tag.color }};">
+                                                {{ tag.name }}
+                                            </span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                
+                                <div class="related-post-stats">
+                                    <span class="stat-item">
+                                        <i class="fas fa-eye"></i>
+                                        {{ related_post.view_count }}
+                                    </span>
+                                    <span class="stat-item">
+                                        <i class="fas fa-clock"></i>
+                                        {{ related_post.read_time }} min
+                                    </span>
+                                </div>
+                                
+                                <a href="{% url 'blog:detail' related_post.slug %}" class="related-post-link">
+                                    Read Article
+                                    <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+                
+                <!-- More Articles Link -->
+                <div class="more-articles-section">
+                    <a href="{% url 'blog:list' %}" class="more-articles-btn">
+                        <i class="fas fa-th-large"></i>
+                        Explore All Articles
+                    </a>
+                    {% if post.categories.first %}
+                        <a href="{% url 'blog:list_by_category' post.categories.first.slug %}" class="more-articles-btn secondary">
+                            <i class="fas fa-folder"></i>
+                            More in {{ post.categories.first.name }}
+                        </a>
+                    {% endif %}
+                </div>
+            </section>
+        {% else %}
+            <!-- Fallback: Show popular posts if no related posts found -->
+            <section class="related-posts-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-fire"></i>
+                        Popular Articles
+                    </h2>
+                    <p class="section-subtitle">
+                        Since we couldn't find related articles, here are some popular reads
+                    </p>
+                </div>
+                
+                <div class="popular-fallback-grid">
+                    <!-- This would be populated by a separate context variable for popular posts -->
+                    <div class="no-related-message">
+                        <i class="fas fa-compass"></i>
+                        <p>Discover more great content by exploring our <a href="{% url 'blog:list' %}">blog archive</a>.</p>
+                    </div>
+                </div>
+            </section>
+        {% endif %}
     </div>
     <script>
         // Blog Detail Page JavaScript Functionality
@@ -493,5 +793,54 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Comment System JavaScript Functions
+function toggleReplyForm(commentId) {
+    const replyForm = document.getElementById('reply-form-' + commentId);
+    if (replyForm) {
+        if (replyForm.style.display === 'none' || replyForm.style.display === '') {
+            replyForm.style.display = 'block';
+            // Focus on the first input field
+            const firstInput = replyForm.querySelector('input[name="author_name"]');
+            if (firstInput) {
+                firstInput.focus();
+            }
+        } else {
+            replyForm.style.display = 'none';
+        }
+    }
+}
+
+// Re-initialize if content is dynamically loaded
+const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+            // Check if any new pre elements were added
+            const hasNewCodeBlocks = Array.from(mutation.addedNodes).some(node => 
+                node.nodeType === 1 && (node.tagName === 'PRE' || node.querySelector('pre'))
+            );
+            
+            if (hasNewCodeBlocks) {
+                // Small delay to ensure content is fully rendered
+                setTimeout(initializeCopyButtons, 100);
+            }
+        }
+    });
+});
+
+// Start observing the article content for changes
+const articleContent = document.querySelector('.article-content');
+if (articleContent) {
+    observer.observe(articleContent, {
+        childList: true,
+        subtree: true
+    });
+}
+});
     </script>
+    
+    <!-- Table of Contents JavaScript -->
+    {% if toc_data.show_toc %}
+        <script src="{% static 'js/table-of-contents.js' %}"></script>
+    {% endif %}
 {% endblock %}
