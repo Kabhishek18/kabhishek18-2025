@@ -150,10 +150,23 @@ class ContentSecurityMiddleware(MiddlewareMixin):
             r'data:text/html',
             r'on\w+\s*=',
         ]
+        
+        # Fields that should be excluded from security scanning (like tags, categories)
+        self.excluded_fields = [
+            'tags', 'categories', 'tag', 'category', 'slug', 'name',
+            'csrfmiddlewaretoken', '_method', '_token'
+        ]
+        
+        # Paths that should have relaxed security scanning
+        self.admin_paths = ['/admin/', '/blog/admin/']
     
     def process_request(self, request):
         """Scan request for malicious content"""
         if request.method in ['POST', 'PUT', 'PATCH']:
+            # Skip security scanning for admin paths (Django admin handles its own security)
+            if any(admin_path in request.path for admin_path in self.admin_paths):
+                return None
+            
             # Check POST data for suspicious patterns
             if self._contains_suspicious_content(request.POST):
                 SecurityAuditLogger.log_suspicious_activity(
@@ -173,12 +186,32 @@ class ContentSecurityMiddleware(MiddlewareMixin):
         import re
         
         for key, value in data.items():
+            # Skip excluded fields (like tags, categories, etc.)
+            if key.lower() in self.excluded_fields:
+                continue
+                
+            # Skip fields that are lists (like multiple tag selections)
+            if isinstance(value, list):
+                continue
+                
             if isinstance(value, str):
-                for pattern in self.suspicious_patterns:
-                    if re.search(pattern, value, re.IGNORECASE):
-                        return True
+                # Only check content fields, not metadata fields
+                if self._is_content_field(key):
+                    for pattern in self.suspicious_patterns:
+                        if re.search(pattern, value, re.IGNORECASE):
+                            return True
         
         return False
+    
+    def _is_content_field(self, field_name: str) -> bool:
+        """Determine if a field should be scanned for malicious content"""
+        content_fields = [
+            'content', 'comment', 'message', 'description', 'bio', 
+            'text', 'body', 'excerpt', 'summary'
+        ]
+        
+        field_lower = field_name.lower()
+        return any(content_field in field_lower for content_field in content_fields)
 
 
 class CacheControlMiddleware(MiddlewareMixin):
