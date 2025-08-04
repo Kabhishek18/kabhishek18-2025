@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Font Awesome Test{% endblock %}
+
+{% block content %}
+<div style="padding: 2rem; background: var(--secondary-bg); margin: 2rem; border-radius: 8px;">
+    <h1>Font Awesome Icon Test</h1>
+    
+    <div style="margin: 1rem 0;">
+        <h3>Solid Icons (fas):</h3>
+        <i class="fas fa-home"></i> Home
+        <i class="fas fa-user"></i> User
+        <i class="fas fa-envelope"></i> Email
+        <i class="fas fa-phone"></i> Phone
+        <i class="fas fa-heart"></i> Heart
+    </div>
+    
+    <div style="margin: 1rem 0;">
+        <h3>Regular Icons (far):</h3>
+        <i class="far fa-heart"></i> Heart
+        <i class="far fa-star"></i> Star
+        <i class="far fa-bookmark"></i> Bookmark
+    </div>
+    
+    <div style="margin: 1rem 0;">
+        <h3>Brand Icons (fab):</h3>
+        <i class="fab fa-github"></i> GitHub
+        <i class="fab fa-twitter"></i> Twitter
+        <i class="fab fa-linkedin"></i> LinkedIn
+        <i class="fab fa-google"></i> Google
+    </div>
+    
+    <div style="margin: 1rem 0;">
+        <h3>Different Sizes:</h3>
+        <i class="fas fa-star fa-xs"></i>
+        <i class="fas fa-star fa-sm"></i>
+        <i class="fas fa-star"></i>
+        <i class="fas fa-star fa-lg"></i>
+        <i class="fas fa-star fa-xl"></i>
+        <i class="fas fa-star fa-2xl"></i>
+    </div>
+</div>
+{% endblock %}
