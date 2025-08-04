@@ -1,0 +1,18 @@
+{{ site_name }} - Confirm Your Newsletter Subscription
+
+Hello!
+
+Thank you for subscribing to our newsletter. To complete your subscription and start receiving our latest blog posts and updates, please confirm your email address by visiting the following link:
+
+{{ confirmation_url }}
+
+What you'll receive:
+- Notifications about new blog posts
+- Exclusive content and insights  
+- Updates about new features and projects
+
+Note: This confirmation link will expire in 7 days. If you didn't subscribe to our newsletter, you can safely ignore this email.
+
+This email was sent to {{ subscriber.email }}
+
+© {{ site_name }}. All rights reserved.

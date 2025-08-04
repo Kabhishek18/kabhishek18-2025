@@ -1,0 +1,23 @@
+{{ site_name }} - New Blog Post Published!
+
+New Post: {{ post.title }}
+
+By {{ post.author.get_full_name|default:post.author.username }}
+Published: {{ post.created_at|date:"F j, Y" }}
+Reading time: {{ post.get_reading_time }} minutes
+
+{% if post.excerpt %}
+{{ post.excerpt }}
+{% endif %}
+
+Read the full article here: {{ post_url }}
+
+We hope you enjoy this new post! Stay tuned for more insights and updates.
+
+---
+
+This email was sent to {{ subscriber.email }}
+
+Don't want to receive these emails? Unsubscribe here: {{ unsubscribe_url }}
+
+© {{ site_name }}. All rights reserved.

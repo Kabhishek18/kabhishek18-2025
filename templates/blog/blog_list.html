@@ -1,5 +1,5 @@
-{% extends "index.html" %}
-{% load static random_icons %}
+{% extends "base.html" %}
+{% load static random_icons search_extras %}
 
 {# Override meta details for this specific page #}
 {% block meta_data %}
@@ -28,58 +28,257 @@
 
     <!-- Main Container -->
     <div class="blog-container">
+         <!-- Breadcrumb Navigation -->
+         {% if breadcrumbs %}
+         <nav class="breadcrumb-nav" aria-label="Breadcrumb">
+             <ol class="breadcrumb-list">
+                 {% for breadcrumb in breadcrumbs %}
+                     <li class="breadcrumb-item {% if breadcrumb.active %}active{% endif %}">
+                         {% if not breadcrumb.active %}
+                             <a href="{{ breadcrumb.url }}" class="breadcrumb-link">
+                                 {{ breadcrumb.name }}
+                             </a>
+                         {% else %}
+                             <span class="breadcrumb-current">{{ breadcrumb.name }}</span>
+                         {% endif %}
+                         {% if not forloop.last %}
+                             <i class="fas fa-chevron-right breadcrumb-separator"></i>
+                         {% endif %}
+                     </li>
+                 {% endfor %}
+             </ol>
+         </nav>
+     {% endif %}
+
         <div class="blog-header">
             <h1 class="blog-title">DIGITAL CODEX</h1>
             <p class="blog-subtitle">
                 Exploring the intersection of artificial intelligence, machine learning, and the future of software development through the lens of a digital architect.
             </p>
         </div>
+        
+        <!-- Featured Posts Carousel -->
+        {% if featured_posts and not current_category and not current_tag and not query %}
+                <div id="featuredCarousel">
+                    <div class="carousel-container">
+                        <div class="carousel-viewport">
+                            <span class="featured-badge text-center">
+                                <i class="fas fa-star"></i>
+                                Featured Digital Codex
+                            </span>
+                            <div class="carousel-track" id="carouselTrack">
+                                {% for post in featured_posts %}
+                                    <div class="featured-post-card">        
+                                        {% if post.featured_image %}
+                                            <div class="featured-post-image" style="background-image: url('{{ post.featured_image.url }}');"></div>
+                                        {% else %}
+                                            <div class="featured-post-image featured-post-placeholder">
+                                                <i class="{% random_icon %}"></i>
+                                            </div>
+                                        {% endif %}
+                                        <div class="featured-post-content">
+                                            <div class="featured-post-meta">
+                                                {% if post.categories.first %}
 
-        <div class="search-container">
-            <form method="get" action="{% url 'blog:list' %}">
-                <div class="search-icon"><i class="fas fa-search"></i></div>
-                <input type="text" class="search-input" name="q" placeholder="Search the digital archives..." value="{{ request.GET.q }}">
-            </form>
+                                                <span class="featured-post-category">
+                                                    <a href="{% url 'blog:list_by_category' post.categories.first.slug %}">
+                                                        {{ post.categories.first.name }}
+                                                    </a>
+                                                </span>
+                                                {% endif %}
+
+                                                <span class="featured-post-date">{{ post.created_at|date:"M d, Y" }}</span>
+                                            </div>
+                                            <h3 class="featured-post-title">
+                                                <a href="{% url 'blog:detail' post.slug %}">{{ post.title }}</a>
+                                            </h3>
+                                            <p class="featured-post-excerpt">{{ post.excerpt|safe|truncatechars:250 }}</p>
+                                            {% if post.tags.all %}
+                                                <div class="featured-post-tags">
+                                                    {% for tag in post.tags.all|slice:":3" %}
+                                                        <a href="{% url 'blog:list_by_tag' tag.slug %}" 
+                                                           class="featured-post-tag" 
+                                                           style="--tag-color: {{ tag.color }};">
+                                                            {{ tag.name }}
+                                                        </a>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}                                    
+                                            <a href="{% url 'blog:detail' post.slug %}" class="featured-post-link">
+                                                Read Article
+                                                <i class="fas fa-arrow-right"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% if featured_posts|length > 1 %}
+                        <div class="carousel-controls">
+                            <button class="carousel-btn carousel-prev" id="carouselPrev">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <div class="carousel-indicators" id="carouselIndicators">
+                                {% for post in featured_posts %}
+                                    <button class="carousel-indicator {% if forloop.first %}active{% endif %}" 
+                                            data-slide="{{ forloop.counter0 }}"></button>
+                                {% endfor %}
+                            </div>
+                            <button class="carousel-btn carousel-next" id="carouselNext">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+    
+        {% endif %}
+
+
+
+        <!-- Search Results Summary -->
+        {% if query or current_category or current_tag %}
+            <div class="search-results-summary">
+                <div class="results-info">
+                    <h2 class="results-title">
+                        {% if query %}
+                            Search Results for "{{ query }}"
+                        {% elif current_category and current_tag %}
+                            {{ current_category.name }} posts tagged with {{ current_tag.name }}
+                        {% elif current_category %}
+                            Posts in {{ current_category.name }}
+                        {% elif current_tag %}
+                            Posts tagged with {{ current_tag.name }}
+                        {% endif %}
+                    </h2>
+                    <p class="results-count">
+                        {{ total_results }} post{{ total_results|pluralize }} found
+                        {% if current_filters.date_range and current_filters.date_range != 'all' %}
+                            in the {{ current_filters.date_range }}
+                        {% endif %}
+                    </p>
+                </div>
+                
+                {% if query or current_filters.category != 'all' or current_filters.tag != 'all' or current_filters.date_range != 'all' %}
+                    <div class="active-filters-summary">
+                        <span class="filters-label">Active filters:</span>
+                        {% if query %}
+                            <span class="filter-tag search-filter">
+                                <i class="fas fa-search"></i>
+                                "{{ query }}"
+                                <a href="{% url 'blog:list' %}" class="remove-filter" title="Clear search">&times;</a>
+                            </span>
+                        {% endif %}
+                        {% if current_category %}
+                            <span class="filter-tag category-filter">
+                                <i class="fas fa-folder"></i>
+                                {{ current_category.name }}
+                                <a href="{% if current_tag %}{% url 'blog:list_by_tag' current_tag.slug %}{% else %}{% url 'blog:list' %}{% endif %}" class="remove-filter" title="Remove category filter">&times;</a>
+                            </span>
+                        {% endif %}
+                        {% if current_tag %}
+                            <span class="filter-tag tag-filter">
+                                <i class="fas fa-tag"></i>
+                                {{ current_tag.name }}
+                                <a href="{% if current_category %}{% url 'blog:list_by_category' current_category.slug %}{% else %}{% url 'blog:list' %}{% endif %}" class="remove-filter" title="Remove tag filter">&times;</a>
+                            </span>
+                        {% endif %}
+                        <a href="{% url 'blog:list' %}" class="clear-all-filters">
+                            <i class="fas fa-times-circle"></i>
+                            Clear all
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+
+      
+
+        <!-- Navigation and Filters -->
+        <div class="blog-filters">
+            <!-- Category Navigation -->
+            {% if all_categories %}
+                <div class="filter-section">
+                    <h3 class="filter-title">Categories</h3>
+                    <div class="category-nav">
+                        <a href="{% url 'blog:list' %}" class="category-link {% if not current_category %}active{% endif %}">All Posts</a>
+                        {% for category in all_categories %}
+                            <a href="{% url 'blog:list_by_category' category.slug %}" 
+                               class="category-link {% if current_category.slug == category.slug %}active{% endif %}">
+                                {{ category.name }}
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Tag Cloud -->
+            {% if tag_cloud %}
+                <div class="filter-section">
+                    <h3 class="filter-title">Tags</h3>
+                    <div class="tag-cloud">
+                        {% for tag in tag_cloud %}
+                            <a href="{% url 'blog:list_by_tag' tag.slug %}" 
+                               class="tag-link {% if current_tag.slug == tag.slug %}active{% endif %}"
+                               style="--tag-color: {{ tag.color }};"
+                               data-count="{{ tag.post_count }}">
+                                {{ tag.name }}
+                                <span class="tag-count">{{ tag.post_count }}</span>
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Active Filters Display -->
+            {% if current_category or current_tag %}
+                <div class="active-filters">
+                    <h4>Active Filters:</h4>
+                    {% if current_category %}
+                        <span class="active-filter">
+                            Category: {{ current_category.name }}
+                            <a href="{% if current_tag %}{% url 'blog:list_by_tag' current_tag.slug %}{% else %}{% url 'blog:list' %}{% endif %}" class="remove-filter">&times;</a>
+                        </span>
+                    {% endif %}
+                    {% if current_tag %}
+                        <span class="active-filter">
+                            Tag: {{ current_tag.name }}
+                            <a href="{% if current_category %}{% url 'blog:list_by_category' current_category.slug %}{% else %}{% url 'blog:list' %}{% endif %}" class="remove-filter">&times;</a>
+                        </span>
+                    {% endif %}
+                </div>
+            {% endif %}
         </div>
 
         <div class="blog-grid" id="blogGrid">
-            {% for post in posts %}
-                {% if post.is_featured and forloop.first and not current_category and not request.GET.q and not posts.has_previous %}
-                    <article class="blog-card featured-post">
-                        {% if post.featured_image %}
+            {% for post in posts %}  
+                <article class="blog-card">
+                    {% if post.featured_image %}
                             <div class="blog-image" style="background-image: url('{{ post.featured_image.url }}');"></div>
-                        {% else %}
-                             <div class="blog-image"><i class="{% random_icon %}"></i></div>
-                        {% endif %}
-                        <div class="blog-content">
-                            <span class="featured-badge">Featured</span>
-                            <div class="blog-meta">
-                                <span class="blog-category">{{ post.categories.first.name|default:'General' }}</span>
-                                <span class="blog-date"><i class="fas fa-calendar"></i> {{ post.created_at|date:"F d, Y" }}</span>
-                            </div>
-                            <h2 class="blog-card-title">{{ post.title }}</h2>
-                        <p class="blog-excerpt">{{ post.excerpt|safe|truncatechars:200 }}</p>
-                            <a href="{% url 'blog:detail' post.slug %}" class="read-more">Read Full Article <i class="fas fa-arrow-right"></i></a>
+                    {% else %}
+                            <div class="blog-image"><i class="{% random_icon %}"></i></div>
+                    {% endif %}
+                    <div class="blog-content">
+                        <div class="blog-meta">
+                            <span class="blog-category">{{ post.categories.first.name|default:'General' }}</span>
+                            <span class="blog-date"><i class="fas fa-calendar"></i> {{ post.created_at|date:"F d, Y" }}</span>
                         </div>
-                    </article>
-                {% else %}
-                    <article class="blog-card">
-                        {% if post.featured_image %}
-                             <div class="blog-image" style="background-image: url('{{ post.featured_image.url }}');"></div>
-                        {% else %}
-                             <div class="blog-image"><i class="{% random_icon %}"></i></div>
-                        {% endif %}
-                        <div class="blog-content">
-                            <div class="blog-meta">
-                                <span class="blog-category">{{ post.categories.first.name|default:'General' }}</span>
-                                <span class="blog-date"><i class="fas fa-calendar"></i> {{ post.created_at|date:"F d, Y" }}</span>
+                        {% if post.tags.all %}
+                            <div class="post-tags">
+                                {% for tag in post.tags.all %}
+                                    <a href="{% url 'blog:list_by_tag' tag.slug %}" 
+                                        class="post-tag" 
+                                        style="--tag-color: {{ tag.color }};">
+                                        {{ tag.name }}
+                                    </a>
+                                {% endfor %}
                             </div>
-                            <h2 class="blog-card-title">{{ post.title }}</h2>
-                        <p class="blog-excerpt">{{ post.excerpt|safe|truncatechars:200 }}</p>
-                            <a href="{% url 'blog:detail' post.slug %}" class="read-more">Read More <i class="fas fa-arrow-right"></i></a>
-                        </div>
-                    </article>
-                {% endif %}
+                        {% endif %}
+                        <h2 class="blog-card-title">{{ post.title }}</h2>
+                    <p class="blog-excerpt">{{ post.excerpt|safe|truncatechars:200 }}</p>
+                        <a href="{% url 'blog:detail' post.slug %}"  class="featured-post-link">Read More <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </article>
             {% empty %}
                 <p style="grid-column: 1 / -1; text-align: center; padding: 4rem 0;">No posts found matching your criteria.</p>
             {% endfor %}
@@ -88,29 +287,31 @@
      <amp-auto-ads type="adsense"
         data-ad-client="ca-pub-6078293202282096">
     </amp-auto-ads>   
-    <!-- Pagination -->
+    <!-- Enhanced Pagination -->
     {% if posts.has_other_pages %}
         <div class="pagination">
             {% if posts.has_previous %}
-                <a href="?page={{ posts.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="page-btn">&larr;</a>
+                <a href="?page={{ posts.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-btn">&larr;</a>
             {% else %}
                 <span class="page-btn disabled">&larr;</span>
             {% endif %}
 
             {% for i in posts.paginator.page_range %}
                 {% if posts.number == i %}
-                    <a href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="page-btn active">{{ i }}</a>
+                    <span class="page-btn active">{{ i }}</span>
                 {% elif i > posts.number|add:'-3' and i < posts.number|add:'3' %}
-                    <a href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="page-btn">{{ i }}</a>
+                    <a href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-btn">{{ i }}</a>
                 {% endif %}
             {% endfor %}
 
             {% if posts.has_next %}
-                <a href="?page={{ posts.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" class="page-btn">&rarr;</a>
+                <a href="?page={{ posts.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-btn">&rarr;</a>
             {% else %}
                 <span class="page-btn disabled">&rarr;</span>
             {% endif %}
         </div>
+        
+       
     {% endif %}
 
     <!-- Newsletter Signup -->
@@ -135,4 +336,155 @@
         </form>
     </div>
     
+    <!-- Popular Posts Sidebar -->
+        {% if popular_posts %}
+        <div class="popular-posts-section">
+            <h3 class="section-title">
+                <i class="fas fa-fire"></i>
+                Popular This Week
+            </h3>
+            <div class="popular-posts-list">
+                {% for post in popular_posts %}
+                    <div class="popular-post-item">
+                        <div class="popular-post-rank">{{ forloop.counter }}</div>
+                        <div class="popular-post-content">
+                            <h4 class="popular-post-title">
+                                <a href="{% url 'blog:detail' post.slug %}">{{ post.title }}</a>
+                            </h4>
+                            <div class="popular-post-meta">
+                                <span class="popular-post-views">
+                                    <i class="fas fa-eye"></i>
+                                    {{ post.view_count }}
+                                </span>
+                                <span class="popular-post-date">{{ post.created_at|date:"M d" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    <!-- Enhanced Search and Navigation JavaScript -->
+    <script src="{% static 'js/blog-search.js' %}"></script>
+    
+    <!-- Featured Posts Carousel JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Featured Posts Carousel Functionality
+            const carousel = document.getElementById('featuredCarousel');
+            if (carousel) {
+                const track = document.getElementById('carouselTrack');
+                const prevBtn = document.getElementById('carouselPrev');
+                const nextBtn = document.getElementById('carouselNext');
+                const indicators = document.querySelectorAll('.carousel-indicator');
+                
+                let currentSlide = 0;
+                const totalSlides = indicators.length;
+                
+                if (totalSlides <= 1) return; // No need for carousel with single slide
+                
+                function updateCarousel() {
+                    const translateX = -currentSlide * 100;
+                    track.style.transform = `translateX(${translateX}%)`;
+                    
+                    // Update indicators
+                    indicators.forEach((indicator, index) => {
+                        indicator.classList.toggle('active', index === currentSlide);
+                    });
+                    
+                    // Update button states
+                    prevBtn.disabled = currentSlide === 0;
+                    nextBtn.disabled = currentSlide === totalSlides - 1;
+                }
+                
+                function nextSlide() {
+                    if (currentSlide < totalSlides - 1) {
+                        currentSlide++;
+                        updateCarousel();
+                    }
+                }
+                
+                function prevSlide() {
+                    if (currentSlide > 0) {
+                        currentSlide--;
+                        updateCarousel();
+                    }
+                }
+                
+                function goToSlide(slideIndex) {
+                    currentSlide = slideIndex;
+                    updateCarousel();
+                }
+                
+                // Event listeners
+                if (nextBtn) nextBtn.addEventListener('click', nextSlide);
+                if (prevBtn) prevBtn.addEventListener('click', prevSlide);
+                
+                indicators.forEach((indicator, index) => {
+                    indicator.addEventListener('click', () => goToSlide(index));
+                });
+                
+                // Auto-play carousel (optional)
+                let autoPlayInterval;
+                function startAutoPlay() {
+                    autoPlayInterval = setInterval(() => {
+                        if (currentSlide < totalSlides - 1) {
+                            nextSlide();
+                        } else {
+                            currentSlide = 0;
+                            updateCarousel();
+                        }
+                    }, 5000); // Change slide every 5 seconds
+                }
+                
+                function stopAutoPlay() {
+                    clearInterval(autoPlayInterval);
+                }
+                
+                // Start auto-play
+                startAutoPlay();
+                
+                // Pause auto-play on hover
+                carousel.addEventListener('mouseenter', stopAutoPlay);
+                carousel.addEventListener('mouseleave', startAutoPlay);
+                
+                // Touch/swipe support for mobile
+                let startX = 0;
+                let currentX = 0;
+                let isDragging = false;
+                
+                carousel.addEventListener('touchstart', (e) => {
+                    startX = e.touches[0].clientX;
+                    isDragging = true;
+                    stopAutoPlay();
+                });
+                
+                carousel.addEventListener('touchmove', (e) => {
+                    if (!isDragging) return;
+                    currentX = e.touches[0].clientX;
+                });
+                
+                carousel.addEventListener('touchend', () => {
+                    if (!isDragging) return;
+                    isDragging = false;
+                    
+                    const diffX = startX - currentX;
+                    const threshold = 50; // Minimum swipe distance
+                    
+                    if (Math.abs(diffX) > threshold) {
+                        if (diffX > 0) {
+                            nextSlide();
+                        } else {
+                            prevSlide();
+                        }
+                    }
+                    
+                    startAutoPlay();
+                });
+                
+                // Initialize carousel
+                updateCarousel();
+            }
+        });
+    </script>
 {% endblock %}

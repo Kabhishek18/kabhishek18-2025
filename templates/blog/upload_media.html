@@ -1,0 +1,407 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .media-upload-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .upload-form {
+        background: #f8f9fa;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #333;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e1e5e9;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: border-color 0.3s ease;
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: #007acc;
+        box-shadow: 0 0 0 3px rgba(0, 122, 204, 0.1);
+    }
+    
+    .media-type-select {
+        background: white;
+        cursor: pointer;
+    }
+    
+    .file-upload-area {
+        border: 2px dashed #007acc;
+        border-radius: 10px;
+        padding: 40px;
+        text-align: center;
+        background: #f8f9ff;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .file-upload-area:hover {
+        background: #f0f4ff;
+        border-color: #0056b3;
+    }
+    
+    .file-upload-area.dragover {
+        background: #e6f3ff;
+        border-color: #0056b3;
+        transform: scale(1.02);
+    }
+    
+    .upload-icon {
+        font-size: 48px;
+        color: #007acc;
+        margin-bottom: 15px;
+    }
+    
+    .upload-text {
+        font-size: 16px;
+        color: #666;
+        margin-bottom: 10px;
+    }
+    
+    .upload-hint {
+        font-size: 12px;
+        color: #999;
+    }
+    
+    .media-type-fields {
+        display: none;
+    }
+    
+    .media-type-fields.active {
+        display: block;
+    }
+    
+    .btn-primary {
+        background: #007acc;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 6px;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        background: #0056b3;
+    }
+    
+    .btn-secondary {
+        background: #6c757d;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 6px;
+        color: white;
+        text-decoration: none;
+        display: inline-block;
+        margin-right: 10px;
+    }
+    
+    .preview-area {
+        margin-top: 20px;
+        padding: 20px;
+        border: 1px solid #e1e5e9;
+        border-radius: 6px;
+        background: white;
+        display: none;
+    }
+    
+    .preview-image {
+        max-width: 100%;
+        max-height: 300px;
+        border-radius: 6px;
+    }
+    
+    .video-preview {
+        aspect-ratio: 16/9;
+        background: #000;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="media-upload-container">
+    <h1>{{ title }}</h1>
+    
+    <div class="upload-form">
+        <form method="post" enctype="multipart/form-data" id="media-upload-form">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="{{ form.media_type.id_for_label }}" class="form-label">Media Type</label>
+                {{ form.media_type }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.title.id_for_label }}" class="form-label">Title</label>
+                {{ form.title }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                {{ form.description }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.alt_text.id_for_label }}" class="form-label">Alt Text (for accessibility)</label>
+                {{ form.alt_text }}
+            </div>
+            
+            <!-- Image Upload Fields -->
+            <div id="image-fields" class="media-type-fields">
+                <div class="form-group">
+                    <label class="form-label">Upload Image</label>
+                    <div class="file-upload-area" id="image-upload-area">
+                        <div class="upload-icon">📷</div>
+                        <div class="upload-text">Drag and drop an image here, or click to select</div>
+                        <div class="upload-hint">Supported formats: JPEG, PNG, WebP, GIF (Max 10MB)</div>
+                        {{ form.image_file }}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Gallery Upload Fields -->
+            <div id="gallery-fields" class="media-type-fields">
+                <div class="form-group">
+                    <label class="form-label">Upload Gallery Images</label>
+                    <div class="file-upload-area" id="gallery-upload-area">
+                        <div class="upload-icon">🖼️</div>
+                        <div class="upload-text">Drag and drop multiple images here, or click to select</div>
+                        <div class="upload-hint">Select multiple images (Max 20 images, 10MB each)</div>
+                        {{ form.gallery_files }}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Video Embed Fields -->
+            <div id="video-fields" class="media-type-fields">
+                <div class="form-group">
+                    <label for="{{ form.video_url.id_for_label }}" class="form-label">Video URL</label>
+                    {{ form.video_url }}
+                    <small class="form-text text-muted">
+                        Paste a YouTube or Vimeo URL (e.g., https://www.youtube.com/watch?v=...)
+                    </small>
+                </div>
+            </div>
+            
+            <!-- Preview Area -->
+            <div id="preview-area" class="preview-area">
+                <h4>Preview</h4>
+                <div id="preview-content"></div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">Upload Media</button>
+                <a href="{% url 'blog:detail' slug=post.slug %}" class="btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const mediaTypeSelect = document.getElementById('id_media_type');
+    const imageFields = document.getElementById('image-fields');
+    const galleryFields = document.getElementById('gallery-fields');
+    const videoFields = document.getElementById('video-fields');
+    const previewArea = document.getElementById('preview-area');
+    const previewContent = document.getElementById('preview-content');
+    
+    // Handle media type change
+    function handleMediaTypeChange() {
+        const selectedType = mediaTypeSelect.value;
+        
+        // Hide all fields
+        imageFields.classList.remove('active');
+        galleryFields.classList.remove('active');
+        videoFields.classList.remove('active');
+        previewArea.style.display = 'none';
+        
+        // Show relevant fields
+        if (selectedType === 'image') {
+            imageFields.classList.add('active');
+        } else if (selectedType === 'gallery') {
+            galleryFields.classList.add('active');
+        } else if (selectedType === 'video') {
+            videoFields.classList.add('active');
+        }
+    }
+    
+    mediaTypeSelect.addEventListener('change', handleMediaTypeChange);
+    handleMediaTypeChange(); // Initialize
+    
+    // Drag and drop functionality
+    function setupDragAndDrop(uploadArea, fileInput) {
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFilePreview(files, uploadArea);
+            }
+        });
+        
+        uploadArea.addEventListener('click', function() {
+            fileInput.click();
+        });
+        
+        fileInput.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                handleFilePreview(this.files, uploadArea);
+            }
+        });
+    }
+    
+    // Setup drag and drop for image upload
+    const imageUploadArea = document.getElementById('image-upload-area');
+    const imageFileInput = document.getElementById('id_image_file');
+    setupDragAndDrop(imageUploadArea, imageFileInput);
+    
+    // Setup drag and drop for gallery upload
+    const galleryUploadArea = document.getElementById('gallery-upload-area');
+    const galleryFileInput = document.getElementById('id_gallery_files');
+    setupDragAndDrop(galleryUploadArea, galleryFileInput);
+    
+    // Handle file preview
+    function handleFilePreview(files, uploadArea) {
+        previewContent.innerHTML = '';
+        
+        if (files.length === 1) {
+            // Single image preview
+            const file = files[0];
+            if (file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.className = 'preview-image';
+                img.onload = function() {
+                    URL.revokeObjectURL(this.src);
+                };
+                previewContent.appendChild(img);
+                previewArea.style.display = 'block';
+            }
+        } else if (files.length > 1) {
+            // Gallery preview
+            const galleryDiv = document.createElement('div');
+            galleryDiv.style.display = 'grid';
+            galleryDiv.style.gridTemplateColumns = 'repeat(auto-fill, minmax(150px, 1fr))';
+            galleryDiv.style.gap = '10px';
+            
+            Array.from(files).forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(file);
+                    img.style.width = '100%';
+                    img.style.height = '100px';
+                    img.style.objectFit = 'cover';
+                    img.style.borderRadius = '6px';
+                    img.onload = function() {
+                        URL.revokeObjectURL(this.src);
+                    };
+                    galleryDiv.appendChild(img);
+                }
+            });
+            
+            previewContent.appendChild(galleryDiv);
+            previewArea.style.display = 'block';
+        }
+    }
+    
+    // Handle video URL preview
+    const videoUrlInput = document.getElementById('id_video_url');
+    videoUrlInput.addEventListener('input', function() {
+        const url = this.value.trim();
+        if (url) {
+            // Simple video ID extraction for preview
+            let videoId = null;
+            let platform = null;
+            
+            // YouTube patterns
+            const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+            if (youtubeMatch) {
+                videoId = youtubeMatch[1];
+                platform = 'youtube';
+            }
+            
+            // Vimeo patterns
+            const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+            if (vimeoMatch) {
+                videoId = vimeoMatch[1];
+                platform = 'vimeo';
+            }
+            
+            if (videoId && platform) {
+                previewContent.innerHTML = '';
+                const videoDiv = document.createElement('div');
+                videoDiv.className = 'video-preview';
+                
+                if (platform === 'youtube') {
+                    videoDiv.innerHTML = `
+                        <iframe width="100%" height="100%" 
+                                src="https://www.youtube.com/embed/${videoId}" 
+                                frameborder="0" allowfullscreen>
+                        </iframe>
+                    `;
+                } else if (platform === 'vimeo') {
+                    videoDiv.innerHTML = `
+                        <iframe width="100%" height="100%" 
+                                src="https://player.vimeo.com/video/${videoId}" 
+                                frameborder="0" allowfullscreen>
+                        </iframe>
+                    `;
+                }
+                
+                previewContent.appendChild(videoDiv);
+                previewArea.style.display = 'block';
+            } else {
+                previewArea.style.display = 'none';
+            }
+        } else {
+            previewArea.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}

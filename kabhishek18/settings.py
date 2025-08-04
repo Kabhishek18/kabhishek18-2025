@@ -58,12 +58,20 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'blog.middleware.SecurityHeadersMiddleware',
+    'blog.middleware.RateLimitMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'blog.middleware.CacheControlMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'blog.middleware.CSRFEnhancementMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'blog.middleware.ContentSecurityMiddleware',
+    'blog.middleware.CommentSpamProtectionMiddleware',
+    'blog.middleware.PerformanceMonitoringMiddleware',
+    'blog.middleware.RequestLoggingMiddleware',
 ]
 
 ROOT_URLCONF = 'kabhishek18.urls'
@@ -314,6 +322,42 @@ UNFOLD = {
                         "link": reverse_lazy("admin:blog_category_changelist"),
                         "permission": lambda request: request.user.is_superuser,
                     },
+                    {
+                        "title": _("Tags"),
+                        "icon": "tag",
+                        "link": reverse_lazy("admin:blog_tag_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": _("Comments"),
+                        "icon": "comment",
+                        "link": reverse_lazy("admin:blog_comment_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": _("Author Profiles"),
+                        "icon": "person",
+                        "link": reverse_lazy("admin:blog_authorprofile_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": _("Media Items"),
+                        "icon": "image",
+                        "link": reverse_lazy("admin:blog_mediaitem_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": _("Newsletter Subscribers"),
+                        "icon": "email",
+                        "link": reverse_lazy("admin:blog_newslettersubscriber_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": _("Social Shares"),
+                        "icon": "share",
+                        "link": reverse_lazy("admin:blog_socialshare_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
                 ],
             },
             {
@@ -531,7 +575,55 @@ LOGGING['loggers'].update({
         'level': 'INFO',
         'propagate': False,
     },
+    'blog.security': {
+        'handlers': ['console', 'file'],
+        'level': 'WARNING',
+        'propagate': False,
+    },
+    'blog.performance': {
+        'handlers': ['console', 'file'],
+        'level': 'WARNING',
+        'propagate': False,
+    },
 })
+
+# Security Settings
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+
+# Session Security
+SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_AGE = 3600  # 1 hour
+
+# CSRF Security
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_USE_SESSIONS = True
+
+# Blog Security Settings
+BLOG_RATE_LIMIT_COMMENT_SUBMISSIONS = 5  # per 5 minutes
+BLOG_RATE_LIMIT_NEWSLETTER_SUBSCRIPTIONS = 3  # per hour
+BLOG_RATE_LIMIT_SEARCH_REQUESTS = 30  # per 5 minutes
+BLOG_COMMENT_MAX_LENGTH = 2000
+BLOG_COMMENT_MIN_LENGTH = 10
+BLOG_ENABLE_SPAM_DETECTION = True
+BLOG_SPAM_THRESHOLD = 0.7
+
+# Performance Settings
+BLOG_CACHE_TIMEOUT_POPULAR_POSTS = 3600  # 1 hour
+BLOG_CACHE_TIMEOUT_FEATURED_POSTS = 1800  # 30 minutes
+BLOG_CACHE_TIMEOUT_TAG_CLOUD = 7200  # 2 hours
+BLOG_CACHE_TIMEOUT_SEARCH_RESULTS = 900  # 15 minutes
+BLOG_VIEW_COUNT_BATCH_SIZE = 10
+BLOG_VIEW_COUNT_FLUSH_INTERVAL = 300  # 5 minutes
 
 # CORS Settings (if needed for frontend integration)
 CORS_ALLOWED_ORIGINS = [
@@ -554,3 +646,16 @@ CORS_ALLOW_HEADERS = [
     'x-api-key',
     'x-encryption-key',
 ]
+
+# Email Configuration
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@kabhishek18.com')
+
+# Site Configuration
+SITE_NAME = os.getenv('SITE_NAME', 'Digital Codex')
+SITE_URL = os.getenv('SITE_URL', 'http://127.0.0.1:8000')

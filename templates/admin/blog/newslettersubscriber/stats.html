@@ -1,0 +1,59 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:blog_newslettersubscriber_changelist' %}">Newsletter Subscribers</a>
+&rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="module">
+    <h2>Newsletter Subscriber Statistics</h2>
+    
+    <div class="results">
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="row1">
+                    <td><strong>Total Subscribers</strong></td>
+                    <td>{{ total_subscribers }}</td>
+                </tr>
+                <tr class="row2">
+                    <td><strong>Confirmed Subscribers</strong></td>
+                    <td>{{ confirmed_subscribers }}</td>
+                </tr>
+                <tr class="row1">
+                    <td><strong>Unconfirmed Subscribers</strong></td>
+                    <td>{{ unconfirmed_subscribers }}</td>
+                </tr>
+                <tr class="row2">
+                    <td><strong>Confirmation Rate</strong></td>
+                    <td>{{ confirmation_rate|floatformat:1 }}%</td>
+                </tr>
+                <tr class="row1">
+                    <td><strong>New Subscriptions (Last 30 Days)</strong></td>
+                    <td>{{ recent_subscriptions }}</td>
+                </tr>
+                <tr class="row2">
+                    <td><strong>New Confirmations (Last 30 Days)</strong></td>
+                    <td>{{ recent_confirmations }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="submit-row">
+        <a href="{% url 'admin:blog_newslettersubscriber_changelist' %}" class="default">Back to Subscriber List</a>
+    </div>
+</div>
+{% endblock %}

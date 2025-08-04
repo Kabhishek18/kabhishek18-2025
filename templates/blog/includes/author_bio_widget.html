@@ -1,0 +1,327 @@
+{% load static %}
+
+<!-- Enhanced Author Bio Widget -->
+<div class="author-bio-widget" id="authorBioWidget">
+    <div class="author-avatar">
+        {% if author_profile.profile_picture %}
+            <img src="{{ author_profile.profile_picture.url }}" 
+                 alt="{{ author_profile.get_display_name }}'s profile" 
+                 class="profile-image"
+                 loading="lazy">
+        {% else %}
+            <!-- Fallback to initials if no profile image -->
+            <div class="profile-initials">
+                {% if post.author.first_name %}
+                    {{ post.author.first_name|first }}{{ post.author.last_name|first }}
+                {% else %}
+                    {{ post.author.username|first|upper }}
+                {% endif %}
+            </div>
+        {% endif %}
+        
+        {% if author_profile.is_guest_author %}
+            <div class="guest-author-badge" title="Guest Author">
+                <i class="fas fa-user-friends"></i>
+            </div>
+        {% endif %}
+        
+        <!-- Online status indicator (if applicable) -->
+        <div class="author-status" title="Active contributor">
+            <i class="fas fa-circle"></i>
+        </div>
+    </div>
+    
+    <div class="author-info">
+        <div class="author-header">
+            <h3 class="author-name">
+                <a href="{% url 'blog:author_detail' post.author.username %}">
+                    {{ author_profile.get_display_name }}
+                </a>
+            </h3>
+            
+            {% if author_profile.is_guest_author and author_profile.guest_author_company %}
+                <span class="author-company">{{ author_profile.guest_author_company }}</span>
+            {% endif %}
+        </div>
+        
+        {% if author_profile.bio %}
+            <p class="author-bio">{{ author_profile.get_short_bio }}</p>
+        {% else %}
+            <p class="author-bio">
+                {% if author_profile.is_guest_author %}
+                    Guest contributor sharing insights and expertise.
+                {% else %}
+                    Author and contributor at Digital Codex.
+                {% endif %}
+            </p>
+        {% endif %}
+        
+        <!-- Author Stats -->
+        <div class="author-stats">
+            <div class="stat-item">
+                <i class="fas fa-edit"></i>
+                <span>{{ author_profile.get_post_count }} post{{ author_profile.get_post_count|pluralize }}</span>
+            </div>
+            {% if not author_profile.is_guest_author %}
+                <div class="stat-item">
+                    <i class="fas fa-calendar"></i>
+                    <span>Since {{ post.author.date_joined|date:"Y" }}</span>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Social Media Links -->
+        {% with social_links=author_profile.get_social_links %}
+            {% if social_links %}
+                <div class="author-social">
+                    {% for platform, link_data in social_links.items %}
+                        <a href="{{ link_data.url }}" 
+                           target="_blank" 
+                           rel="noopener noreferrer"
+                           class="social-link"
+                           title="{{ link_data.display }}">
+                            <i class="{{ link_data.icon }}"></i>
+                            <span>{{ link_data.display }}</span>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
+        <!-- View All Posts Link -->
+        <div class="author-actions">
+            <a href="{% url 'blog:author_detail' post.author.username %}" class="view-all-posts-btn">
+                <i class="fas fa-arrow-right"></i>
+                View all posts by {{ author_profile.get_display_name }}
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.author-bio-widget {
+    display: flex;
+    gap: 1.5rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 15px;
+    border: 1px solid #dee2e6;
+    margin: 2rem 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.author-bio-widget::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #007acc, #0056b3);
+}
+
+.author-avatar {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.author-avatar .profile-image {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.author-avatar .profile-initials {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #007acc, #0056b3);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    border: 3px solid #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.guest-author-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 24px;
+    height: 24px;
+    background: #28a745;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.75rem;
+    border: 2px solid #fff;
+}
+
+.author-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.author-header {
+    margin-bottom: 0.75rem;
+}
+
+.author-name {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.author-name a {
+    color: #212529;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.author-name a:hover {
+    color: #007acc;
+}
+
+.author-company {
+    font-size: 0.875rem;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.author-bio {
+    color: #495057;
+    line-height: 1.6;
+    margin: 0 0 1rem 0;
+    font-size: 0.95rem;
+}
+
+.author-stats {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.stat-item i {
+    color: #007acc;
+    width: 14px;
+}
+
+.author-social {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.social-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 20px;
+    text-decoration: none;
+    color: #495057;
+    font-size: 0.875rem;
+    transition: all 0.3s ease;
+}
+
+.social-link:hover {
+    background: #007acc;
+    color: white;
+    border-color: #007acc;
+    transform: translateY(-1px);
+}
+
+.social-link i {
+    width: 16px;
+    text-align: center;
+}
+
+.author-actions {
+    margin-top: 1rem;
+}
+
+.view-all-posts-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: #007acc;
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.view-all-posts-btn:hover {
+    background: #0056b3;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 122, 204, 0.3);
+}
+
+.view-all-posts-btn i {
+    transition: transform 0.3s ease;
+}
+
+.view-all-posts-btn:hover i {
+    transform: translateX(2px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .author-bio-widget {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+        padding: 1.5rem;
+    }
+    
+    .author-stats {
+        justify-content: center;
+    }
+    
+    .author-social {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .author-stats {
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: center;
+    }
+    
+    .author-social {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .social-link {
+        justify-content: center;
+        min-width: 120px;
+    }
+}
+</style>

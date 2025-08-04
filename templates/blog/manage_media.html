@@ -1,0 +1,576 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .media-manager {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .media-actions {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+    }
+    
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .btn-primary {
+        background: #007acc;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #0056b3;
+    }
+    
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn-success {
+        background: #28a745;
+        color: white;
+    }
+    
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .media-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .media-item {
+        background: white;
+        border: 1px solid #e1e5e9;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .media-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    
+    .media-preview {
+        height: 200px;
+        background: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .media-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .media-preview .video-thumbnail {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        position: relative;
+    }
+    
+    .media-preview .play-button {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0,0,0,0.7);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        font-size: 24px;
+        cursor: pointer;
+        transition: background 0.3s ease;
+    }
+    
+    .media-preview .play-button:hover {
+        background: rgba(0,0,0,0.9);
+    }
+    
+    .media-preview .gallery-indicator {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+    }
+    
+    .media-info {
+        padding: 15px;
+    }
+    
+    .media-title {
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #333;
+    }
+    
+    .media-description {
+        color: #666;
+        font-size: 14px;
+        margin-bottom: 10px;
+        line-height: 1.4;
+    }
+    
+    .media-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        color: #999;
+        margin-bottom: 15px;
+    }
+    
+    .media-type-badge {
+        background: #007acc;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 10px;
+        text-transform: uppercase;
+    }
+    
+    .media-actions-item {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .btn-sm {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    
+    .sortable-handle {
+        cursor: move;
+        color: #999;
+        margin-right: 8px;
+    }
+    
+    .sortable-handle:hover {
+        color: #333;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #666;
+    }
+    
+    .empty-state-icon {
+        font-size: 64px;
+        margin-bottom: 20px;
+        opacity: 0.5;
+    }
+    
+    .lightbox {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.9);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .lightbox.active {
+        display: flex;
+    }
+    
+    .lightbox-content {
+        max-width: 90%;
+        max-height: 90%;
+        position: relative;
+    }
+    
+    .lightbox-image {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+    
+    .lightbox-close {
+        position: absolute;
+        top: -40px;
+        right: 0;
+        background: none;
+        border: none;
+        color: white;
+        font-size: 24px;
+        cursor: pointer;
+    }
+    
+    @media (max-width: 768px) {
+        .media-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .media-actions {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="media-manager">
+    <h1>{{ title }}</h1>
+    
+    <div class="media-actions">
+        <a href="{% url 'blog:upload_media' post_id=post.id %}" class="btn btn-primary">
+            📷 Upload Media
+        </a>
+        <a href="{% url 'blog:create_gallery' post_id=post.id %}" class="btn btn-success">
+            🖼️ Create Gallery
+        </a>
+        <a href="{% url 'blog:embed_video' post_id=post.id %}" class="btn btn-secondary">
+            🎥 Embed Video
+        </a>
+        <button onclick="optimizeImages()" class="btn btn-secondary">
+            ⚡ Optimize Images
+        </button>
+        <a href="{% url 'blog:detail' slug=post.slug %}" class="btn btn-secondary">
+            ← Back to Post
+        </a>
+    </div>
+    
+    {% if media_items %}
+        <div class="media-grid" id="media-grid">
+            {% for media in media_items %}
+                <div class="media-item" data-media-id="{{ media.id }}">
+                    <div class="media-preview">
+                        {% if media.media_type == 'image' %}
+                            {% if media.medium_image %}
+                                <img src="{{ media.medium_image.url }}" alt="{{ media.alt_text|default:media.title }}" 
+                                     onclick="openLightbox('{{ media.original_image.url }}', '{{ media.title|escapejs }}')">
+                            {% elif media.original_image %}
+                                <img src="{{ media.original_image.url }}" alt="{{ media.alt_text|default:media.title }}"
+                                     onclick="openLightbox('{{ media.original_image.url }}', '{{ media.title|escapejs }}')">
+                            {% endif %}
+                        {% elif media.media_type == 'video' %}
+                            {% if media.video_thumbnail %}
+                                <img src="{{ media.video_thumbnail }}" alt="{{ media.title }}" class="video-thumbnail">
+                                <button class="play-button" onclick="openVideoModal('{{ media.video_embed_url }}', '{{ media.title|escapejs }}')">
+                                    ▶️
+                                </button>
+                            {% endif %}
+                        {% elif media.media_type == 'gallery' %}
+                            {% if media.gallery_images %}
+                                <div class="gallery-indicator">
+                                    📸 {{ media.gallery_images|length }} images
+                                </div>
+                                <!-- Show first image as preview -->
+                                {% if media.gallery_images.0.processed.medium %}
+                                    <img src="{{ media.gallery_images.0.processed.medium }}" alt="{{ media.title }}">
+                                {% endif %}
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="media-info">
+                        <div class="media-title">
+                            <span class="sortable-handle">⋮⋮</span>
+                            {{ media.title|default:"Untitled" }}
+                        </div>
+                        
+                        {% if media.description %}
+                            <div class="media-description">
+                                {{ media.description|truncatewords:20 }}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="media-meta">
+                            <span class="media-type-badge">{{ media.get_media_type_display }}</span>
+                            <span>{{ media.created_at|date:"M d, Y" }}</span>
+                        </div>
+                        
+                        <div class="media-actions-item">
+                            {% if media.media_type == 'gallery' %}
+                                <button onclick="viewGallery({{ media.id }})" class="btn btn-primary btn-sm">
+                                    👁️ View
+                                </button>
+                            {% endif %}
+                            <button onclick="editMedia({{ media.id }})" class="btn btn-secondary btn-sm">
+                                ✏️ Edit
+                            </button>
+                            <button onclick="deleteMedia({{ media.id }})" class="btn btn-danger btn-sm">
+                                🗑️ Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📷</div>
+            <h3>No media items yet</h3>
+            <p>Upload images, create galleries, or embed videos to get started.</p>
+            <a href="{% url 'blog:upload_media' post_id=post.id %}" class="btn btn-primary">
+                Upload Your First Media
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Lightbox Modal -->
+<div id="lightbox" class="lightbox">
+    <div class="lightbox-content">
+        <button class="lightbox-close" onclick="closeLightbox()">×</button>
+        <img id="lightbox-image" class="lightbox-image" src="" alt="">
+    </div>
+</div>
+
+<!-- Video Modal -->
+<div id="video-modal" class="lightbox">
+    <div class="lightbox-content">
+        <button class="lightbox-close" onclick="closeVideoModal()">×</button>
+        <div id="video-container" style="width: 800px; height: 450px; max-width: 90vw; max-height: 50vh;">
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize sortable for media items
+    const mediaGrid = document.getElementById('media-grid');
+    if (mediaGrid) {
+        new Sortable(mediaGrid, {
+            handle: '.sortable-handle',
+            animation: 150,
+            onEnd: function(evt) {
+                updateMediaOrder();
+            }
+        });
+    }
+});
+
+function updateMediaOrder() {
+    const mediaItems = document.querySelectorAll('.media-item');
+    const orderData = Array.from(mediaItems).map((item, index) => ({
+        id: parseInt(item.dataset.mediaId),
+        order: index
+    }));
+    
+    fetch('{% url "blog:update_media_order" post_id=post.id %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify(orderData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Media order updated successfully');
+        } else {
+            alert('Failed to update media order: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error updating media order:', error);
+        alert('Failed to update media order');
+    });
+}
+
+function deleteMedia(mediaId) {
+    if (confirm('Are you sure you want to delete this media item? This action cannot be undone.')) {
+        fetch(`/blog/media/${mediaId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove the media item from the DOM
+                const mediaItem = document.querySelector(`[data-media-id="${mediaId}"]`);
+                if (mediaItem) {
+                    mediaItem.remove();
+                }
+                alert('Media item deleted successfully');
+            } else {
+                alert('Failed to delete media: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting media:', error);
+            alert('Failed to delete media');
+        });
+    }
+}
+
+function optimizeImages() {
+    if (confirm('This will optimize all images for web delivery. Continue?')) {
+        fetch('{% url "blog:optimize_images" post_id=post.id %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+            } else {
+                alert('Failed to optimize images: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error optimizing images:', error);
+            alert('Failed to optimize images');
+        });
+    }
+}
+
+function openLightbox(imageSrc, title) {
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImage = document.getElementById('lightbox-image');
+    
+    lightboxImage.src = imageSrc;
+    lightboxImage.alt = title;
+    lightbox.classList.add('active');
+    
+    // Close on click outside
+    lightbox.onclick = function(e) {
+        if (e.target === lightbox) {
+            closeLightbox();
+        }
+    };
+}
+
+function closeLightbox() {
+    const lightbox = document.getElementById('lightbox');
+    lightbox.classList.remove('active');
+}
+
+function openVideoModal(embedUrl, title) {
+    const videoModal = document.getElementById('video-modal');
+    const videoContainer = document.getElementById('video-container');
+    
+    videoContainer.innerHTML = `
+        <iframe width="100%" height="100%" 
+                src="${embedUrl}" 
+                frameborder="0" 
+                allowfullscreen
+                title="${title}">
+        </iframe>
+    `;
+    
+    videoModal.classList.add('active');
+    
+    // Close on click outside
+    videoModal.onclick = function(e) {
+        if (e.target === videoModal) {
+            closeVideoModal();
+        }
+    };
+}
+
+function closeVideoModal() {
+    const videoModal = document.getElementById('video-modal');
+    const videoContainer = document.getElementById('video-container');
+    
+    videoModal.classList.remove('active');
+    videoContainer.innerHTML = '';
+}
+
+function viewGallery(mediaId) {
+    fetch(`/blog/media/${mediaId}/gallery/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.images) {
+                // Open gallery lightbox with multiple images
+                openGalleryLightbox(data.images, data.title);
+            } else {
+                alert('Failed to load gallery: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading gallery:', error);
+            alert('Failed to load gallery');
+        });
+}
+
+function openGalleryLightbox(images, title) {
+    // Simple gallery implementation - you can enhance this with a proper gallery library
+    let currentIndex = 0;
+    
+    function showImage(index) {
+        if (index >= 0 && index < images.length) {
+            const image = images[index];
+            openLightbox(image.original.url, `${title} - Image ${index + 1}`);
+            currentIndex = index;
+        }
+    }
+    
+    showImage(0);
+    
+    // Add navigation (you can enhance this)
+    document.addEventListener('keydown', function(e) {
+        if (document.getElementById('lightbox').classList.contains('active')) {
+            if (e.key === 'ArrowLeft' && currentIndex > 0) {
+                showImage(currentIndex - 1);
+            } else if (e.key === 'ArrowRight' && currentIndex < images.length - 1) {
+                showImage(currentIndex + 1);
+            }
+        }
+    });
+}
+
+function editMedia(mediaId) {
+    // Placeholder for edit functionality
+    alert('Edit functionality coming soon!');
+}
+
+// Close modals with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeLightbox();
+        closeVideoModal();
+    }
+});
+</script>
+{% endblock %}

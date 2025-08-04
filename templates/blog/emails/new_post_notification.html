@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Post: {{ post.title }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007acc;
+            margin-bottom: 10px;
+        }
+        .post-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin: 20px 0 10px 0;
+        }
+        .post-meta {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .post-excerpt {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-left: 4px solid #007acc;
+            margin: 20px 0;
+            font-style: italic;
+        }
+        .button {
+            display: inline-block;
+            background-color: #007acc;
+            color: #ffffff;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .button:hover {
+            background-color: #005a99;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .unsubscribe {
+            font-size: 11px;
+            color: #999;
+        }
+        .featured-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">{{ site_name }}</div>
+            <h1>New Blog Post Published!</h1>
+        </div>
+        
+        <div class="content">
+            {% if post.featured_image %}
+            <img src="{{ post.featured_image.url }}" alt="{{ post.title }}" class="featured-image">
+            {% endif %}
+            
+            <div class="post-title">{{ post.title }}</div>
+            
+            <div class="post-meta">
+                By {{ post.author.get_full_name|default:post.author.username }} • 
+                {{ post.created_at|date:"F j, Y" }} • 
+                {{ post.get_reading_time }} min read
+            </div>
+            
+            {% if post.excerpt %}
+            <div class="post-excerpt">
+                {{ post.excerpt }}
+            </div>
+            {% endif %}
+            
+            <div style="text-align: center;">
+                <a href="{{ post_url }}" class="button">Read Full Article</a>
+            </div>
+            
+            <p>We hope you enjoy this new post! Stay tuned for more insights and updates.</p>
+        </div>
+        
+        <div class="footer">
+            <p>This email was sent to {{ subscriber.email }}</p>
+            <p class="unsubscribe">
+                Don't want to receive these emails? 
+                <a href="{{ unsubscribe_url }}" style="color: #999;">Unsubscribe here</a>
+            </p>
+            <p>&copy; {{ site_name }}. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
