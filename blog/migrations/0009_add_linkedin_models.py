@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('blog', '0008_rename_blog_mediai_post_id_b8e7a5_idx_blog_mediai_post_id_61caea_idx_and_more'),
+        ('blog', '0001_initial'),
     ]
 
     operations = [

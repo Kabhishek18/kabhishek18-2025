@@ -44,12 +44,13 @@ class CredentialEncryption:
         
         if key:
             if isinstance(key, str):
-                # If it's a string, assume it's base64 encoded
+                # If it's a string, it should be a valid Fernet key (base64 encoded)
                 try:
-                    self._key = base64.urlsafe_b64decode(key.encode())
+                    # Try to use it directly as a Fernet key
+                    self._key = key.encode()
                     return self._key
                 except Exception as e:
-                    logger.error(f"Failed to decode encryption key from settings: {e}")
+                    logger.error(f"Failed to use encryption key from settings: {e}")
                     raise ImproperlyConfigured("Invalid LINKEDIN_ENCRYPTION_KEY format")
             elif isinstance(key, bytes):
                 self._key = key
@@ -59,10 +60,11 @@ class CredentialEncryption:
         env_key = os.environ.get('LINKEDIN_ENCRYPTION_KEY')
         if env_key:
             try:
-                self._key = base64.urlsafe_b64decode(env_key.encode())
+                # Use the key directly as it's already base64 encoded
+                self._key = env_key.encode()
                 return self._key
             except Exception as e:
-                logger.error(f"Failed to decode encryption key from environment: {e}")
+                logger.error(f"Failed to use encryption key from environment: {e}")
                 raise ImproperlyConfigured("Invalid LINKEDIN_ENCRYPTION_KEY environment variable")
         
         # Generate a key from Django's SECRET_KEY as fallback
