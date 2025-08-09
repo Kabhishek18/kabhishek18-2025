@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
     #celery
     'django_celery_beat',
     'django_celery_results',
@@ -657,6 +658,7 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@kabhishek18.com')
 
 # Site Configuration
+SITE_ID = 1
 SITE_NAME = os.getenv('SITE_NAME', 'Digital Codex')
 SITE_URL = os.getenv('SITE_URL', 'http://127.0.0.1:8000')
 
