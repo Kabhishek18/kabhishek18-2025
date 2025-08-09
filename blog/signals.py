@@ -2,7 +2,8 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.auth.models import User
 from .models import Post, AuthorProfile
-from .tasks import send_new_post_notification
+from .linkedin_models import LinkedInPost, LinkedInConfig
+from .tasks import send_new_post_notification, post_to_linkedin
 import logging
 
 logger = logging.getLogger(__name__)
@@ -64,3 +65,77 @@ def send_newsletter_on_publish(sender, instance, created, **kwargs):
                     send_new_post_notification.delay(instance.id)
             except Post.DoesNotExist:
                 pass
+
+
+@receiver(post_save, sender=Post)
+def post_to_linkedin_on_publish(sender, instance, created, **kwargs):
+    """
+    Automatically post to LinkedIn when a blog post is published.
+    
+    This signal handler:
+    - Triggers LinkedIn posting when post status changes to published
+    - Implements duplicate posting prevention logic
+    - Adds proper logging for signal-triggered actions
+    
+    Requirements: 1.1, 1.2, 4.1
+    """
+    # Only process published posts
+    if instance.status != 'published':
+        return
+    
+    # Check if LinkedIn integration is configured and active
+    linkedin_config = LinkedInConfig.get_active_config()
+    if not linkedin_config:
+        logger.warning(f"No LinkedIn configuration found. Skipping LinkedIn posting for post: {instance.title}")
+        return
+    elif not linkedin_config.is_active:
+        logger.info(f"LinkedIn integration is disabled. Skipping LinkedIn posting for post: {instance.title}")
+        return
+    elif not linkedin_config.has_valid_credentials():
+        logger.error(f"LinkedIn configuration has invalid credentials. Skipping LinkedIn posting for post: {instance.title}")
+        return
+    
+    # Duplicate posting prevention logic
+    try:
+        # Check if we already have a LinkedIn post record for this blog post
+        existing_linkedin_post = LinkedInPost.objects.filter(post=instance).first()
+        
+        if existing_linkedin_post:
+            # If already successfully posted, skip
+            if existing_linkedin_post.is_successful():
+                logger.info(f"Post '{instance.title}' already successfully posted to LinkedIn. Skipping duplicate posting.")
+                return
+            
+            # If failed but can retry, allow reposting
+            if existing_linkedin_post.is_failed() and existing_linkedin_post.can_retry():
+                logger.info(f"Retrying LinkedIn posting for post '{instance.title}' (attempt {existing_linkedin_post.attempt_count + 1})")
+            elif existing_linkedin_post.is_failed():
+                logger.warning(f"Post '{instance.title}' has failed LinkedIn posting and exceeded max attempts. Skipping.")
+                return
+            # If pending or retrying, let the existing task handle it
+            elif existing_linkedin_post.status in ['pending', 'retrying']:
+                logger.info(f"LinkedIn posting already in progress for post '{instance.title}'. Skipping duplicate trigger.")
+                return
+    
+    except Exception as e:
+        logger.error(f"Error checking existing LinkedIn post for '{instance.title}': {e}")
+        # Continue with posting attempt despite the error
+    
+    # Trigger LinkedIn posting task
+    try:
+        # Use a flag to prevent recursive signal triggering
+        if not hasattr(instance, '_linkedin_posting_triggered'):
+            instance._linkedin_posting_triggered = True
+            
+            logger.info(f"Triggering LinkedIn posting for published post: {instance.title}")
+            
+            # Queue the LinkedIn posting task asynchronously
+            post_to_linkedin.delay(instance.id)
+            
+            logger.info(f"LinkedIn posting task queued for post: {instance.title}")
+        else:
+            logger.debug(f"LinkedIn posting already triggered for post: {instance.title}")
+    
+    except Exception as e:
+        logger.error(f"Failed to queue LinkedIn posting task for post '{instance.title}': {e}")
+        # Don't raise the exception to avoid interrupting the post save process

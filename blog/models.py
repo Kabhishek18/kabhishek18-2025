@@ -134,6 +134,10 @@ class Post(models.Model):
         if self.content:
             return readtime.of_text(strip_tags(self.content)).minutes or 1
         return self.read_time
+    
+    def get_absolute_url(self):
+        """Return the absolute URL for this post"""
+        return reverse('blog:detail', kwargs={'slug': self.slug})
 
 # Enhanced model to store email addresses for the newsletter with confirmation workflow
 class NewsletterSubscriber(models.Model):
@@ -493,3 +497,6 @@ class MediaItem(models.Model):
         
         super().save(*args, **kwargs)
 
+
+# Import LinkedIn models
+from .linkedin_models import LinkedInConfig, LinkedInPost

@@ -15,13 +15,14 @@ import json
 from unfold.admin import ModelAdmin
 from unfold.contrib.forms.widgets import WysiwygWidget
 from .models import Post, Category, NewsletterSubscriber, Tag, Comment, SocialShare, AuthorProfile, MediaItem
+from .linkedin_models import LinkedInConfig, LinkedInPost
 from ckeditor.widgets import CKEditorWidget
 
 
 @admin.register(Post)
 class PostAdmin(ModelAdmin):
-    list_display = ('title', 'author', 'status', 'is_featured', 'view_count', 'engagement_score', 'created_at')
-    list_filter = ('status', 'is_featured', 'categories', 'tags', 'author', 'created_at')
+    list_display = ('title', 'author', 'status', 'is_featured', 'view_count', 'engagement_score', 'linkedin_status', 'created_at')
+    list_filter = ('status', 'is_featured', 'categories', 'tags', 'author', 'created_at', 'linkedin_posts__status')
     search_fields = ('title', 'excerpt', 'content')
     prepopulated_fields = {'slug': ('title',)}
     list_editable = ('status', 'is_featured')
@@ -49,14 +50,19 @@ class PostAdmin(ModelAdmin):
         ("Organization & Media", {
             'fields': ('categories', 'tags', 'is_featured', 'featured_image')
         }),
+        ("LinkedIn Integration", {
+            'classes': ('collapse',),
+            'fields': ('linkedin_posting_info',),
+            'description': 'LinkedIn posting status and information'
+        }),
         ("SEO & Meta", {
             'classes': ('collapse',),
             'fields': ('read_time', 'view_count', 'meta_data')
         }),
     )
     
-    readonly_fields = ('view_count',)
-    actions = ['mark_as_featured', 'unmark_as_featured', 'clear_content_cache']
+    readonly_fields = ('view_count', 'linkedin_posting_info')
+    actions = ['mark_as_featured', 'unmark_as_featured', 'clear_content_cache', 'post_to_linkedin', 'retry_linkedin_posting']
     
     def engagement_score(self, obj):
         """Calculate and display engagement score based on views, comments, and shares"""
@@ -92,6 +98,258 @@ class PostAdmin(ModelAdmin):
         ContentDiscoveryService.clear_content_caches()
         self.message_user(request, 'Content discovery caches cleared.')
     clear_content_cache.short_description = "Clear content discovery caches"
+    
+    def linkedin_status(self, obj):
+        """Display LinkedIn posting status"""
+        try:
+            linkedin_post = obj.linkedin_posts.first()
+            if not linkedin_post:
+                return format_html('<span style="color: gray;">Not Posted</span>')
+            
+            status_colors = {
+                'pending': 'orange',
+                'success': 'green',
+                'failed': 'red',
+                'retrying': 'blue',
+            }
+            color = status_colors.get(linkedin_post.status, 'gray')
+            
+            if linkedin_post.status == 'success' and linkedin_post.linkedin_post_url:
+                return format_html(
+                    '<a href="{}" target="_blank" style="color: {}; font-weight: bold;">✓ Posted</a>',
+                    linkedin_post.linkedin_post_url,
+                    color
+                )
+            else:
+                return format_html(
+                    '<span style="color: {}; font-weight: bold;">{}</span>',
+                    color,
+                    linkedin_post.get_status_display()
+                )
+        except Exception:
+            return format_html('<span style="color: gray;">Unknown</span>')
+    linkedin_status.short_description = 'LinkedIn Status'
+    
+    def linkedin_posting_info(self, obj):
+        """Display detailed LinkedIn posting information"""
+        try:
+            linkedin_post = obj.linkedin_posts.first()
+            if not linkedin_post:
+                return "This post has not been posted to LinkedIn."
+            
+            info_parts = []
+            info_parts.append(f"<strong>Status:</strong> {linkedin_post.get_status_display()}")
+            
+            if linkedin_post.linkedin_post_id:
+                info_parts.append(f"<strong>LinkedIn Post ID:</strong> {linkedin_post.linkedin_post_id}")
+            
+            if linkedin_post.linkedin_post_url:
+                info_parts.append(f'<strong>LinkedIn URL:</strong> <a href="{linkedin_post.linkedin_post_url}" target="_blank">View Post</a>')
+            
+            if linkedin_post.attempt_count > 0:
+                info_parts.append(f"<strong>Attempts:</strong> {linkedin_post.attempt_count}")
+            
+            if linkedin_post.posted_at:
+                info_parts.append(f"<strong>Posted At:</strong> {linkedin_post.posted_at.strftime('%Y-%m-%d %H:%M:%S')}")
+            
+            if linkedin_post.error_message:
+                info_parts.append(f"<strong>Last Error:</strong> {linkedin_post.error_message}")
+            
+            if linkedin_post.status == 'retrying' and linkedin_post.next_retry_at:
+                info_parts.append(f"<strong>Next Retry:</strong> {linkedin_post.get_retry_delay_display()}")
+            
+            return "<br>".join(info_parts)
+        except Exception as e:
+            return f"Error retrieving LinkedIn posting information: {e}"
+    linkedin_posting_info.allow_tags = True
+    linkedin_posting_info.short_description = 'LinkedIn Posting Information'
+    
+    def post_to_linkedin(self, request, queryset):
+        """Manually post selected blog posts to LinkedIn"""
+        from .services.linkedin_service import LinkedInAPIService, LinkedInAPIError
+        from .linkedin_models import LinkedInConfig
+        
+        # Check if LinkedIn is configured
+        config = LinkedInConfig.get_active_config()
+        if not config:
+            self.message_user(
+                request, 
+                "LinkedIn integration is not configured. Please configure LinkedIn settings first.", 
+                level=messages.ERROR
+            )
+            return
+        
+        service = LinkedInAPIService(config)
+        if not service.is_configured():
+            self.message_user(
+                request, 
+                "LinkedIn integration is not properly configured.", 
+                level=messages.ERROR
+            )
+            return
+        
+        success_count = 0
+        error_count = 0
+        
+        for post in queryset:
+            # Only post published posts
+            if post.status != 'published':
+                self.message_user(
+                    request, 
+                    f"Skipped '{post.title}' - only published posts can be posted to LinkedIn", 
+                    level=messages.WARNING
+                )
+                continue
+            
+            # Check if already successfully posted
+            existing_linkedin_post = post.linkedin_posts.filter(status='success').first()
+            if existing_linkedin_post:
+                self.message_user(
+                    request, 
+                    f"Skipped '{post.title}' - already successfully posted to LinkedIn", 
+                    level=messages.WARNING
+                )
+                continue
+            
+            try:
+                linkedin_post = service.post_blog_article(post)
+                if linkedin_post.is_successful():
+                    success_count += 1
+                else:
+                    error_count += 1
+                    self.message_user(
+                        request, 
+                        f"Failed to post '{post.title}' to LinkedIn: {linkedin_post.error_message}", 
+                        level=messages.ERROR
+                    )
+            except LinkedInAPIError as e:
+                error_count += 1
+                self.message_user(
+                    request, 
+                    f"Failed to post '{post.title}' to LinkedIn: {e.message}", 
+                    level=messages.ERROR
+                )
+            except Exception as e:
+                error_count += 1
+                self.message_user(
+                    request, 
+                    f"Unexpected error posting '{post.title}' to LinkedIn: {str(e)}", 
+                    level=messages.ERROR
+                )
+        
+        if success_count > 0:
+            self.message_user(
+                request, 
+                f"Successfully posted {success_count} post(s) to LinkedIn", 
+                level=messages.SUCCESS
+            )
+        
+        if error_count > 0:
+            self.message_user(
+                request, 
+                f"Failed to post {error_count} post(s) to LinkedIn", 
+                level=messages.ERROR
+            )
+    post_to_linkedin.short_description = "Post selected posts to LinkedIn"
+    
+    def retry_linkedin_posting(self, request, queryset):
+        """Retry failed LinkedIn postings for selected posts"""
+        from .services.linkedin_service import LinkedInAPIService, LinkedInAPIError
+        from .linkedin_models import LinkedInConfig
+        
+        # Check if LinkedIn is configured
+        config = LinkedInConfig.get_active_config()
+        if not config:
+            self.message_user(
+                request, 
+                "LinkedIn integration is not configured. Please configure LinkedIn settings first.", 
+                level=messages.ERROR
+            )
+            return
+        
+        service = LinkedInAPIService(config)
+        if not service.is_configured():
+            self.message_user(
+                request, 
+                "LinkedIn integration is not properly configured.", 
+                level=messages.ERROR
+            )
+            return
+        
+        retry_count = 0
+        success_count = 0
+        error_count = 0
+        
+        for post in queryset:
+            # Only retry posts that have failed LinkedIn postings
+            failed_linkedin_posts = post.linkedin_posts.filter(status__in=['failed', 'retrying'])
+            if not failed_linkedin_posts.exists():
+                continue
+            
+            linkedin_post = failed_linkedin_posts.first()
+            if not linkedin_post.can_retry():
+                self.message_user(
+                    request, 
+                    f"Cannot retry '{post.title}' - maximum attempts reached", 
+                    level=messages.WARNING
+                )
+                continue
+            
+            try:
+                # Reset to pending and try again
+                linkedin_post.mark_as_pending()
+                linkedin_post = service.post_blog_article(post)
+                retry_count += 1
+                
+                if linkedin_post.is_successful():
+                    success_count += 1
+                else:
+                    error_count += 1
+                    self.message_user(
+                        request, 
+                        f"Retry failed for '{post.title}': {linkedin_post.error_message}", 
+                        level=messages.ERROR
+                    )
+            except LinkedInAPIError as e:
+                error_count += 1
+                self.message_user(
+                    request, 
+                    f"Retry failed for '{post.title}': {e.message}", 
+                    level=messages.ERROR
+                )
+            except Exception as e:
+                error_count += 1
+                self.message_user(
+                    request, 
+                    f"Unexpected error retrying '{post.title}': {str(e)}", 
+                    level=messages.ERROR
+                )
+        
+        if retry_count == 0:
+            self.message_user(
+                request, 
+                "No posts found that can be retried for LinkedIn posting", 
+                level=messages.WARNING
+            )
+        else:
+            if success_count > 0:
+                self.message_user(
+                    request, 
+                    f"Successfully retried and posted {success_count} post(s) to LinkedIn", 
+                    level=messages.SUCCESS
+                )
+            
+            if error_count > 0:
+                self.message_user(
+                    request, 
+                    f"Failed to retry {error_count} post(s) for LinkedIn posting", 
+                    level=messages.ERROR
+                )
+    retry_linkedin_posting.short_description = "Retry failed LinkedIn postings"
+    
+    def get_queryset(self, request):
+        """Optimize queryset with prefetch_related for LinkedIn posts"""
+        return super().get_queryset(request).prefetch_related('linkedin_posts')
 
 @admin.register(Category)
 class CategoryAdmin(ModelAdmin):
@@ -880,3 +1138,455 @@ blog_engagement_admin.register(Comment, CommentAdmin)
 blog_engagement_admin.register(SocialShare, SocialShareAdmin)
 blog_engagement_admin.register(AuthorProfile, AuthorProfileAdmin)
 blog_engagement_admin.register(MediaItem, MediaItemAdmin)
+
+@admin.register(LinkedInConfig)
+class LinkedInConfigAdmin(ModelAdmin):
+    """
+    Admin configuration for LinkedIn API credentials with secure field handling.
+    """
+    list_display = ('client_id_display', 'is_active', 'credential_status', 'token_status', 'created_at')
+    list_filter = ('is_active', 'created_at')
+    search_fields = ('client_id',)
+    readonly_fields = ('created_at', 'updated_at', 'credential_validation_display', 'token_info_display')
+    
+    fieldsets = (
+        ("Basic Configuration", {
+            'fields': ('client_id', 'is_active'),
+            'description': 'Basic LinkedIn API configuration settings.'
+        }),
+        ("API Credentials", {
+            'fields': ('client_secret', 'access_token', 'refresh_token'),
+            'description': 'Sensitive API credentials (encrypted when stored). Leave blank to keep existing values.'
+        }),
+        ("Token Management", {
+            'fields': ('token_expires_at', 'token_info_display'),
+            'description': 'Access token expiration and status information.'
+        }),
+        ("Validation", {
+            'classes': ('collapse',),
+            'fields': ('credential_validation_display',),
+            'description': 'Credential validation and troubleshooting information.'
+        }),
+        ("Timestamps", {
+            'classes': ('collapse',),
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
+    
+    actions = ['validate_credentials', 'clear_tokens', 'test_connection']
+    
+    def client_id_display(self, obj):
+        """Display truncated client ID for security"""
+        if obj.client_id:
+            return f"{obj.client_id[:10]}..."
+        return "Not set"
+    client_id_display.short_description = 'Client ID'
+    
+    def credential_status(self, obj):
+        """Display overall credential status"""
+        if obj.has_valid_credentials():
+            return format_html('<span style="color: green; font-weight: bold;">✓ Valid</span>')
+        elif obj.get_client_secret() and obj.client_id:
+            return format_html('<span style="color: orange; font-weight: bold;">⚠ Needs Auth</span>')
+        else:
+            return format_html('<span style="color: red; font-weight: bold;">✗ Invalid</span>')
+    credential_status.short_description = 'Status'
+    
+    def token_status(self, obj):
+        """Display token expiration status"""
+        if not obj.get_access_token():
+            return format_html('<span style="color: gray;">No Token</span>')
+        elif obj.is_token_expired():
+            return format_html('<span style="color: red; font-weight: bold;">Expired</span>')
+        elif obj.needs_token_refresh():
+            return format_html('<span style="color: orange; font-weight: bold;">Expires Soon</span>')
+        else:
+            return format_html('<span style="color: green; font-weight: bold;">Valid</span>')
+    token_status.short_description = 'Token Status'
+    
+    def client_secret_display(self, obj):
+        """Display client secret field with security handling"""
+        if obj.client_secret:
+            return "••••••••••••••••"
+        return "Not set"
+    client_secret_display.short_description = 'Client Secret'
+    
+    def access_token_display(self, obj):
+        """Display access token field with security handling"""
+        if obj.access_token:
+            return "••••••••••••••••"
+        return "Not set"
+    access_token_display.short_description = 'Access Token'
+    
+    def refresh_token_display(self, obj):
+        """Display refresh token field with security handling"""
+        if obj.refresh_token:
+            return "••••••••••••••••"
+        return "Not set"
+    refresh_token_display.short_description = 'Refresh Token'
+    
+    def token_info_display(self, obj):
+        """Display detailed token information"""
+        status = obj.get_credential_status()
+        
+        info_parts = []
+        if status.get('expires_at'):
+            expires_at = status['expires_at'].strftime('%Y-%m-%d %H:%M:%S')
+            info_parts.append(f"Expires: {expires_at}")
+            
+            if status.get('expires_in_hours'):
+                hours = status['expires_in_hours']
+                if hours > 0:
+                    info_parts.append(f"({hours:.1f} hours remaining)")
+                else:
+                    info_parts.append("(EXPIRED)")
+        
+        if status.get('needs_refresh'):
+            info_parts.append("⚠ Needs refresh")
+        
+        return "<br>".join(info_parts) if info_parts else "No token information"
+    token_info_display.allow_tags = True
+    token_info_display.short_description = 'Token Information'
+    
+    def credential_validation_display(self, obj):
+        """Display credential validation results"""
+        validation = obj.validate_credentials()
+        
+        results = []
+        if validation['client_secret_valid']:
+            results.append("✓ Client Secret: Valid")
+        else:
+            results.append("✗ Client Secret: Invalid")
+        
+        if validation['access_token_valid']:
+            results.append("✓ Access Token: Valid")
+        else:
+            results.append("✗ Access Token: Invalid")
+        
+        if validation['refresh_token_valid']:
+            results.append("✓ Refresh Token: Valid")
+        else:
+            results.append("✗ Refresh Token: Invalid")
+        
+        if validation['errors']:
+            results.append("<br><strong>Errors:</strong>")
+            for error in validation['errors']:
+                results.append(f"• {error}")
+        
+        return "<br>".join(results)
+    credential_validation_display.allow_tags = True
+    credential_validation_display.short_description = 'Credential Validation'
+    
+    def validate_credentials(self, request, queryset):
+        """Validate credentials for selected configurations"""
+        for config in queryset:
+            validation = config.validate_credentials()
+            if validation['errors']:
+                self.message_user(
+                    request, 
+                    f"Config {config.id}: {', '.join(validation['errors'])}", 
+                    level=messages.ERROR
+                )
+            else:
+                self.message_user(
+                    request, 
+                    f"Config {config.id}: All credentials valid", 
+                    level=messages.SUCCESS
+                )
+    validate_credentials.short_description = "Validate selected configurations"
+    
+    def clear_tokens(self, request, queryset):
+        """Clear tokens for selected configurations"""
+        for config in queryset:
+            config.clear_tokens()
+        
+        count = queryset.count()
+        self.message_user(request, f"Cleared tokens for {count} configuration(s)")
+    clear_tokens.short_description = "Clear tokens (force re-authentication)"
+    
+    def test_connection(self, request, queryset):
+        """Test LinkedIn API connection for selected configurations"""
+        # This would require the LinkedIn service to be implemented
+        # For now, just validate credentials
+        for config in queryset:
+            if config.has_valid_credentials():
+                self.message_user(
+                    request, 
+                    f"Config {config.id}: Ready for API connection", 
+                    level=messages.SUCCESS
+                )
+            else:
+                self.message_user(
+                    request, 
+                    f"Config {config.id}: Invalid credentials - cannot connect", 
+                    level=messages.ERROR
+                )
+    test_connection.short_description = "Test API connection readiness"
+    
+    def get_form(self, request, obj=None, **kwargs):
+        """Customize form to handle sensitive fields"""
+        from django import forms
+        
+        class LinkedInConfigForm(forms.ModelForm):
+            client_secret = forms.CharField(
+                widget=forms.PasswordInput(attrs={'placeholder': 'Enter client secret'}),
+                required=False,
+                help_text="Leave blank to keep existing value"
+            )
+            access_token = forms.CharField(
+                widget=forms.Textarea(attrs={'rows': 3, 'placeholder': 'Enter access token'}),
+                required=False,
+                help_text="Leave blank to keep existing value"
+            )
+            refresh_token = forms.CharField(
+                widget=forms.Textarea(attrs={'rows': 3, 'placeholder': 'Enter refresh token'}),
+                required=False,
+                help_text="Leave blank to keep existing value"
+            )
+            
+            class Meta:
+                model = LinkedInConfig
+                fields = '__all__'
+            
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                # Don't show actual encrypted values in form
+                if self.instance and self.instance.pk:
+                    self.fields['client_secret'].initial = ''
+                    self.fields['access_token'].initial = ''
+                    self.fields['refresh_token'].initial = ''
+            
+            def save(self, commit=True):
+                instance = super().save(commit=False)
+                
+                # Only update encrypted fields if new values are provided
+                if self.cleaned_data.get('client_secret'):
+                    instance.set_client_secret(self.cleaned_data['client_secret'])
+                
+                if self.cleaned_data.get('access_token'):
+                    instance.set_access_token(self.cleaned_data['access_token'])
+                
+                if self.cleaned_data.get('refresh_token'):
+                    instance.set_refresh_token(self.cleaned_data['refresh_token'])
+                
+                if commit:
+                    instance.save()
+                return instance
+        
+        kwargs['form'] = LinkedInConfigForm
+        return super().get_form(request, obj, **kwargs)
+    
+    def has_add_permission(self, request):
+        """Limit to one active configuration"""
+        if LinkedInConfig.objects.filter(is_active=True).exists():
+            return False
+        return super().has_add_permission(request)
+    
+    def get_urls(self):
+        """Add custom URLs for credential management"""
+        urls = super().get_urls()
+        custom_urls = [
+            path('set-credentials/<int:config_id>/', 
+                 self.admin_site.admin_view(self.set_credentials_view), 
+                 name='blog_linkedinconfig_set_credentials'),
+        ]
+        return custom_urls + urls
+    
+    def set_credentials_view(self, request, config_id):
+        """Custom view for setting sensitive credentials"""
+        try:
+            config = LinkedInConfig.objects.get(id=config_id)
+        except LinkedInConfig.DoesNotExist:
+            messages.error(request, "Configuration not found")
+            return redirect('admin:blog_linkedinconfig_changelist')
+        
+        if request.method == 'POST':
+            client_secret = request.POST.get('client_secret')
+            access_token = request.POST.get('access_token')
+            refresh_token = request.POST.get('refresh_token')
+            expires_in = request.POST.get('expires_in')
+            
+            try:
+                if client_secret:
+                    config.set_client_secret(client_secret)
+                
+                if access_token:
+                    config.set_access_token(access_token)
+                
+                if refresh_token:
+                    config.set_refresh_token(refresh_token)
+                
+                if expires_in:
+                    try:
+                        expires_seconds = int(expires_in)
+                        config.token_expires_at = timezone.now() + timedelta(seconds=expires_seconds)
+                    except ValueError:
+                        messages.error(request, "Invalid expiration time")
+                        return redirect(request.path)
+                
+                config.save()
+                messages.success(request, "Credentials updated successfully")
+                return redirect('admin:blog_linkedinconfig_changelist')
+                
+            except Exception as e:
+                messages.error(request, f"Failed to update credentials: {e}")
+        
+        context = {
+            'title': f'Set Credentials for {config}',
+            'config': config,
+            'opts': self.model._meta,
+        }
+        
+        return render(request, 'admin/blog/linkedinconfig/set_credentials.html', context)
+
+
+@admin.register(LinkedInPost)
+class LinkedInPostAdmin(ModelAdmin):
+    """
+    Admin configuration for LinkedIn Post tracking with status monitoring.
+    """
+    list_display = ('post_title', 'status_display', 'attempt_count', 'created_at', 'posted_at', 'retry_info')
+    list_filter = ('status', 'created_at', 'posted_at', 'post__categories')
+    search_fields = ('post__title', 'linkedin_post_id', 'error_message')
+    readonly_fields = (
+        'created_at', 'posted_at', 'last_attempt_at', 'linkedin_post_url',
+        'posted_title', 'posted_content', 'posted_url', 'error_details_display'
+    )
+    raw_id_fields = ('post',)
+    date_hierarchy = 'created_at'
+    ordering = ('-created_at',)
+    
+    fieldsets = (
+        ("Post Information", {
+            'fields': ('post', 'status', 'linkedin_post_id', 'linkedin_post_url')
+        }),
+        ("Posting Content", {
+            'classes': ('collapse',),
+            'fields': ('posted_title', 'posted_content', 'posted_url'),
+            'description': 'Content that was posted to LinkedIn'
+        }),
+        ("Retry Configuration", {
+            'fields': ('attempt_count', 'max_attempts', 'next_retry_at')
+        }),
+        ("Error Information", {
+            'classes': ('collapse',),
+            'fields': ('error_message', 'error_code', 'error_details_display'),
+            'description': 'Error details for failed posting attempts'
+        }),
+        ("Timestamps", {
+            'classes': ('collapse',),
+            'fields': ('created_at', 'posted_at', 'last_attempt_at')
+        }),
+    )
+    
+    actions = ['retry_failed_posts', 'mark_as_success', 'reset_attempts', 'export_posting_data']
+    
+    def post_title(self, obj):
+        """Display the blog post title"""
+        return obj.post.title
+    post_title.short_description = 'Blog Post'
+    post_title.admin_order_field = 'post__title'
+    
+    def status_display(self, obj):
+        """Display status with color coding"""
+        status_colors = {
+            'pending': 'orange',
+            'success': 'green',
+            'failed': 'red',
+            'retrying': 'blue',
+        }
+        color = status_colors.get(obj.status, 'gray')
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color,
+            obj.get_status_display()
+        )
+    status_display.short_description = 'Status'
+    
+    def retry_info(self, obj):
+        """Display retry information"""
+        if obj.status == 'retrying' and obj.next_retry_at:
+            return obj.get_retry_delay_display()
+        elif obj.status == 'failed':
+            return f"Failed after {obj.attempt_count} attempts"
+        elif obj.status == 'success':
+            return "Posted successfully"
+        else:
+            return "Pending"
+    retry_info.short_description = 'Retry Info'
+    
+    def error_details_display(self, obj):
+        """Display detailed error information"""
+        if not obj.error_message:
+            return "No errors"
+        
+        details = [f"<strong>Message:</strong> {obj.error_message}"]
+        
+        if obj.error_code:
+            details.append(f"<strong>Code:</strong> {obj.error_code}")
+        
+        if obj.last_attempt_at:
+            details.append(f"<strong>Last Attempt:</strong> {obj.last_attempt_at.strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        return "<br>".join(details)
+    error_details_display.allow_tags = True
+    error_details_display.short_description = 'Error Details'
+    
+    def retry_failed_posts(self, request, queryset):
+        """Retry selected failed posts"""
+        retryable_posts = queryset.filter(status__in=['failed', 'retrying'])
+        count = 0
+        
+        for linkedin_post in retryable_posts:
+            if linkedin_post.can_retry():
+                linkedin_post.mark_as_pending()
+                count += 1
+        
+        self.message_user(request, f"Marked {count} posts for retry")
+    retry_failed_posts.short_description = "Retry selected failed posts"
+    
+    def mark_as_success(self, request, queryset):
+        """Mark selected posts as successful (manual override)"""
+        count = 0
+        for linkedin_post in queryset:
+            if linkedin_post.status != 'success':
+                linkedin_post.mark_as_success('manual-override', 'Manual admin override')
+                count += 1
+        
+        self.message_user(request, f"Marked {count} posts as successful")
+    mark_as_success.short_description = "Mark selected posts as successful"
+    
+    def reset_attempts(self, request, queryset):
+        """Reset attempt count for selected posts"""
+        updated = queryset.update(attempt_count=0, next_retry_at=None)
+        self.message_user(request, f"Reset attempt count for {updated} posts")
+    reset_attempts.short_description = "Reset attempt count"
+    
+    def export_posting_data(self, request, queryset):
+        """Export posting data to CSV"""
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="linkedin_posts_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow([
+            'Blog Post Title', 'Status', 'LinkedIn Post ID', 'Attempt Count', 
+            'Created At', 'Posted At', 'Error Message'
+        ])
+        
+        for linkedin_post in queryset.select_related('post'):
+            writer.writerow([
+                linkedin_post.post.title,
+                linkedin_post.get_status_display(),
+                linkedin_post.linkedin_post_id or '',
+                linkedin_post.attempt_count,
+                linkedin_post.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                linkedin_post.posted_at.strftime('%Y-%m-%d %H:%M:%S') if linkedin_post.posted_at else '',
+                linkedin_post.error_message or ''
+            ])
+        
+        return response
+    export_posting_data.short_description = "Export posting data to CSV"
+    
+    def get_queryset(self, request):
+        """Optimize queryset with select_related"""
+        return super().get_queryset(request).select_related('post')
