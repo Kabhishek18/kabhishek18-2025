@@ -660,7 +660,8 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@kabhishek18.com')
 SITE_NAME = os.getenv('SITE_NAME', 'Digital Codex')
 SITE_URL = os.getenv('SITE_URL', 'http://127.0.0.1:8000')
 
-# Linkdeln
+# LinkedIn
 LINKEDIN_CLIENT_ID = os.getenv("LINKEDIN_CLIENT_ID","")
 LINKEDIN_CLIENT_SECRET = os.getenv("LINKEDIN_CLIENT_SECRET","")
 LINKEDIN_REDIRECT_URI = os.getenv("LINKEDIN_REDIRECT_URI",SITE_URL)
+LINKEDIN_ENCRYPTION_KEY = os.getenv("LINKEDIN_ENCRYPTION_KEY")
