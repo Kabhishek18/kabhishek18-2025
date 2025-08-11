@@ -1,0 +1,55 @@
+<div class="media-item-display" data-media-id="{{ media.id }}">
+    {% if media.media_type == 'image' %}
+        <figure class="blog-image-figure">
+            {% if media.medium_image %}
+                <img src="{{ media.medium_image.url }}" 
+                     alt="{{ media.alt_text|default:media.title }}"
+                     class="blog-image responsive-image"
+                     loading="lazy">
+            {% elif media.original_image %}
+                <img src="{{ media.original_image.url }}" 
+                     alt="{{ media.alt_text|default:media.title }}"
+                     class="blog-image responsive-image"
+                     loading="lazy">
+            {% endif %}
+            {% if media.title or media.description %}
+                <figcaption class="image-caption">
+                    {% if media.title %}<strong>{{ media.title }}</strong>{% endif %}
+                    {% if media.description %}<p>{{ media.description }}</p>{% endif %}
+                </figcaption>
+            {% endif %}
+        </figure>
+    
+    {% elif media.media_type == 'video' %}
+        <div class="video-container">
+            {% if media.video_embed_url %}
+                {{ media.get_video_embed_code|safe }}
+            {% endif %}
+            {% if media.title or media.description %}
+                <div class="video-caption">
+                    {% if media.title %}<h4>{{ media.title }}</h4>{% endif %}
+                    {% if media.description %}<p>{{ media.description }}</p>{% endif %}
+                </div>
+            {% endif %}
+        </div>
+    
+    {% elif media.media_type == 'gallery' %}
+        <div class="image-gallery" data-gallery-id="{{ media.id }}">
+            {% if media.title %}<h4 class="gallery-title">{{ media.title }}</h4>{% endif %}
+            <div class="gallery-grid">
+                {% for image in media.gallery_images %}
+                    <div class="gallery-item">
+                        <img src="{{ image.processed.medium }}" 
+                             alt="{{ image.alt_text|default:image.title }}"
+                             class="gallery-image"
+                             onclick="openGalleryLightbox({{ media.id }}, {{ forloop.counter0 }})"
+                             loading="lazy">
+                    </div>
+                {% endfor %}
+            </div>
+            {% if media.description %}
+                <p class="gallery-description">{{ media.description }}</p>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>

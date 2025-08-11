@@ -1,0 +1,104 @@
+{% if media_items %}
+<section class="post-media-gallery">
+    <h3>Media Gallery</h3>
+    <div class="media-gallery-grid">
+        {% for media in media_items %}
+            {% if not media.is_featured %}
+                {% include 'blog/partials/media_item.html' with media=media %}
+            {% endif %}
+        {% endfor %}
+    </div>
+</section>
+
+<style>
+.post-media-gallery {
+    margin: 2rem 0;
+    padding: 2rem 0;
+    border-top: 1px solid #eee;
+}
+
+.media-gallery-grid {
+    display: grid;
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+.blog-image-figure {
+    margin: 1.5rem 0;
+    text-align: center;
+}
+
+.blog-image {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.image-caption {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: #666;
+    font-style: italic;
+}
+
+.video-container {
+    margin: 2rem 0;
+}
+
+.video-caption {
+    margin-top: 1rem;
+    text-align: center;
+}
+
+.image-gallery {
+    margin: 2rem 0;
+}
+
+.gallery-title {
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.gallery-item {
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.gallery-item:hover {
+    transform: scale(1.05);
+}
+
+.gallery-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+.gallery-description {
+    margin-top: 1rem;
+    color: #666;
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    .gallery-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+    
+    .gallery-image {
+        height: 150px;
+    }
+}
+</style>
+{% endif %}

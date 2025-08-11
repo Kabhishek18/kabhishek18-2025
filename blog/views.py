@@ -13,7 +13,7 @@ from django.db.models import Case, When, Value, IntegerField
 from datetime import datetime, timedelta
 import re
 from .models import Post, Category, NewsletterSubscriber, Tag, Comment, SocialShare, AuthorProfile, MediaItem
-from .forms import NewsletterSubscriptionForm, CommentForm  # MediaUploadForm, ImageGalleryForm, VideoEmbedForm
+from .forms import NewsletterSubscriptionForm, CommentForm, MediaUploadForm, VideoEmbedForm, GalleryForm
 from .tasks import send_confirmation_email, send_comment_notification
 from .services.social_share_service import SocialShareService
 from .services.content_discovery_service import ContentDiscoveryService
@@ -264,6 +264,13 @@ def blog_detail(request, slug):
     
     # Generate table of contents data
     toc_data = TableOfContentsService.generate_toc_data_for_template(post)
+    
+    # Get media items for this post
+    media_items = post.media_items.all().order_by('order', 'created_at')
+    featured_media = post.media_items.filter(is_featured=True).first()
+    post_images = post.media_items.filter(media_type='image').order_by('order')
+    post_videos = post.media_items.filter(media_type='video').order_by('order')
+    post_galleries = post.media_items.filter(media_type='gallery').order_by('order')
 
     context = {
         'post': post,
@@ -278,6 +285,11 @@ def blog_detail(request, slug):
         'meta_data': post.meta_data,
         'meta_details': post.excerpt or post.content[:160],
         'toc_data': toc_data,
+        'media_items': media_items,
+        'featured_media': featured_media,
+        'post_images': post_images,
+        'post_videos': post_videos,
+        'post_galleries': post_galleries,
     }
     return render(request, 'blog/blog_detail.html', context)
 

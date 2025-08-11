@@ -1,297 +1,313 @@
 {% extends "base.html" %}
 {% load static %}
+{% load media_tags %}
 
 {% block meta_data %}
-    {% if meta_data %}
-        {{ meta_data }}
-    {% else %}
+{% if meta_data %}
+{{ meta_data }}
+{% else %}
 
-        <meta name="author" content="Kumar Abhishek">
-        <meta name="keywords" content="Kumar Abhishek, Full Stack Developer, Software Engineer, AI, Machine Learning, Python, React, Portfolio, Digital Architect">
-        <meta name="robots" content="index, follow">
-        <meta name="description" content="{{ meta_details }}">
-        
-        <meta property="og:title" content="{{ title }}">
-        <meta property="og:description" content="{{ meta_details }}">
-        <link rel="canonical" href="{{ request.build_absolute_uri }}">
-        <meta property="og:url" content="{{ request.build_absolute_uri }}">
-        <meta property="og:type" content="article">
-        <meta property="article:published_time" content="{{ post.created_at|date:'c' }}">
-        <meta property="article:author" content="{{ post.author.get_full_name|default:post.author.username }}">
-        <link rel="canonical" href="https://kabhishek18.com/">
-        <meta property="og:image" content="https://kabhishek18.com/static/web-app-manifest-512x512.png">
-        <meta property="og:site_name" content="The Digital Architect">
-        <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:title" content="{{ title }}">
-        <meta name="twitter:description" content="{{meta_details}}">
-        <meta name="twitter:image" content="https://kabhishek18.com/static/web-app-manifest-512x512.png">
-        <meta name="twitter:site" content="@kabhishek18">
-        <meta name="twitter:creator" content="@kabhishek18">
-     {% endif %}   
+<meta name="author" content="Kumar Abhishek">
+<meta name="keywords"
+    content="Kumar Abhishek, Full Stack Developer, Software Engineer, AI, Machine Learning, Python, React, Portfolio, Digital Architect">
+<meta name="robots" content="index, follow">
+<meta name="description" content="{{ meta_details }}">
+
+<meta property="og:title" content="{{ title }}">
+<meta property="og:description" content="{{ meta_details }}">
+<link rel="canonical" href="{{ request.build_absolute_uri }}">
+<meta property="og:url" content="{{ request.build_absolute_uri }}">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="{{ post.created_at|date:'c' }}">
+<meta property="article:author" content="{{ post.author.get_full_name|default:post.author.username }}">
+<link rel="canonical" href="https://kabhishek18.com/">
+<meta property="og:image" content="https://kabhishek18.com/static/web-app-manifest-512x512.png">
+<meta property="og:site_name" content="The Digital Architect">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ title }}">
+<meta name="twitter:description" content="{{meta_details}}">
+<meta name="twitter:image" content="https://kabhishek18.com/static/web-app-manifest-512x512.png">
+<meta name="twitter:site" content="@kabhishek18">
+<meta name="twitter:creator" content="@kabhishek18">
+{% endif %}
 {% endblock meta_data %}
 
 {% block title %}<title>{{ title |truncatechars:10 }} - Digital Codex</title>{% endblock title %}
 
 {% block content %}
-    <div class="reading-progress"><div class="progress-bar" id="readingProgress"></div></div>
+<div class="reading-progress">
+    <div class="progress-bar" id="readingProgress"></div>
+</div>
 
-    <nav class="detail-nav">
-        <div class="nav-container">
-            <a href="{% url 'blog:list' %}" class="nav-back"><i class="fas fa-arrow-left"></i><span>Back to Blog</span></a>
-            <div class="nav-actions">
-                <button class="share-btn" id="shareBtn"><i class="fas fa-share-alt"></i><span>Share</span></button>
-                <!-- <button class="bookmark-btn" id="bookmarkBtn"><i class="fas fa-bookmark"></i><span>Save</span></button> -->
-            </div>
+<nav class="detail-nav">
+    <div class="nav-container">
+        <a href="{% url 'blog:list' %}" class="nav-back"><i class="fas fa-arrow-left"></i><span>Back to Blog</span></a>
+        <div class="nav-actions">
+            <button class="share-btn" id="shareBtn"><i class="fas fa-share-alt"></i><span>Share</span></button>
+            <!-- <button class="bookmark-btn" id="bookmarkBtn"><i class="fas fa-bookmark"></i><span>Save</span></button> -->
         </div>
-    </nav>
+    </div>
+</nav>
 
-    <div class="article-container">
-        <header class="article-header">
-            <span class="article-category">{{ post.categories.first.name|default:'General' }}</span>
-            <h1 class="article-title">{{ post.title }}</h1>
-            <div class="article-meta">
-                <div class="meta-item"><i class="fas fa-user"></i><span>{{ post.author.get_full_name|default:post.author.username }}</span></div>
-                <div class="meta-item"><i class="fas fa-calendar"></i><span>{{ post.created_at|date:"F d, Y" }}</span></div>
-                <div class="meta-item"><i class="fas fa-clock"></i><span>{{ post.read_time }} min read</span></div>
-                <div class="meta-item"><i class="fas fa-eye"></i><span>{{ post.view_count }} views</span></div>
-            </div>
-        </header>
+<div class="article-container">
+    <header class="article-header">
+        <span class="article-category">{{ post.categories.first.name|default:'General' }}</span>
+        <h1 class="article-title">{{ post.title }}</h1>
+        <div class="article-meta">
+            <div class="meta-item"><i class="fas fa-user"></i><span>{{
+                    post.author.get_full_name|default:post.author.username }}</span></div>
+            <div class="meta-item"><i class="fas fa-calendar"></i><span>{{ post.created_at|date:"F d, Y" }}</span></div>
+            <div class="meta-item"><i class="fas fa-clock"></i><span>{{ post.read_time }} min read</span></div>
+            <div class="meta-item"><i class="fas fa-eye"></i><span>{{ post.view_count }} views</span></div>
+        </div>
+    </header>
 
-        {% if post.featured_image %}
-            <div class="article-image"><img src="{{ post.featured_image.url }}" alt="{{ post.title }}" style="width:100%; height:auto; border-radius:15px; margin-bottom: 2rem;"></div>
-        {% endif %}
-        
-        <article class="article-content">
-            {{ post.content|safe }}
-        </article>
+    {% if post.featured_image %}
+    <div class="article-image"><img src="{{ post.featured_image.url }}" alt="{{ post.title }}"
+            style="width:100%; height:auto; border-radius:15px; margin-bottom: 2rem;"></div>
+    {% else %}
+    {% get_featured_media post as featured_media %}
+    {% if featured_media %}
+    <div class="article-featured-media">
+        {% render_media_item featured_media %}
+    </div>
+    {% endif %}
+    {% endif %}
 
-        <!-- <div class="article-tags">
+    <article class="article-content">
+        {{ post.content|process_media_shortcodes:post|safe }}
+
+        <!-- Display all media items after content -->
+        {% render_media_gallery post %}
+    </article>
+
+    <!-- <div class="article-tags">
             {% for category in post.categories.all %}
                  <a href="{% url 'blog:list_by_category' category.slug %}" class="article-tag">{{ category.name }}</a>
             {% endfor %}
         </div> -->
 
-        <div class="author-section">
-            <div class="author-avatar">
-                {% if post.author.profile.profile_picture %}
-                    <img src="{{ post.author.profile.profile_picture.url }}" 
-                        alt="{{ post.author.get_full_name }}'s profile" 
-                        class="profile-image">
-                {% else %}
-                    <!-- Fallback to initials if no profile image -->
-                    <div class="profile-initials">
-                        {% if post.author.first_name %}{{ post.author.first_name|first }}{{ post.author.last_name|first }}{% else %}{{ post.author.username|first|upper }}{% endif %}
-                    </div>
-                {% endif %}
+    <div class="author-section">
+        <div class="author-avatar">
+            {% if post.author.profile.profile_picture %}
+            <img src="{{ post.author.profile.profile_picture.url }}" alt="{{ post.author.get_full_name }}'s profile"
+                class="profile-image">
+            {% else %}
+            <!-- Fallback to initials if no profile image -->
+            <div class="profile-initials">
+                {% if post.author.first_name %}{{ post.author.first_name|first }}{{ post.author.last_name|first }}{%
+                else %}{{ post.author.username|first|upper }}{% endif %}
             </div>
-            <div class="author-info">
-                <h3>{{ post.author.get_full_name|default:post.author.username }}</h3>
-                
-                {% if post.author.profile.about %}
-                    <p class="author-bio">{{ post.author.profile.about }}</p>
-                {% else %}
-                    <p class="author-bio">Full Stack Developer | AI Enthusiast | Digital Architect</p>
-                {% endif %}
-                
-                <!-- Only show social media section if get_social_media exists -->
-                {% if post.author.get_social_media %}
-                    {% with social=post.author.get_social_media %}
-                        {% if social.twitter or social.linkedin or social.instagram or social.website %}
-                            <div class="author-social">
-                                {% if social.website %}
-                                    <a href="{{ social.website }}" target="_blank">🌐 Website</a>
-                                {% endif %}
-                                {% if social.twitter %}
-                                    <a href="{{ social.twitter }}" target="_blank">🐦 Twitter</a>
-                                {% endif %}
-                                {% if social.linkedin %}
-                                    <a href="{{ social.linkedin }}" target="_blank">💼 LinkedIn</a>
-                                {% endif %}
-                                {% if social.instagram %}
-                                    <a href="{{ social.instagram }}" target="_blank">📸 Instagram</a>
-                                {% endif %}
-                            </div>
-                        {% endif %}
-                    {% endwith %}
-                {% endif %}
-            </div>
+            {% endif %}
         </div>
-        <amp-auto-ads type="adsense"
-            data-ad-client="ca-pub-6078293202282096">
-        </amp-auto-ads>
-        <section class="related-posts">
-            <h2 class="related-title">Related Articles : {% for category in post.categories.all %} <a href="{% url 'blog:list_by_category' category.slug %}" class="article-tag">{{ category.name }}</a>{% endfor %}</h2>
-            <div class="related-grid">
-                {% for related_post in related_posts %}
-                    <div class="related-card" onclick="window.location.href='{% url 'blog:detail' related_post.slug %}'">
-                        <h4>{{ related_post.title }}</h4>
-                        <p>{{ related_post.excerpt|striptags|truncatechars:100 }}</p>
-                    </div>
-                {% empty %}
-                    <p>No related articles found.</p>
-                {% endfor %}
+        <div class="author-info">
+            <h3>{{ post.author.get_full_name|default:post.author.username }}</h3>
+
+            {% if post.author.profile.about %}
+            <p class="author-bio">{{ post.author.profile.about }}</p>
+            {% else %}
+            <p class="author-bio">Full Stack Developer | AI Enthusiast | Digital Architect</p>
+            {% endif %}
+
+            <!-- Only show social media section if get_social_media exists -->
+            {% if post.author.get_social_media %}
+            {% with social=post.author.get_social_media %}
+            {% if social.twitter or social.linkedin or social.instagram or social.website %}
+            <div class="author-social">
+                {% if social.website %}
+                <a href="{{ social.website }}" target="_blank">🌐 Website</a>
+                {% endif %}
+                {% if social.twitter %}
+                <a href="{{ social.twitter }}" target="_blank">🐦 Twitter</a>
+                {% endif %}
+                {% if social.linkedin %}
+                <a href="{{ social.linkedin }}" target="_blank">💼 LinkedIn</a>
+                {% endif %}
+                {% if social.instagram %}
+                <a href="{{ social.instagram }}" target="_blank">📸 Instagram</a>
+                {% endif %}
             </div>
-        </section>
+            {% endif %}
+            {% endwith %}
+            {% endif %}
+        </div>
     </div>
-    <script>
-        // Blog Detail Page JavaScript Functionality
+    <amp-auto-ads type="adsense" data-ad-client="ca-pub-6078293202282096">
+    </amp-auto-ads>
+    <section class="related-posts">
+        <h2 class="related-title">Related Articles : {% for category in post.categories.all %} <a
+                href="{% url 'blog:list_by_category' category.slug %}" class="article-tag">{{ category.name }}</a>{% endfor %}</h2>
+        <div class="related-grid">
+            {% for related_post in related_posts %}
+            <div class="related-card" onclick="window.location.href='{% url 'blog:detail' related_post.slug %}'">
+                <h4>{{ related_post.title }}</h4>
+                <p>{{ related_post.excerpt|striptags|truncatechars:100 }}</p>
+            </div>
+            {% empty %}
+            <p>No related articles found.</p>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+<script>
+    // Blog Detail Page JavaScript Functionality
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Reading Progress Bar
-    const readingProgress = document.getElementById('readingProgress');
-    
-    function updateReadingProgress() {
-        const article = document.querySelector('.article-content');
-        if (!article) return;
-        
-        const articleTop = article.offsetTop;
-        const articleHeight = article.offsetHeight;
-        const windowHeight = window.innerHeight;
-        const scrollTop = window.pageYOffset;
-        
-        const articleBottom = articleTop + articleHeight;
-        const windowBottom = scrollTop + windowHeight;
-        
-        if (scrollTop >= articleTop && scrollTop <= articleBottom - windowHeight) {
-            const progress = ((scrollTop - articleTop) / (articleHeight - windowHeight)) * 100;
-            readingProgress.style.width = Math.min(Math.max(progress, 0), 100) + '%';
-        } else if (scrollTop < articleTop) {
-            readingProgress.style.width = '0%';
-        } else {
-            readingProgress.style.width = '100%';
-        }
-    }
-    
-    window.addEventListener('scroll', updateReadingProgress);
-    updateReadingProgress(); // Initial call
+    document.addEventListener('DOMContentLoaded', function () {
+        // Reading Progress Bar
+        const readingProgress = document.getElementById('readingProgress');
 
-    // Share Button Functionality
-    const shareBtn = document.getElementById('shareBtn');
-    if (shareBtn) {
-        shareBtn.addEventListener('click', function() {
-            const url = window.location.href;
-            const title = document.querySelector('.article-title')?.textContent || document.title;
-            
-            // Check if Web Share API is supported
-            if (navigator.share) {
-                navigator.share({
-                    title: title,
-                    url: url
-                }).catch(err => console.log('Error sharing:', err));
+        function updateReadingProgress() {
+            const article = document.querySelector('.article-content');
+            if (!article) return;
+
+            const articleTop = article.offsetTop;
+            const articleHeight = article.offsetHeight;
+            const windowHeight = window.innerHeight;
+            const scrollTop = window.pageYOffset;
+
+            const articleBottom = articleTop + articleHeight;
+            const windowBottom = scrollTop + windowHeight;
+
+            if (scrollTop >= articleTop && scrollTop <= articleBottom - windowHeight) {
+                const progress = ((scrollTop - articleTop) / (articleHeight - windowHeight)) * 100;
+                readingProgress.style.width = Math.min(Math.max(progress, 0), 100) + '%';
+            } else if (scrollTop < articleTop) {
+                readingProgress.style.width = '0%';
             } else {
-                // Fallback: Copy to clipboard and show notification
-                navigator.clipboard.writeText(url).then(() => {
-                    showNotification('Link copied to clipboard!', 'success');
-                }).catch(() => {
-                    // Fallback for older browsers
-                    const textArea = document.createElement('textarea');
-                    textArea.value = url;
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textArea);
-                    showNotification('Link copied to clipboard!', 'success');
-                });
+                readingProgress.style.width = '100%';
             }
-        });
-    }
+        }
 
-    // Bookmark/Save Button Functionality
-    const bookmarkBtn = document.getElementById('bookmarkBtn');
-    if (bookmarkBtn) {
-        const postSlug = window.location.pathname.split('/').filter(Boolean).pop();
-        
-        // Check if post is already bookmarked
-        const savedPosts = JSON.parse(localStorage.getItem('savedPosts') || '[]');
-        const isBookmarked = savedPosts.includes(postSlug);
-        
-        // Update button appearance based on bookmark status
-        updateBookmarkButton(isBookmarked);
-        
-        bookmarkBtn.addEventListener('click', function() {
-            const currentlySaved = savedPosts.includes(postSlug);
-            
-            if (currentlySaved) {
-                // Remove from bookmarks
-                const index = savedPosts.indexOf(postSlug);
-                savedPosts.splice(index, 1);
-                updateBookmarkButton(false);
-                showNotification('Article removed from saved items', 'info');
+        window.addEventListener('scroll', updateReadingProgress);
+        updateReadingProgress(); // Initial call
+
+        // Share Button Functionality
+        const shareBtn = document.getElementById('shareBtn');
+        if (shareBtn) {
+            shareBtn.addEventListener('click', function () {
+                const url = window.location.href;
+                const title = document.querySelector('.article-title')?.textContent || document.title;
+
+                // Check if Web Share API is supported
+                if (navigator.share) {
+                    navigator.share({
+                        title: title,
+                        url: url
+                    }).catch(err => console.log('Error sharing:', err));
+                } else {
+                    // Fallback: Copy to clipboard and show notification
+                    navigator.clipboard.writeText(url).then(() => {
+                        showNotification('Link copied to clipboard!', 'success');
+                    }).catch(() => {
+                        // Fallback for older browsers
+                        const textArea = document.createElement('textarea');
+                        textArea.value = url;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                        showNotification('Link copied to clipboard!', 'success');
+                    });
+                }
+            });
+        }
+
+        // Bookmark/Save Button Functionality
+        const bookmarkBtn = document.getElementById('bookmarkBtn');
+        if (bookmarkBtn) {
+            const postSlug = window.location.pathname.split('/').filter(Boolean).pop();
+
+            // Check if post is already bookmarked
+            const savedPosts = JSON.parse(localStorage.getItem('savedPosts') || '[]');
+            const isBookmarked = savedPosts.includes(postSlug);
+
+            // Update button appearance based on bookmark status
+            updateBookmarkButton(isBookmarked);
+
+            bookmarkBtn.addEventListener('click', function () {
+                const currentlySaved = savedPosts.includes(postSlug);
+
+                if (currentlySaved) {
+                    // Remove from bookmarks
+                    const index = savedPosts.indexOf(postSlug);
+                    savedPosts.splice(index, 1);
+                    updateBookmarkButton(false);
+                    showNotification('Article removed from saved items', 'info');
+                } else {
+                    // Add to bookmarks
+                    savedPosts.push(postSlug);
+                    updateBookmarkButton(true);
+                    showNotification('Article saved successfully!', 'success');
+                }
+
+                localStorage.setItem('savedPosts', JSON.stringify(savedPosts));
+            });
+        }
+
+        // Helper function to update bookmark button appearance
+        function updateBookmarkButton(isBookmarked) {
+            const icon = bookmarkBtn.querySelector('i');
+            const text = bookmarkBtn.querySelector('span');
+
+            if (isBookmarked) {
+                icon.className = 'fas fa-bookmark';
+                text.textContent = 'Saved';
+                bookmarkBtn.classList.add('bookmarked');
             } else {
-                // Add to bookmarks
-                savedPosts.push(postSlug);
-                updateBookmarkButton(true);
-                showNotification('Article saved successfully!', 'success');
+                icon.className = 'far fa-bookmark';
+                text.textContent = 'Save';
+                bookmarkBtn.classList.remove('bookmarked');
             }
-            
-            localStorage.setItem('savedPosts', JSON.stringify(savedPosts));
-        });
-    }
-
-    // Helper function to update bookmark button appearance
-    function updateBookmarkButton(isBookmarked) {
-        const icon = bookmarkBtn.querySelector('i');
-        const text = bookmarkBtn.querySelector('span');
-        
-        if (isBookmarked) {
-            icon.className = 'fas fa-bookmark';
-            text.textContent = 'Saved';
-            bookmarkBtn.classList.add('bookmarked');
-        } else {
-            icon.className = 'far fa-bookmark';
-            text.textContent = 'Save';
-            bookmarkBtn.classList.remove('bookmarked');
-        }
-    }
-
-    // Notification system
-    function showNotification(message, type = 'info') {
-        // Remove existing notification if any
-        const existingNotification = document.querySelector('.notification');
-        if (existingNotification) {
-            existingNotification.remove();
         }
 
-        // Create notification element
-        const notification = document.createElement('div');
-        notification.className = `notification notification-${type}`;
-        notification.innerHTML = `
+        // Notification system
+        function showNotification(message, type = 'info') {
+            // Remove existing notification if any
+            const existingNotification = document.querySelector('.notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.innerHTML = `
             <div class="notification-content">
                 <i class="fas fa-${getNotificationIcon(type)}"></i>
                 <span>${message}</span>
             </div>
         `;
 
-        // Add notification to page
-        document.body.appendChild(notification);
+            // Add notification to page
+            document.body.appendChild(notification);
 
-        // Trigger animation
-        setTimeout(() => notification.classList.add('show'), 100);
+            // Trigger animation
+            setTimeout(() => notification.classList.add('show'), 100);
 
-        // Remove notification after 3 seconds
-        setTimeout(() => {
-            notification.classList.remove('show');
-            setTimeout(() => notification.remove(), 300);
-        }, 3000);
-    }
-
-    function getNotificationIcon(type) {
-        switch (type) {
-            case 'success': return 'check-circle';
-            case 'error': return 'exclamation-circle';
-            case 'warning': return 'exclamation-triangle';
-            default: return 'info-circle';
+            // Remove notification after 3 seconds
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
         }
-    }
 
-    // Enhanced share options (optional)
-    function showShareModal() {
-        const url = window.location.href;
-        const title = document.querySelector('.article-title')?.textContent || document.title;
-        
-        const shareModal = document.createElement('div');
-        shareModal.className = 'share-modal-overlay';
-        shareModal.innerHTML = `
+        function getNotificationIcon(type) {
+            switch (type) {
+                case 'success': return 'check-circle';
+                case 'error': return 'exclamation-circle';
+                case 'warning': return 'exclamation-triangle';
+                default: return 'info-circle';
+            }
+        }
+
+        // Enhanced share options (optional)
+        function showShareModal() {
+            const url = window.location.href;
+            const title = document.querySelector('.article-title')?.textContent || document.title;
+
+            const shareModal = document.createElement('div');
+            shareModal.className = 'share-modal-overlay';
+            shareModal.innerHTML = `
             <div class="share-modal">
                 <div class="share-modal-header">
                     <h3>Share Article</h3>
@@ -313,62 +329,62 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
         `;
-        
-        document.body.appendChild(shareModal);
-        
-        // Handle share option clicks
-        shareModal.addEventListener('click', function(e) {
-            if (e.target.classList.contains('share-modal-overlay') || 
-                e.target.classList.contains('close-modal')) {
-                shareModal.remove();
-                return;
-            }
-            
-            const platform = e.target.closest('.share-option')?.dataset.platform;
-            if (platform) {
-                handleSharePlatform(platform, url, title);
-                shareModal.remove();
-            }
-        });
-    }
 
-    function handleSharePlatform(platform, url, title) {
-        const encodedUrl = encodeURIComponent(url);
-        const encodedTitle = encodeURIComponent(title);
-        
-        switch (platform) {
-            case 'twitter':
-                window.open(`https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`, '_blank');
-                break;
-            case 'facebook':
-                window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`, '_blank');
-                break;
-            case 'linkedin':
-                window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`, '_blank');
-                break;
-            case 'copy':
-                navigator.clipboard.writeText(url).then(() => {
-                    showNotification('Link copied to clipboard!', 'success');
-                });
-                break;
+            document.body.appendChild(shareModal);
+
+            // Handle share option clicks
+            shareModal.addEventListener('click', function (e) {
+                if (e.target.classList.contains('share-modal-overlay') ||
+                    e.target.classList.contains('close-modal')) {
+                    shareModal.remove();
+                    return;
+                }
+
+                const platform = e.target.closest('.share-option')?.dataset.platform;
+                if (platform) {
+                    handleSharePlatform(platform, url, title);
+                    shareModal.remove();
+                }
+            });
         }
-    }
-});
 
-// Copy Button Functionality for Code Blocks
-function initializeCopyButtons() {
-    // Find all pre elements (code blocks)
-    const codeBlocks = document.querySelectorAll('pre');
-    
-    codeBlocks.forEach((pre, index) => {
-        // Create copy button
-        const copyBtn = document.createElement('button');
-        copyBtn.className = 'copy-btn';
-        copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
-        copyBtn.setAttribute('data-index', index);
-        
-        // Style the button
-        copyBtn.style.cssText = `
+        function handleSharePlatform(platform, url, title) {
+            const encodedUrl = encodeURIComponent(url);
+            const encodedTitle = encodeURIComponent(title);
+
+            switch (platform) {
+                case 'twitter':
+                    window.open(`https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`, '_blank');
+                    break;
+                case 'facebook':
+                    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`, '_blank');
+                    break;
+                case 'linkedin':
+                    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`, '_blank');
+                    break;
+                case 'copy':
+                    navigator.clipboard.writeText(url).then(() => {
+                        showNotification('Link copied to clipboard!', 'success');
+                    });
+                    break;
+            }
+        }
+    });
+
+    // Copy Button Functionality for Code Blocks
+    function initializeCopyButtons() {
+        // Find all pre elements (code blocks)
+        const codeBlocks = document.querySelectorAll('pre');
+
+        codeBlocks.forEach((pre, index) => {
+            // Create copy button
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-btn';
+            copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+            copyBtn.setAttribute('data-index', index);
+
+            // Style the button
+            copyBtn.style.cssText = `
             position: absolute;
             top: 0.8rem;
             right: 1rem;
@@ -384,114 +400,114 @@ function initializeCopyButtons() {
             z-index: 10;
             backdrop-filter: blur(10px);
         `;
-        
-        // Add hover effect
-        copyBtn.addEventListener('mouseenter', () => {
-            copyBtn.style.background = 'rgba(0, 255, 255, 0.2)';
-            copyBtn.style.transform = 'scale(1.05)';
-        });
-        
-        copyBtn.addEventListener('mouseleave', () => {
-            copyBtn.style.background = 'rgba(0, 255, 255, 0.1)';
-            copyBtn.style.transform = 'scale(1)';
-        });
-        
-        // Add click event
-        copyBtn.addEventListener('click', async (e) => {
-            e.preventDefault();
-            
-            // Get the code text
-            const codeText = pre.textContent || pre.innerText;
-            
-            try {
-                // Try modern clipboard API first
-                if (navigator.clipboard && window.isSecureContext) {
-                    await navigator.clipboard.writeText(codeText);
-                } else {
-                    // Fallback for older browsers
-                    const textArea = document.createElement('textarea');
-                    textArea.value = codeText;
-                    textArea.style.position = 'fixed';
-                    textArea.style.left = '-999999px';
-                    textArea.style.top = '-999999px';
-                    document.body.appendChild(textArea);
-                    textArea.focus();
-                    textArea.select();
-                    document.execCommand('copy');
-                    textArea.remove();
-                }
-                
-                // Show success feedback
-                copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-                copyBtn.style.background = 'rgba(0, 255, 0, 0.2)';
-                copyBtn.style.color = '#00ff00';
-                
-                // Show notification if your notification system exists
-                if (typeof showNotification === 'function') {
-                    showNotification('Code copied to clipboard!', 'success');
-                }
-                
-                // Reset button after 2 seconds
-                setTimeout(() => {
-                    copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
-                    copyBtn.style.background = 'rgba(0, 255, 255, 0.1)';
-                    copyBtn.style.color = '#00ffff';
-                }, 2000);
-                
-            } catch (err) {
-                console.error('Copy failed:', err);
-                copyBtn.innerHTML = '<i class="fas fa-times"></i> Failed';
-                copyBtn.style.background = 'rgba(255, 0, 0, 0.2)';
-                copyBtn.style.color = '#ff0000';
-                
-                setTimeout(() => {
-                    copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
-                    copyBtn.style.background = 'rgba(0, 255, 255, 0.1)';
-                    copyBtn.style.color = '#00ffff';
-                }, 2000);
-            }
-        });
-        
-        // Make sure the pre element has relative positioning
-        pre.style.position = 'relative';
-        
-        // Append button to the pre element
-        pre.appendChild(copyBtn);
-    });
-}
 
-// Initialize copy buttons when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    // Your existing DOMContentLoaded code here...
-    
-    // Initialize copy buttons
-    initializeCopyButtons();
-    
-    // Re-initialize if content is dynamically loaded
-    const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                // Check if any new pre elements were added
-                const hasNewCodeBlocks = Array.from(mutation.addedNodes).some(node => 
-                    node.nodeType === 1 && (node.tagName === 'PRE' || node.querySelector('pre'))
-                );
-                
-                if (hasNewCodeBlocks) {
-                    // Small delay to ensure content is fully rendered
-                    setTimeout(initializeCopyButtons, 100);
+            // Add hover effect
+            copyBtn.addEventListener('mouseenter', () => {
+                copyBtn.style.background = 'rgba(0, 255, 255, 0.2)';
+                copyBtn.style.transform = 'scale(1.05)';
+            });
+
+            copyBtn.addEventListener('mouseleave', () => {
+                copyBtn.style.background = 'rgba(0, 255, 255, 0.1)';
+                copyBtn.style.transform = 'scale(1)';
+            });
+
+            // Add click event
+            copyBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+
+                // Get the code text
+                const codeText = pre.textContent || pre.innerText;
+
+                try {
+                    // Try modern clipboard API first
+                    if (navigator.clipboard && window.isSecureContext) {
+                        await navigator.clipboard.writeText(codeText);
+                    } else {
+                        // Fallback for older browsers
+                        const textArea = document.createElement('textarea');
+                        textArea.value = codeText;
+                        textArea.style.position = 'fixed';
+                        textArea.style.left = '-999999px';
+                        textArea.style.top = '-999999px';
+                        document.body.appendChild(textArea);
+                        textArea.focus();
+                        textArea.select();
+                        document.execCommand('copy');
+                        textArea.remove();
+                    }
+
+                    // Show success feedback
+                    copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                    copyBtn.style.background = 'rgba(0, 255, 0, 0.2)';
+                    copyBtn.style.color = '#00ff00';
+
+                    // Show notification if your notification system exists
+                    if (typeof showNotification === 'function') {
+                        showNotification('Code copied to clipboard!', 'success');
+                    }
+
+                    // Reset button after 2 seconds
+                    setTimeout(() => {
+                        copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+                        copyBtn.style.background = 'rgba(0, 255, 255, 0.1)';
+                        copyBtn.style.color = '#00ffff';
+                    }, 2000);
+
+                } catch (err) {
+                    console.error('Copy failed:', err);
+                    copyBtn.innerHTML = '<i class="fas fa-times"></i> Failed';
+                    copyBtn.style.background = 'rgba(255, 0, 0, 0.2)';
+                    copyBtn.style.color = '#ff0000';
+
+                    setTimeout(() => {
+                        copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+                        copyBtn.style.background = 'rgba(0, 255, 255, 0.1)';
+                        copyBtn.style.color = '#00ffff';
+                    }, 2000);
                 }
-            }
-        });
-    });
-    
-    // Start observing the article content for changes
-    const articleContent = document.querySelector('.article-content');
-    if (articleContent) {
-        observer.observe(articleContent, {
-            childList: true,
-            subtree: true
+            });
+
+            // Make sure the pre element has relative positioning
+            pre.style.position = 'relative';
+
+            // Append button to the pre element
+            pre.appendChild(copyBtn);
         });
     }
-});
-    </script>
+
+    // Initialize copy buttons when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function () {
+        // Your existing DOMContentLoaded code here...
+
+        // Initialize copy buttons
+        initializeCopyButtons();
+
+        // Re-initialize if content is dynamically loaded
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    // Check if any new pre elements were added
+                    const hasNewCodeBlocks = Array.from(mutation.addedNodes).some(node =>
+                        node.nodeType === 1 && (node.tagName === 'PRE' || node.querySelector('pre'))
+                    );
+
+                    if (hasNewCodeBlocks) {
+                        // Small delay to ensure content is fully rendered
+                        setTimeout(initializeCopyButtons, 100);
+                    }
+                }
+            });
+        });
+
+        // Start observing the article content for changes
+        const articleContent = document.querySelector('.article-content');
+        if (articleContent) {
+            observer.observe(articleContent, {
+                childList: true,
+                subtree: true
+            });
+        }
+    });
+</script>
 {% endblock %}
