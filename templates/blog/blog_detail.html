@@ -54,8 +54,7 @@
         <span class="article-category">{{ post.categories.first.name|default:'General' }}</span>
         <h1 class="article-title">{{ post.title }}</h1>
         <div class="article-meta">
-            <div class="meta-item"><i class="fas fa-user"></i><span>{{
-                    post.author.get_full_name|default:post.author.username }}</span></div>
+            <div class="meta-item"><i class="fas fa-user"></i><span style="text-transform:capitalize">{{post.author.get_full_name|default:post.author.username }}</span></div>
             <div class="meta-item"><i class="fas fa-calendar"></i><span>{{ post.created_at|date:"F d, Y" }}</span></div>
             <div class="meta-item"><i class="fas fa-clock"></i><span>{{ post.read_time }} min read</span></div>
             <div class="meta-item"><i class="fas fa-eye"></i><span>{{ post.view_count }} views</span></div>
