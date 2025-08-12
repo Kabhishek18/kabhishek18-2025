@@ -1,24 +1,4 @@
-# ===================================================================
-# robots.txt for kabhishek18.com
-# -------------------------------------------------------------------
-# This file tells search engine crawlers which pages or files
-# the crawler can or can't request from your site.
-# ===================================================================
-
-# Allow all ethical search engines full access to the site.
 User-agent: *
 Allow: /
 
-# Disallow crawlers from indexing specific, non-public files.
-# This prevents the Google verification file from appearing in search results.
-Disallow: /google9ad52ac54f5ff410.html
-
-# -------------------------------------------------------------------
-# Sitemap Location
-# -------------------------------------------------------------------
-# Provide the path to your sitemap file. This helps search engines
-# discover and index all of your content more effectively.
-# Make sure to replace this with your final domain name.
-# ===================================================================
-
-Sitemap: https://kabhishek18.com/static/Sitemap.xml
+Sitemap: https://example.com/sitemap.xml

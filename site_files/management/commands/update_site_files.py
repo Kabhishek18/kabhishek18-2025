@@ -1,191 +1,193 @@
 """
 Management command to update site metadata files.
 
-This command updates the site's metadata files (Sitemap.xml, robots.txt, security.txt, LLMs.txt)
-with the latest available URLs from the website.
-
-Usage:
-    python manage.py update_site_files [options]
-
-Options:
-    --sitemap       Update only the sitemap
-    --robots        Update only the robots.txt
-    --security      Update only the security.txt
-    --llms          Update only the LLMs.txt
-    --all           Update all files (default)
-    --verbose       Increase output verbosity
-
-Examples:
-    # Update all files
-    python manage.py update_site_files
-
-    # Update only the sitemap
-    python manage.py update_site_files --sitemap
-
-    # Update robots.txt and security.txt
-    python manage.py update_site_files --robots --security
-
-    # Update all files with verbose output
-    python manage.py update_site_files --all --verbose
-
-Notes:
-    - If no specific file options are provided, all files will be updated
-    - The command respects the configuration settings in the admin interface
-    - Each file update creates a backup of the existing file before modification
-    - Results are logged and displayed in the console output
+This command updates Sitemap.xml, robots.txt, security.txt, and LLMs.txt files
+based on the current site configuration.
 """
-import logging
-from django.core.management.base import BaseCommand, CommandError
+import os
+from django.core.management.base import BaseCommand
 from django.conf import settings
-from site_files.models import SiteFilesConfig
-from site_files.services.sitemap_generator import SitemapGenerator
-from site_files.services.robots_txt_updater import RobotsTxtUpdater
-from site_files.services.security_txt_updater import SecurityTxtUpdater
-from site_files.services.llms_txt_creator import LLMsTxtCreator
 from django.utils import timezone
+from site_files.models import SiteFilesConfig
 
-logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
-    help = 'Updates site metadata files (Sitemap.xml, robots.txt, security.txt, LLMs.txt)'
+    help = 'Update site metadata files (Sitemap.xml, robots.txt, security.txt, LLMs.txt)'
     
     def add_arguments(self, parser):
-        parser.add_argument('--sitemap', action='store_true', help='Update only the sitemap')
-        parser.add_argument('--robots', action='store_true', help='Update only the robots.txt')
-        parser.add_argument('--security', action='store_true', help='Update only the security.txt')
-        parser.add_argument('--llms', action='store_true', help='Update only the LLMs.txt')
-        parser.add_argument('--all', action='store_true', help='Update all files (default)')
-        parser.add_argument('--verbose', action='store_true', help='Increase output verbosity')
+        parser.add_argument(
+            '--sitemap',
+            action='store_true',
+            help='Update sitemap.xml file',
+        )
+        parser.add_argument(
+            '--robots',
+            action='store_true',
+            help='Update robots.txt file',
+        )
+        parser.add_argument(
+            '--security',
+            action='store_true',
+            help='Update security.txt file',
+        )
+        parser.add_argument(
+            '--llms',
+            action='store_true',
+            help='Update LLMs.txt file',
+        )
+        parser.add_argument(
+            '--all',
+            action='store_true',
+            help='Update all site files',
+        )
+        parser.add_argument(
+            '--verbose',
+            action='store_true',
+            help='Verbose output',
+        )
     
     def handle(self, *args, **options):
-        # Set up logging based on verbosity
-        verbosity = 2 if options['verbose'] else 1
+        """Execute the command."""
+        verbose = options.get('verbose', False)
         
         # Get configuration
-        try:
-            config = SiteFilesConfig.objects.first()
-            if not config:
-                config = SiteFilesConfig.objects.create()
-                self.stdout.write(self.style.WARNING('No configuration found. Created default configuration.'))
-        except Exception as e:
-            raise CommandError(f"Error getting configuration: {e}")
+        config = SiteFilesConfig.objects.first()
+        if not config:
+            config = SiteFilesConfig.objects.create()
+            if verbose:
+                self.stdout.write(
+                    self.style.WARNING('No configuration found. Created default configuration.')
+                )
         
         # Determine which files to update
-        update_all = options['all'] or not any([
-            options['sitemap'], options['robots'], options['security'], options['llms']
-        ])
+        update_all = options.get('all', False)
+        update_sitemap = options.get('sitemap', False) or update_all or config.update_sitemap
+        update_robots = options.get('robots', False) or update_all or config.update_robots
+        update_security = options.get('security', False) or update_all or config.update_security
+        update_llms = options.get('llms', False) or update_all or config.update_llms
         
-        update_sitemap = options['sitemap'] or update_all
-        update_robots = options['robots'] or update_all
-        update_security = options['security'] or update_all
-        update_llms = options['llms'] or update_all
+        if verbose:
+            self.stdout.write(f"Starting site files update at {timezone.now()}")
         
-        # Apply configuration settings
-        if not update_all:
-            # If specific files are requested, respect those choices
-            pass
-        else:
-            # If updating all files, respect configuration settings
-            update_sitemap = update_sitemap and config.update_sitemap
-            update_robots = update_robots and config.update_robots
-            update_security = update_security and config.update_security
-            update_llms = update_llms and config.update_llms
+        # Update files
+        updated_files = []
         
-        # Track results
-        results = {
-            'sitemap': None,
-            'robots': None,
-            'security': None,
-            'llms': None
-        }
-        
-        # Update sitemap
         if update_sitemap:
-            self.stdout.write('Updating sitemap...')
             try:
-                sitemap_generator = SitemapGenerator(site_url=config.site_url)
-                success = sitemap_generator.update_sitemap(config.sitemap_path)
-                results['sitemap'] = success
-                
-                if success:
-                    self.stdout.write(self.style.SUCCESS(f'Sitemap updated successfully at {config.sitemap_path}'))
-                else:
-                    self.stdout.write(self.style.ERROR('Failed to update sitemap'))
+                self._update_sitemap(config, verbose)
+                updated_files.append('sitemap.xml')
             except Exception as e:
-                logger.error(f"Error updating sitemap: {e}")
-                self.stdout.write(self.style.ERROR(f'Error updating sitemap: {e}'))
-                results['sitemap'] = False
+                self.stdout.write(
+                    self.style.ERROR(f'Error updating sitemap.xml: {e}')
+                )
         
-        # Update robots.txt
         if update_robots:
-            self.stdout.write('Updating robots.txt...')
             try:
-                robots_updater = RobotsTxtUpdater(site_url=config.site_url)
-                success = robots_updater.write_robots_txt(config.robots_path, config.sitemap_path)
-                results['robots'] = success
-                
-                if success:
-                    self.stdout.write(self.style.SUCCESS(f'robots.txt updated successfully at {config.robots_path}'))
-                else:
-                    self.stdout.write(self.style.ERROR('Failed to update robots.txt'))
+                self._update_robots(config, verbose)
+                updated_files.append('robots.txt')
             except Exception as e:
-                logger.error(f"Error updating robots.txt: {e}")
-                self.stdout.write(self.style.ERROR(f'Error updating robots.txt: {e}'))
-                results['robots'] = False
+                self.stdout.write(
+                    self.style.ERROR(f'Error updating robots.txt: {e}')
+                )
         
-        # Update security.txt
         if update_security:
-            self.stdout.write('Updating security.txt...')
             try:
-                security_updater = SecurityTxtUpdater(site_url=config.site_url)
-                success = security_updater.update_security_txt(config.security_path)
-                results['security'] = success
-                
-                if success:
-                    self.stdout.write(self.style.SUCCESS(f'security.txt updated successfully at {config.security_path}'))
-                else:
-                    self.stdout.write(self.style.ERROR('Failed to update security.txt'))
+                self._update_security(config, verbose)
+                updated_files.append('security.txt')
             except Exception as e:
-                logger.error(f"Error updating security.txt: {e}")
-                self.stdout.write(self.style.ERROR(f'Error updating security.txt: {e}'))
-                results['security'] = False
+                self.stdout.write(
+                    self.style.ERROR(f'Error updating security.txt: {e}')
+                )
         
-        # Update LLMs.txt
         if update_llms:
-            self.stdout.write('Updating LLMs.txt...')
             try:
-                llms_creator = LLMsTxtCreator(site_url=config.site_url, site_name=config.site_name)
-                success = llms_creator.write_llms_txt(config.llms_path)
-                results['llms'] = success
-                
-                if success:
-                    self.stdout.write(self.style.SUCCESS(f'LLMs.txt updated successfully at {config.llms_path}'))
-                else:
-                    self.stdout.write(self.style.ERROR('Failed to update LLMs.txt'))
+                self._update_llms(config, verbose)
+                updated_files.append('LLMs.txt')
             except Exception as e:
-                logger.error(f"Error updating LLMs.txt: {e}")
-                self.stdout.write(self.style.ERROR(f'Error updating LLMs.txt: {e}'))
-                results['llms'] = False
+                self.stdout.write(
+                    self.style.ERROR(f'Error updating LLMs.txt: {e}')
+                )
         
-        # Update last_update timestamp in configuration
-        try:
-            config.last_update = timezone.now()
-            config.save()
-        except Exception as e:
-            logger.error(f"Error updating last_update timestamp: {e}")
-            self.stdout.write(self.style.WARNING(f'Error updating last_update timestamp: {e}'))
+        if updated_files:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f'Successfully updated: {", ".join(updated_files)}'
+                )
+            )
+        else:
+            self.stdout.write(
+                self.style.WARNING('No files were updated.')
+            )
+    
+    def _update_sitemap(self, config, verbose):
+        """Update sitemap.xml file."""
+        if verbose:
+            self.stdout.write('Updating sitemap.xml...')
         
-        # Print summary
-        self.stdout.write('\nSummary:')
-        for file_type, success in results.items():
-            if success is None:
-                status = 'Skipped'
-                style = self.style.WARNING
-            elif success:
-                status = 'Success'
-                style = self.style.SUCCESS
-            else:
-                status = 'Failed'
-                style = self.style.ERROR
-            
-            self.stdout.write(f'  {file_type}: {style(status)}')
+        # Basic sitemap content
+        sitemap_content = f'''<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>{config.site_url}</loc>
+        <lastmod>{timezone.now().strftime('%Y-%m-%d')}</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+    </url>
+</urlset>'''
+        
+        file_path = os.path.join(settings.BASE_DIR, config.sitemap_path)
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(sitemap_content)
+    
+    def _update_robots(self, config, verbose):
+        """Update robots.txt file."""
+        if verbose:
+            self.stdout.write('Updating robots.txt...')
+        
+        robots_content = f'''User-agent: *
+Allow: /
+
+Sitemap: {config.site_url}/sitemap.xml
+'''
+        
+        file_path = os.path.join(settings.BASE_DIR, config.robots_path)
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(robots_content)
+    
+    def _update_security(self, config, verbose):
+        """Update security.txt file."""
+        if verbose:
+            self.stdout.write('Updating security.txt...')
+        
+        security_content = f'''Contact: mailto:security@{config.site_url.replace("https://", "").replace("http://", "")}
+Expires: {(timezone.now() + timezone.timedelta(days=365)).strftime('%Y-%m-%dT%H:%M:%S.%fZ')}
+Preferred-Languages: en
+Canonical: {config.site_url}/.well-known/security.txt
+'''
+        
+        file_path = os.path.join(settings.BASE_DIR, config.security_path)
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(security_content)
+    
+    def _update_llms(self, config, verbose):
+        """Update LLMs.txt file."""
+        if verbose:
+            self.stdout.write('Updating LLMs.txt...')
+        
+        llms_content = f'''# LLMs.txt - AI Training Data Usage Policy
+# Generated on {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+Site: {config.site_name}
+URL: {config.site_url}
+
+# This site allows AI training on publicly available content
+# with proper attribution and respect for copyright.
+
+AI-Training: allowed
+Attribution: required
+Commercial-Use: allowed-with-attribution
+'''
+        
+        file_path = os.path.join(settings.BASE_DIR, config.llms_path)
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(llms_content)

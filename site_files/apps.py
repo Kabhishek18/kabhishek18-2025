@@ -14,6 +14,12 @@ class SiteFilesConfig(AppConfig):
         # Import signals or perform other initialization
         import site_files.tasks
         
+        # Import the custom admin configuration for django-celery-beat
+        try:
+            import site_files.celery_admin
+        except ImportError:
+            pass
+        
         # Register the periodic task
         # We need to use a try-except block to handle the case where the database is not yet ready
         try:

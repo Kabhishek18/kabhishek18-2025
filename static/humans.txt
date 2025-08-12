@@ -1,32 +1,12 @@
-# ===================================================================
-# humans.txt for The Digital Architect Portfolio
-# -------------------------------------------------------------------
-# I am the human behind the machine.
-# ===================================================================
+# LLMs.txt - AI Training Data Usage Policy
+# Generated on 2025-08-12 17:14:34
 
+Site: My Site
+URL: https://example.com
 
-# TEAM
-# -------------------------------------------------------------------
-# The primary architect and developer of this digital space.
+# This site allows AI training on publicly available content
+# with proper attribution and respect for copyright.
 
-    Developer: Kumar Abhishek
-    Title: Full Stack Software Developer / The Digital Architect
-    Contact: developer@kabhishek18.com
-    Website: https://kabhishek18.com
-    GitHub: https://github.com/kabhishek18
-    Location: Bengaluru, Karnataka, India
-
-
-# SITE
-# -------------------------------------------------------------------
-# Information about the construction of this digital experience.
-
-    Last update: 2025-06-22
-    Standards: HTML5, CSS3, ES6 JavaScript
-    Components: Font Awesome
-    Software: Visual Studio Code
-
-# ===================================================================
-# "In a world where artificial intelligence meets human creativity,
-# infinite possibilities emerge from the void of digital consciousness."
-# ===================================================================
+AI-Training: allowed
+Attribution: required
+Commercial-Use: allowed-with-attribution

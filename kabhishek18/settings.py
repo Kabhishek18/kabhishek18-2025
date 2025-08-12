@@ -415,6 +415,36 @@ UNFOLD = {
                     },
                 ],
             },
+            {
+                "title": _("Task Management"),
+                "separator": True,
+                "items": [
+                    {
+                        "title": _("Periodic Tasks"),
+                        "icon": "schedule",
+                        "link": reverse_lazy("admin:django_celery_beat_periodictask_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": _("Interval Schedules"),
+                        "icon": "timer",
+                        "link": reverse_lazy("admin:django_celery_beat_intervalschedule_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": _("Cron Schedules"),
+                        "icon": "event",
+                        "link": reverse_lazy("admin:django_celery_beat_crontabschedule_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": _("Site Files Config"),
+                        "icon": "settings",
+                        "link": reverse_lazy("admin:site_files_sitefilesconfig_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                ],
+            },
         ],
     },
     
