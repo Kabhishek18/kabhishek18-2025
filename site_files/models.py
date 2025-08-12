@@ -10,17 +10,17 @@ class SiteFilesConfig(models.Model):
     # Site information
     site_name = models.CharField(max_length=255, default='My Site', 
                                 help_text="Name of the website")
-    site_url = models.URLField(default='https://example.com', 
-                              help_text="Base URL of the website (e.g., https://example.com)")
+    site_url = models.URLField(default='https://kabhishek18.com', 
+                              help_text="Base URL of the website (e.g., https://kabhishek18.com)")
     
     # File paths
-    sitemap_path = models.CharField(max_length=255, default='static/Sitemap.xml', 
+    sitemap_path = models.CharField(max_length=255, default='sitemap.xml', 
                                    help_text="Path to the sitemap file relative to the project root")
-    robots_path = models.CharField(max_length=255, default='static/robots.txt', 
+    robots_path = models.CharField(max_length=255, default='robots.txt', 
                                   help_text="Path to the robots.txt file relative to the project root")
-    security_path = models.CharField(max_length=255, default='static/security.txt', 
+    security_path = models.CharField(max_length=255, default='security.txt', 
                                     help_text="Path to the security.txt file relative to the project root")
-    llms_path = models.CharField(max_length=255, default='static/humans.txt', 
+    llms_path = models.CharField(max_length=255, default='humans.txt', 
                                help_text="Path to the LLMs.txt file relative to the project root")
     
     # Schedule settings

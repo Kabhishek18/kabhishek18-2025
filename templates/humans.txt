@@ -1,0 +1,32 @@
+# ===================================================================
+# humans.txt for The Digital Architect Portfolio
+# -------------------------------------------------------------------
+# I am the human behind the machine.
+# ===================================================================
+
+
+# TEAM
+# -------------------------------------------------------------------
+# The primary architect and developer of this digital space.
+
+    Developer: Kumar Abhishek
+    Title: Full Stack Software Developer / The Digital Architect
+    Contact: developer@kabhishek18.com
+    Website: https://kabhishek18.com
+    GitHub: https://github.com/kabhishek18
+    Location: Bengaluru, Karnataka, India
+
+
+# SITE
+# -------------------------------------------------------------------
+# Information about the construction of this digital experience.
+
+    Last update: 2025-06-22
+    Standards: HTML5, CSS3, ES6 JavaScript
+    Components: Font Awesome
+    Software: Visual Studio Code
+
+# ===================================================================
+# "In a world where artificial intelligence meets human creativity,
+# infinite possibilities emerge from the void of digital consciousness."
+# ===================================================================

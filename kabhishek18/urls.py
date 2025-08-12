@@ -6,6 +6,7 @@ from django.conf.urls.static import static
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+from django.views.generic.base import TemplateView
 
 schema_view = get_schema_view(
    openapi.Info(
@@ -30,6 +31,28 @@ urlpatterns = [
     
     # Blog URLs - specific prefix
     path('blog/', include('blog.urls', namespace='blog')),
+
+    # Add these lines
+    path(
+        "sitemap.xml",
+        TemplateView.as_view(template_name="sitemap.xml", content_type="application/xml"),
+        name="sitemap",
+    ),
+    path(
+        "robots.txt",
+        TemplateView.as_view(template_name="robots.txt", content_type="text/plain"),
+        name="robots",
+    ),
+    path(
+        "security.txt",
+        TemplateView.as_view(template_name="security.txt", content_type="text/plain"),
+        name="security",
+    ),
+    path(
+        "humans.txt",
+        TemplateView.as_view(template_name="humans.txt", content_type="text/plain"),
+        name="humans",
+    ),
 ]
 
 # Add Swagger URLs only when in DEBUG mode
