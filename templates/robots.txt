@@ -21,4 +21,4 @@ Disallow: /google9ad52ac54f5ff410.html
 # Make sure to replace this with your final domain name.
 # ===================================================================
 
-Sitemap: https://kabhishek18.com/static/Sitemap.xml
+Sitemap: https://kabhishek18.com/sitemap.xml

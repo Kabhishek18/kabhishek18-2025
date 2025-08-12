@@ -14,7 +14,7 @@ Contact: mailto:developer@kabhishek18.com
 # Encryption:
 
 # The canonical URL of this security.txt file.
-Canonical: https://kabhishek18.com/.well-known/security.txt
+Canonical: https://kabhishek18.com/security.txt
 
 # I prefer to be contacted in English.
 Preferred-Languages: en
