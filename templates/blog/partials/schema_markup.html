@@ -1,0 +1,124 @@
+{% comment %}
+Schema markup template partial for rendering JSON-LD structured data.
+
+This template renders Schema.org compliant JSON-LD markup for blog articles to improve
+SEO performance and enable rich results in search engines like Google.
+
+USAGE:
+    {% load schema_tags %}
+    {% render_article_schema post %}
+
+CONTEXT VARIABLES:
+- schema_json: Pre-generated JSON string of the schema data (recommended)
+- schema_data: Python dict of the schema data (for manual rendering)
+- is_valid: Boolean indicating if schema passed validation
+- post: Post model instance (optional, for breadcrumb generation)
+- debug: Boolean for development debug information
+
+FEATURES:
+- Conditional rendering for optional schema properties
+- Proper JSON escaping and formatting using schema_escape filter
+- Valid JSON-LD structure with comprehensive error handling
+- Automatic breadcrumb schema generation when post context is available
+- Fallback rendering for invalid or missing schema data
+- Development debug information (when DEBUG=True)
+
+SCHEMA TYPES SUPPORTED:
+- Article: Main blog post schema with all required and optional properties
+- Person: Author information with social media profiles
+- Organization: Publisher information with logo and social profiles
+- BreadcrumbList: Navigation breadcrumbs for better UX
+- WebPage: Main entity reference for the article
+
+REQUIREMENTS ADDRESSED:
+- 1.1: JSON-LD schema markup in HTML head section
+- 1.2: Valid Schema.org specifications with required properties
+- 2.1: JSON-LD format as recommended by Google
+- 2.2: Absolute URLs for all schema references
+
+SEO BENEFITS:
+- Enhanced search result display with rich snippets
+- Better content understanding by search engines
+- Improved click-through rates from search results
+- Support for Google's Rich Results features
+{% endcomment %}
+
+{% load schema_tags %}
+
+{% if schema_data %}
+    {% comment %}
+    Render the main article schema markup
+    We use the pre-generated JSON for reliability and proper escaping
+    {% endcomment %}
+    {% if is_valid and schema_json %}
+        <script type="application/ld+json">
+{{ schema_json|safe }}
+        </script>
+    {% elif schema_json %}
+        {% comment %}
+        Fallback: Use the pre-generated JSON if available but validation failed
+        This ensures we still output schema markup even if validation is strict
+        {% endcomment %}
+        <!-- Schema markup generated but failed validation - using fallback -->
+        <script type="application/ld+json">
+{{ schema_json|safe }}
+        </script>
+    {% else %}
+        {% comment %}
+        Manual JSON construction as final fallback
+        This provides a basic schema structure if JSON generation fails
+        {% endcomment %}
+        <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "{{ schema_data.headline|default:post.title|schema_escape }}",
+  "url": "{{ schema_data.url|schema_escape }}",
+  "datePublished": "{{ schema_data.datePublished|default:post.created_at|to_schema_date }}",
+  "dateModified": "{{ schema_data.dateModified|default:post.updated_at|to_schema_date }}",
+  "author": {
+    "@type": "Person",
+    "name": "{{ schema_data.author.name|default:post.author.username|schema_escape }}"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Digital Codex",
+    "url": "https://kabhishek18.com"
+  }
+}
+        </script>
+    {% endif %}
+
+    {% comment %}
+    Optional: Add breadcrumb schema if we have post context
+    This provides additional navigation context for search engines
+    {% endcomment %}
+    {% if post %}
+        {% get_breadcrumb_schema_json post as breadcrumb_json %}
+        {% if breadcrumb_json and breadcrumb_json != '{}' %}
+        <script type="application/ld+json">
+{{ breadcrumb_json|safe }}
+        </script>
+        {% endif %}
+    {% endif %}
+
+    {% comment %}
+    Development debug information
+    Only shown when DEBUG=True in settings
+    {% endcomment %}
+    {% if debug %}
+        <!-- Schema Debug Info: {% schema_debug_info schema_data %} -->
+        {% if not is_valid %}
+        <!-- Warning: Schema validation failed for this markup -->
+        {% endif %}
+    {% endif %}
+
+{% else %}
+    {% comment %}
+    No schema data available - this should not happen in normal operation
+    Log this condition for debugging
+    {% endcomment %}
+    {% if debug %}
+    <!-- No schema data available for rendering -->
+    {% endif %}
+{% endif %}

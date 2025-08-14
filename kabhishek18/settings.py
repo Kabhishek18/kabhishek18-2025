@@ -22,6 +22,8 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+if DEBUG:
+    ALLOWED_HOSTS.extend(['testserver', '127.0.0.1', 'localhost'])
 
 # Application definition
 
@@ -475,6 +477,64 @@ CKEDITOR_CONFIGS = {
         'extraPlugins': 'sourcearea',
     }
 }
+
+# --- CACHING CONFIGURATION ---
+# Configure caching for performance optimization
+# Use local memory cache for development, Redis for production
+if DEBUG:
+    # Development/testing cache configuration
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'default-cache',
+            'TIMEOUT': 300,
+        },
+        'schema_cache': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'schema-cache',
+            'TIMEOUT': 3600,
+        },
+        'template_cache': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'template-cache',
+            'TIMEOUT': 1800,
+        }
+    }
+else:
+    # Production Redis cache configuration
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1'),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            },
+            'KEY_PREFIX': 'kabhishek18',
+            'TIMEOUT': 300,  # 5 minutes default timeout
+        },
+        'schema_cache': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/2'),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            },
+            'KEY_PREFIX': 'schema',
+            'TIMEOUT': 3600,  # 1 hour for schema markup
+        },
+        'template_cache': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/3'),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            },
+            'KEY_PREFIX': 'template',
+            'TIMEOUT': 1800,  # 30 minutes for template fragments
+        }
+    }
+
+# Cache key versioning for invalidation
+CACHE_MIDDLEWARE_KEY_PREFIX = 'kabhishek18'
+CACHE_MIDDLEWARE_SECONDS = 300
 
 # --- CELERY & CELERY BEAT CONFIGURATION ---
 # This section ensures Celery connects to Redis, not RabbitMQ.

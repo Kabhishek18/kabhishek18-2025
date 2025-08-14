@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% load static %}
 {% load media_tags %}
+{% load schema_tags %}
+{% load cache %}
 
 {% block meta_data %}
 {% if meta_data %}
@@ -19,8 +21,7 @@
 <meta property="og:url" content="{{ request.build_absolute_uri }}">
 <meta property="og:type" content="article">
 <meta property="article:published_time" content="{{ post.created_at|date:'c' }}">
-<meta property="article:author" content="{{ post.author.get_full_name|default:post.author.username }}">
-<link rel="canonical" href="https://kabhishek18.com/">
+<meta property="article:author" content="{{ post.author.get_full_name|default:post.author.username }}"
 <meta property="og:image" content="https://kabhishek18.com/static/web-app-manifest-512x512.png">
 <meta property="og:site_name" content="The Digital Architect">
 <meta name="twitter:card" content="summary_large_image">
@@ -29,6 +30,11 @@
 <meta name="twitter:image" content="https://kabhishek18.com/static/web-app-manifest-512x512.png">
 <meta name="twitter:site" content="@kabhishek18">
 <meta name="twitter:creator" content="@kabhishek18">
+
+<!-- Schema.org structured data markup for SEO and rich results -->
+{% cache 1800 schema_markup post.id post.updated_at %}
+{% render_article_schema post %}
+{% endcache %}
 {% endif %}
 {% endblock meta_data %}
 

@@ -7,3 +7,4 @@ class BlogConfig(AppConfig):
 
     def ready(self):
         import blog.signals
+        import blog.signals.schema_cache_signals
