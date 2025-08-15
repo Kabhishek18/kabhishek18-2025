@@ -200,14 +200,17 @@ class LinkedInImageErrorHandler:
         })
         
         # Log the error with detailed context
+        log_context = {
+            'image_url': image_url,
+            'processing_step': processing_step,
+            'error_type': 'image_processing'
+        }
+        if context:
+            log_context.update(context)
+        
         self.error_logger.log_media_upload_error(
             error_details=error_details,
-            context={
-                'image_url': image_url,
-                'processing_step': processing_step,
-                'error_type': 'image_processing',
-                **context or {}
-            }
+            context=log_context
         )
         
         # Update metrics
@@ -249,14 +252,17 @@ class LinkedInImageErrorHandler:
         })
         
         # Log the error with detailed context
+        log_context = {
+            'image_url': image_url,
+            'upload_stage': upload_stage,
+            'error_type': 'image_upload'
+        }
+        if context:
+            log_context.update(context)
+        
         self.error_logger.log_media_upload_error(
             error_details=error_details,
-            context={
-                'image_url': image_url,
-                'upload_stage': upload_stage,
-                'error_type': 'image_upload',
-                **context or {}
-            }
+            context=log_context
         )
         
         # Update metrics
