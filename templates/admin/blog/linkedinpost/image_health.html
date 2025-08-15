@@ -1,0 +1,210 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+    &rsaquo; <a href="{% url 'admin:blog_linkedinpost_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+    &rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="module">
+    <h1>{{ title }}</h1>
+    
+    <!-- Overall Health Score -->
+    <div class="module">
+        <h2>Overall Health Assessment</h2>
+        <div style="text-align: center; margin: 20px 0;">
+            {% if health_report.overall_health_score >= 90 %}
+                <div style="font-size: 48px; color: green;">{{ health_report.overall_health_score }}%</div>
+                <div style="font-size: 18px; color: green; font-weight: bold;">System Healthy</div>
+            {% elif health_report.overall_health_score >= 70 %}
+                <div style="font-size: 48px; color: orange;">{{ health_report.overall_health_score }}%</div>
+                <div style="font-size: 18px; color: orange; font-weight: bold;">Needs Attention</div>
+            {% else %}
+                <div style="font-size: 48px; color: red;">{{ health_report.overall_health_score }}%</div>
+                <div style="font-size: 18px; color: red; font-weight: bold;">Critical Issues</div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Configuration Check -->
+    <div class="module">
+        <h2>Configuration Status</h2>
+        <table class="table">
+            <tr>
+                <th>Status</th>
+                <td>
+                    {% if config_check.status == 'ok' %}
+                        <span style="color: green; font-weight: bold;">✓ OK</span>
+                    {% elif config_check.status == 'warning' %}
+                        <span style="color: orange; font-weight: bold;">⚠ Warning</span>
+                    {% else %}
+                        <span style="color: red; font-weight: bold;">✗ Error</span>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+        
+        {% if config_check.issues %}
+        <h3 style="color: red;">Critical Issues</h3>
+        <ul>
+            {% for issue in config_check.issues %}
+            <li style="color: red;">{{ issue }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        
+        {% if config_check.warnings %}
+        <h3 style="color: orange;">Warnings</h3>
+        <ul>
+            {% for warning in config_check.warnings %}
+            <li style="color: orange;">{{ warning }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        
+        {% if config_check.recommendations %}
+        <h3>Recommendations</h3>
+        <ul>
+            {% for recommendation in config_check.recommendations %}
+            <li>{{ recommendation }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        
+        <h3>Current Configuration</h3>
+        <table class="table">
+            {% for key, value in config_check.configuration.items %}
+            <tr>
+                <th>{{ key|title }}</th>
+                <td>{{ value }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    
+    <!-- Recent Failures Analysis -->
+    <div class="module">
+        <h2>Recent Failures Analysis (Last 6 Hours)</h2>
+        <table class="table">
+            <tr>
+                <th>Status</th>
+                <td>
+                    {% if failure_analysis.status == 'healthy' %}
+                        <span style="color: green; font-weight: bold;">✓ Healthy</span>
+                    {% elif failure_analysis.status == 'minor_issues' %}
+                        <span style="color: orange; font-weight: bold;">⚠ Minor Issues</span>
+                    {% elif failure_analysis.status == 'warning' %}
+                        <span style="color: orange; font-weight: bold;">⚠ Warning</span>
+                    {% else %}
+                        <span style="color: red; font-weight: bold;">✗ Critical</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% if failure_analysis.total_failures %}
+            <tr>
+                <th>Total Failures</th>
+                <td>{{ failure_analysis.total_failures }}</td>
+            </tr>
+            {% endif %}
+        </table>
+        
+        {% if failure_analysis.error_breakdown %}
+        <h3>Error Types</h3>
+        <table class="table">
+            {% for error_type, count in failure_analysis.error_breakdown.items %}
+            <tr>
+                <th>{{ error_type|capfirst }}</th>
+                <td>{{ count }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+        
+        {% if failure_analysis.recommendations %}
+        <h3>Troubleshooting Recommendations</h3>
+        <ul>
+            {% for recommendation in failure_analysis.recommendations %}
+            <li>{{ recommendation }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        
+        {% if failure_analysis.status == 'healthy' %}
+        <p style="color: green; font-weight: bold;">{{ failure_analysis.message }}</p>
+        {% endif %}
+    </div>
+    
+    <!-- Current System Status -->
+    <div class="module">
+        <h2>Current System Status</h2>
+        <table class="table">
+            <tr>
+                <th>Health Status</th>
+                <td>
+                    {% if health_report.current_status.health_status == 'healthy' %}
+                        <span style="color: green; font-weight: bold;">✓ Healthy</span>
+                    {% elif health_report.current_status.health_status == 'warning' %}
+                        <span style="color: orange; font-weight: bold;">⚠ Warning</span>
+                    {% else %}
+                        <span style="color: red; font-weight: bold;">✗ Critical</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th>Image Upload Enabled</th>
+                <td>{{ health_report.current_status.image_upload_enabled|yesno:"Yes,No" }}</td>
+            </tr>
+            <tr>
+                <th>Image Processing Enabled</th>
+                <td>{{ health_report.current_status.image_processing_enabled|yesno:"Yes,No" }}</td>
+            </tr>
+            <tr>
+                <th>Active Processing Sessions</th>
+                <td>{{ health_report.current_status.active_processing_sessions }}</td>
+            </tr>
+            <tr>
+                <th>Recent Success Rate</th>
+                <td>{{ health_report.current_status.recent_success_rate }}%</td>
+            </tr>
+            <tr>
+                <th>Recent Total Attempts</th>
+                <td>{{ health_report.current_status.recent_total_attempts }}</td>
+            </tr>
+            <tr>
+                <th>Average Processing Time</th>
+                <td>{{ health_report.current_status.average_processing_time }}s</td>
+            </tr>
+        </table>
+    </div>
+    
+    <!-- Report Information -->
+    <div class="module">
+        <h2>Report Information</h2>
+        <table class="table">
+            <tr>
+                <th>Report Generated</th>
+                <td>{{ health_report.report_generated }}</td>
+            </tr>
+            <tr>
+                <th>Next Recommended Check</th>
+                <td>{{ health_report.next_recommended_check }}</td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="module">
+        <p>
+            <a href="{% url 'admin:blog_linkedinpost_changelist' %}" class="button">Back to LinkedIn Posts</a>
+            <a href="{% url 'admin:linkedin_image_metrics' %}" class="button">View Metrics</a>
+            <a href="{% url 'admin:blog_linkedinconfig_changelist' %}" class="button">LinkedIn Configuration</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

@@ -1590,3 +1590,346 @@ class LinkedInPostAdmin(ModelAdmin):
     def get_queryset(self, request):
         """Optimize queryset with select_related"""
         return super().get_queryset(request).select_related('post')
+    raw_id_fields = ('post',)
+    date_hierarchy = 'posted_at'
+    list_per_page = 50
+    
+    fieldsets = (
+        ("Post Information", {
+            'fields': ('post', 'status', 'attempt_count', 'created_at', 'posted_at')
+        }),
+        ("LinkedIn Details", {
+            'fields': ('linkedin_post_id', 'linkedin_post_url'),
+            'classes': ('collapse',)
+        }),
+        ("Image Processing", {
+            'fields': (
+                'image_upload_status', 'media_ids', 'image_urls', 
+                'image_error_message', 'image_processing_info'
+            ),
+            'classes': ('collapse',),
+            'description': 'Image upload and processing status information'
+        }),
+        ("Error Information", {
+            'fields': ('error_message', 'detailed_error_info'),
+            'classes': ('collapse',)
+        }),
+        ("Retry Management", {
+            'fields': ('next_retry_at', 'retry_history_display'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    actions = [
+        'retry_failed_posts', 'clear_image_errors', 'reprocess_images',
+        'export_linkedin_stats', 'view_image_metrics'
+    ]
+    
+    def post_title(self, obj):
+        """Display the blog post title with link"""
+        if obj.post:
+            return format_html(
+                '<a href="{}">{}</a>',
+                reverse('admin:blog_post_change', args=[obj.post.id]),
+                obj.post.title[:50] + '...' if len(obj.post.title) > 50 else obj.post.title
+            )
+        return "No Post"
+    post_title.short_description = 'Blog Post'
+    post_title.admin_order_field = 'post__title'
+    
+    def image_status_display(self, obj):
+        """Display image upload status with color coding"""
+        status_colors = {
+            'pending': '#ffa500',  # orange
+            'success': '#28a745',  # green
+            'failed': '#dc3545',   # red
+            'skipped': '#6c757d',  # gray
+        }
+        
+        color = status_colors.get(obj.image_upload_status, '#6c757d')
+        status_text = obj.get_image_upload_status_display()
+        
+        # Add media count if successful
+        if obj.image_upload_status == 'success' and obj.media_ids:
+            media_count = len(obj.media_ids) if isinstance(obj.media_ids, list) else 0
+            status_text += f" ({media_count})"
+        
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color, status_text
+        )
+    image_status_display.short_description = 'Image Status'
+    
+    def media_count(self, obj):
+        """Display number of uploaded media items"""
+        if obj.media_ids and isinstance(obj.media_ids, list):
+            return len(obj.media_ids)
+        return 0
+    media_count.short_description = 'Media Count'
+    
+    def retry_info(self, obj):
+        """Display retry information"""
+        if obj.status == 'retrying' and obj.next_retry_at:
+            return format_html(
+                '<span style="color: #007bff;">Next: {}</span>',
+                obj.next_retry_at.strftime('%m/%d %H:%M')
+            )
+        elif obj.status == 'failed':
+            if obj.can_retry():
+                return format_html('<span style="color: #ffc107;">Can Retry</span>')
+            else:
+                return format_html('<span style="color: #dc3545;">Max Attempts</span>')
+        return "-"
+    retry_info.short_description = 'Retry Info'
+    
+    def image_processing_info(self, obj):
+        """Display detailed image processing information"""
+        info_parts = []
+        
+        # Image upload status
+        info_parts.append(f"<strong>Upload Status:</strong> {obj.get_image_upload_status_display()}")
+        
+        # Media IDs
+        if obj.media_ids:
+            if isinstance(obj.media_ids, list):
+                info_parts.append(f"<strong>Media IDs:</strong> {', '.join(obj.media_ids)}")
+            else:
+                info_parts.append(f"<strong>Media IDs:</strong> {obj.media_ids}")
+        
+        # Image URLs
+        if obj.image_urls:
+            if isinstance(obj.image_urls, list):
+                url_list = []
+                for i, url in enumerate(obj.image_urls[:3]):  # Show max 3 URLs
+                    url_list.append(f'<a href="{url}" target="_blank">Image {i+1}</a>')
+                if len(obj.image_urls) > 3:
+                    url_list.append(f"... and {len(obj.image_urls) - 3} more")
+                info_parts.append(f"<strong>Image URLs:</strong> {', '.join(url_list)}")
+        
+        # Image error message
+        if obj.image_error_message:
+            info_parts.append(f"<strong>Image Error:</strong> {obj.image_error_message}")
+        
+        return "<br>".join(info_parts) if info_parts else "No image processing information"
+    image_processing_info.allow_tags = True
+    image_processing_info.short_description = 'Image Processing Details'
+    
+    def detailed_error_info(self, obj):
+        """Display detailed error information"""
+        info_parts = []
+        
+        if obj.error_message:
+            info_parts.append(f"<strong>General Error:</strong> {obj.error_message}")
+        
+        if obj.image_error_message:
+            info_parts.append(f"<strong>Image Error:</strong> {obj.image_error_message}")
+        
+        if obj.attempt_count > 1:
+            info_parts.append(f"<strong>Attempts Made:</strong> {obj.attempt_count}")
+        
+        return "<br>".join(info_parts) if info_parts else "No error information"
+    detailed_error_info.allow_tags = True
+    detailed_error_info.short_description = 'Error Details'
+    
+    def retry_history_display(self, obj):
+        """Display retry history information"""
+        info_parts = []
+        
+        info_parts.append(f"<strong>Total Attempts:</strong> {obj.attempt_count}")
+        
+        if obj.next_retry_at:
+            info_parts.append(f"<strong>Next Retry:</strong> {obj.next_retry_at}")
+        
+        if obj.can_retry():
+            info_parts.append("<strong>Can Retry:</strong> Yes")
+        else:
+            info_parts.append("<strong>Can Retry:</strong> No (max attempts reached)")
+        
+        return "<br>".join(info_parts)
+    retry_history_display.allow_tags = True
+    retry_history_display.short_description = 'Retry History'
+    
+    def retry_failed_posts(self, request, queryset):
+        """Retry failed LinkedIn posts"""
+        from .services.linkedin_service import LinkedInAPIService
+        from .linkedin_models import LinkedInConfig
+        
+        config = LinkedInConfig.get_active_config()
+        if not config:
+            self.message_user(
+                request, 
+                "LinkedIn integration is not configured.", 
+                level=messages.ERROR
+            )
+            return
+        
+        service = LinkedInAPIService(config)
+        retry_count = 0
+        success_count = 0
+        
+        for linkedin_post in queryset.filter(status__in=['failed', 'retrying']):
+            if linkedin_post.can_retry():
+                try:
+                    linkedin_post.mark_as_pending()
+                    result = service.post_blog_article(linkedin_post.post)
+                    retry_count += 1
+                    if result.is_successful():
+                        success_count += 1
+                except Exception as e:
+                    self.message_user(
+                        request,
+                        f"Error retrying post '{linkedin_post.post.title}': {str(e)}",
+                        level=messages.ERROR
+                    )
+        
+        if retry_count > 0:
+            self.message_user(
+                request,
+                f"Retried {retry_count} posts, {success_count} successful",
+                level=messages.SUCCESS if success_count > 0 else messages.WARNING
+            )
+        else:
+            self.message_user(
+                request,
+                "No posts available for retry",
+                level=messages.WARNING
+            )
+    retry_failed_posts.short_description = "Retry failed LinkedIn posts"
+    
+    def clear_image_errors(self, request, queryset):
+        """Clear image error messages for selected posts"""
+        updated = queryset.update(
+            image_error_message='',
+            image_upload_status='pending'
+        )
+        self.message_user(
+            request,
+            f"Cleared image errors for {updated} posts",
+            level=messages.SUCCESS
+        )
+    clear_image_errors.short_description = "Clear image error messages"
+    
+    def reprocess_images(self, request, queryset):
+        """Reprocess images for selected posts"""
+        from .services.linkedin_image_service import LinkedInImageService
+        
+        reprocessed = 0
+        errors = 0
+        
+        for linkedin_post in queryset:
+            if linkedin_post.post:
+                try:
+                    # Reset image status
+                    linkedin_post.image_upload_status = 'pending'
+                    linkedin_post.image_error_message = ''
+                    linkedin_post.media_ids = []
+                    linkedin_post.image_urls = []
+                    linkedin_post.save()
+                    
+                    # Trigger reprocessing (this would typically be done by the service)
+                    reprocessed += 1
+                except Exception as e:
+                    errors += 1
+                    self.message_user(
+                        request,
+                        f"Error reprocessing images for '{linkedin_post.post.title}': {str(e)}",
+                        level=messages.ERROR
+                    )
+        
+        if reprocessed > 0:
+            self.message_user(
+                request,
+                f"Reset image processing for {reprocessed} posts",
+                level=messages.SUCCESS
+            )
+    reprocess_images.short_description = "Reset image processing status"
+    
+    def export_linkedin_stats(self, request, queryset):
+        """Export LinkedIn posting statistics"""
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="linkedin_stats_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow([
+            'Post Title', 'Status', 'Image Status', 'Media Count', 
+            'Attempts', 'Posted At', 'LinkedIn URL', 'Error Message'
+        ])
+        
+        for linkedin_post in queryset.select_related('post'):
+            media_count = len(linkedin_post.media_ids) if linkedin_post.media_ids else 0
+            writer.writerow([
+                linkedin_post.post.title if linkedin_post.post else 'No Post',
+                linkedin_post.get_status_display(),
+                linkedin_post.get_image_upload_status_display(),
+                media_count,
+                linkedin_post.attempt_count,
+                linkedin_post.posted_at.strftime('%Y-%m-%d %H:%M:%S') if linkedin_post.posted_at else '',
+                linkedin_post.linkedin_post_url or '',
+                linkedin_post.error_message or linkedin_post.image_error_message or ''
+            ])
+        
+        return response
+    export_linkedin_stats.short_description = "Export LinkedIn statistics to CSV"
+    
+    def view_image_metrics(self, request, queryset):
+        """View image processing metrics"""
+        return redirect(reverse('admin:linkedin_image_metrics'))
+    view_image_metrics.short_description = "View image processing metrics"
+    
+    def get_urls(self):
+        """Add custom URLs for LinkedIn image monitoring"""
+        urls = super().get_urls()
+        custom_urls = [
+            path('image-metrics/', self.admin_site.admin_view(self.image_metrics_view), 
+                 name='linkedin_image_metrics'),
+            path('image-health/', self.admin_site.admin_view(self.image_health_view), 
+                 name='linkedin_image_health'),
+        ]
+        return custom_urls + urls
+    
+    def image_metrics_view(self, request):
+        """Display LinkedIn image processing metrics"""
+        from .services.linkedin_image_monitor import LinkedInImageMetrics
+        
+        try:
+            # Get metrics for different time periods
+            metrics_24h = LinkedInImageMetrics.get_processing_metrics(hours=24)
+            metrics_7d = LinkedInImageMetrics.get_processing_metrics(hours=168)  # 7 days
+            current_status = LinkedInImageMetrics.get_current_status()
+            
+            context = {
+                'title': 'LinkedIn Image Processing Metrics',
+                'metrics_24h': metrics_24h,
+                'metrics_7d': metrics_7d,
+                'current_status': current_status,
+                'opts': self.model._meta,
+            }
+            
+            return render(request, 'admin/blog/linkedinpost/image_metrics.html', context)
+        except Exception as e:
+            messages.error(request, f"Error loading metrics: {str(e)}")
+            return redirect(reverse('admin:blog_linkedinpost_changelist'))
+    
+    def image_health_view(self, request):
+        """Display LinkedIn image processing health dashboard"""
+        from .services.linkedin_image_monitor import LinkedInImageTroubleshooter
+        
+        try:
+            health_report = LinkedInImageTroubleshooter.generate_health_report()
+            config_check = LinkedInImageTroubleshooter.check_configuration()
+            failure_analysis = LinkedInImageTroubleshooter.diagnose_recent_failures()
+            
+            context = {
+                'title': 'LinkedIn Image Processing Health',
+                'health_report': health_report,
+                'config_check': config_check,
+                'failure_analysis': failure_analysis,
+                'opts': self.model._meta,
+            }
+            
+            return render(request, 'admin/blog/linkedinpost/image_health.html', context)
+        except Exception as e:
+            messages.error(request, f"Error loading health report: {str(e)}")
+            return redirect(reverse('admin:blog_linkedinpost_changelist'))
+
+

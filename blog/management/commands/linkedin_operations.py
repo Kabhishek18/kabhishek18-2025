@@ -125,16 +125,27 @@ class Command(BaseCommand):
         if not linkedin_service.is_configured():
             raise CommandError('LinkedIn integration is not configured')
         
-        # Format content
+        # Format content with enhanced image integration
         formatter = LinkedInContentFormatter()
         try:
-            formatted_data = formatter.format_for_preview(post)
+            formatted_data = formatter.format_for_preview(post, include_image_analysis=True)
             formatted_content = {
                 'title': formatted_data['title'],
                 'content': formatted_data['full_content'],
                 'url': formatted_data['url'],
-                'image_url': formatted_data['featured_image_url']
+                'image_url': formatted_data.get('best_linkedin_image')  # Enhanced: use best LinkedIn-compatible image
             }
+            
+            # Show enhanced image information
+            if formatted_content['image_url']:
+                self.stdout.write(f'LinkedIn-compatible image found: {formatted_content["image_url"]}')
+                if formatted_data.get('total_images_count', 0) > 1:
+                    self.stdout.write(f'Total images available: {formatted_data["total_images_count"]}')
+            else:
+                self.stdout.write('No LinkedIn-compatible image found (will post as text-only)')
+                if formatted_data.get('total_images_count', 0) > 0:
+                    self.stdout.write(f'Note: {formatted_data["total_images_count"]} images found but none are LinkedIn-compatible')
+                    
         except Exception as e:
             raise CommandError(f'Failed to format content: {str(e)}')
         
@@ -160,45 +171,26 @@ class Command(BaseCommand):
         self.stdout.write('Posting to LinkedIn...')
         
         try:
-            # Create or get LinkedIn post record
-            linkedin_post, created = LinkedInPost.objects.get_or_create(
-                post=post,
-                defaults={'status': 'pending'}
-            )
-            
-            if not created:
-                linkedin_post.mark_as_pending()
-            
-            # Record the posting attempt
-            linkedin_post.record_posting_attempt(
-                title=formatted_content['title'],
-                content=formatted_content['content'],
-                url=formatted_content['url']
-            )
-            
-            # Make the API call
-            response_data = linkedin_service.create_post(
-                title=formatted_content['title'],
-                content=formatted_content['content'],
-                url=formatted_content['url'],
-                image_url=formatted_content.get('image_url')
-            )
-            
-            # Mark as successful
-            linkedin_post_id = response_data.get('id')
-            linkedin_post_url = self._build_linkedin_post_url(linkedin_post_id)
-            linkedin_post.mark_as_success(linkedin_post_id, linkedin_post_url)
+            # Use the enhanced post_blog_article method for comprehensive image integration and error handling
+            linkedin_post = linkedin_service.post_blog_article(post, attempt_count=1)
             
             self.stdout.write(self.style.SUCCESS(f'✓ Successfully posted to LinkedIn!'))
-            self.stdout.write(f'LinkedIn Post ID: {linkedin_post_id}')
-            if linkedin_post_url:
-                self.stdout.write(f'LinkedIn Post URL: {linkedin_post_url}')
+            self.stdout.write(f'LinkedIn Post ID: {linkedin_post.linkedin_post_id}')
+            if linkedin_post.linkedin_post_url:
+                self.stdout.write(f'LinkedIn Post URL: {linkedin_post.linkedin_post_url}')
+            
+            # Show image posting results
+            if linkedin_post.has_images():
+                if linkedin_post.is_image_upload_successful():
+                    self.stdout.write(self.style.SUCCESS(f'✓ Image posted successfully'))
+                    self.stdout.write(f'Media IDs: {", ".join(linkedin_post.media_ids)}')
+                elif linkedin_post.is_image_upload_failed():
+                    self.stdout.write(self.style.WARNING(f'⚠ Image upload failed: {linkedin_post.image_error_message}'))
+                    self.stdout.write('Post was created as text-only')
+            else:
+                self.stdout.write('Posted as text-only (no images)')
             
         except LinkedInAPIError as e:
-            # Mark as failed
-            if 'linkedin_post' in locals():
-                linkedin_post.mark_as_failed(str(e), getattr(e, 'error_code', None), e.is_retryable)
-            
             self.stdout.write(self.style.ERROR(f'✗ Failed to post to LinkedIn: {str(e)}'))
             if hasattr(e, 'error_code') and e.error_code:
                 self.stdout.write(f'Error Code: {e.error_code}')
@@ -374,14 +366,20 @@ class Command(BaseCommand):
                     skipped_posts += 1
                     continue
                 
-                # Format content
-                formatted_data = formatter.format_for_preview(post)
+                # Format content with enhanced image integration
+                formatted_data = formatter.format_for_preview(post, include_image_analysis=True)
                 formatted_content = {
                     'title': formatted_data['title'],
                     'content': formatted_data['full_content'],
                     'url': formatted_data['url'],
-                    'image_url': formatted_data['featured_image_url']
+                    'image_url': formatted_data.get('best_linkedin_image')  # Enhanced: use best LinkedIn-compatible image
                 }
+                
+                # Log image status for bulk operations
+                if formatted_content['image_url']:
+                    self.stdout.write(f'  Image: LinkedIn-compatible image found')
+                else:
+                    self.stdout.write(f'  Image: Text-only (no compatible image)')
                 
                 if dry_run:
                     self.stdout.write('  DRY RUN: Would post the following content:')
@@ -390,36 +388,17 @@ class Command(BaseCommand):
                     successful_posts += 1
                     continue
                 
-                # Create or get LinkedIn post record
-                linkedin_post, created = LinkedInPost.objects.get_or_create(
-                    post=post,
-                    defaults={'status': 'pending'}
-                )
+                # Use the enhanced post_blog_article method for comprehensive image integration
+                linkedin_post = linkedin_service.post_blog_article(post, attempt_count=1)
                 
-                if not created:
-                    linkedin_post.mark_as_pending()
+                # Show results with image information
+                success_msg = f'  ✓ Posted successfully (LinkedIn ID: {linkedin_post.linkedin_post_id})'
+                if linkedin_post.has_images() and linkedin_post.is_image_upload_successful():
+                    success_msg += ' [with image]'
+                elif linkedin_post.has_images() and linkedin_post.is_image_upload_failed():
+                    success_msg += ' [text-only, image failed]'
                 
-                # Record the posting attempt
-                linkedin_post.record_posting_attempt(
-                    title=formatted_content['title'],
-                    content=formatted_content['content'],
-                    url=formatted_content['url']
-                )
-                
-                # Make the API call
-                response_data = linkedin_service.create_post(
-                    title=formatted_content['title'],
-                    content=formatted_content['content'],
-                    url=formatted_content['url'],
-                    image_url=formatted_content.get('image_url')
-                )
-                
-                # Mark as successful
-                linkedin_post_id = response_data.get('id')
-                linkedin_post_url = self._build_linkedin_post_url(linkedin_post_id)
-                linkedin_post.mark_as_success(linkedin_post_id, linkedin_post_url)
-                
-                self.stdout.write(self.style.SUCCESS(f'  ✓ Posted successfully (LinkedIn ID: {linkedin_post_id})'))
+                self.stdout.write(self.style.SUCCESS(success_msg))
                 successful_posts += 1
                 
                 # Delay between posts (except for the last one)

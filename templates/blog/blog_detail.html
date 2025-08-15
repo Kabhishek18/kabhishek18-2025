@@ -8,28 +8,8 @@
 {% if meta_data %}
 {{ meta_data }}
 {% else %}
-
-<meta name="author" content="Kumar Abhishek">
-<meta name="keywords"
-    content="Kumar Abhishek, Full Stack Developer, Software Engineer, AI, Machine Learning, Python, React, Portfolio, Digital Architect">
-<meta name="robots" content="index, follow">
-<meta name="description" content="{{ meta_details }}">
-
-<meta property="og:title" content="{{ title }}">
-<meta property="og:description" content="{{ meta_details }}">
-<link rel="canonical" href="{{ request.build_absolute_uri }}">
-<meta property="og:url" content="{{ request.build_absolute_uri }}">
-<meta property="og:type" content="article">
-<meta property="article:published_time" content="{{ post.created_at|date:'c' }}">
-<meta property="article:author" content="{{ post.author.get_full_name|default:post.author.username }}"
-<meta property="og:image" content="https://kabhishek18.com/static/web-app-manifest-512x512.png">
-<meta property="og:site_name" content="The Digital Architect">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="{{ title }}">
-<meta name="twitter:description" content="{{meta_details}}">
-<meta name="twitter:image" content="https://kabhishek18.com/static/web-app-manifest-512x512.png">
-<meta name="twitter:site" content="@kabhishek18">
-<meta name="twitter:creator" content="@kabhishek18">
+<!-- Enhanced Social Media Meta Tags -->
+{% render_social_meta_tags post request %}
 
 <!-- Schema.org structured data markup for SEO and rich results -->
 {% cache 1800 schema_markup post.id post.updated_at %}

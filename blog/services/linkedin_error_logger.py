@@ -36,6 +36,7 @@ class LinkedInErrorLogger:
     CATEGORY_AUTHENTICATION = 'authentication'
     CATEGORY_RATE_LIMITING = 'rate_limiting'
     CATEGORY_CONTENT_VALIDATION = 'content_validation'
+    CATEGORY_MEDIA_UPLOAD = 'media_upload'
     CATEGORY_NETWORK = 'network'
     CATEGORY_SERVER_ERROR = 'server_error'
     CATEGORY_CONFIGURATION = 'configuration'
@@ -224,6 +225,66 @@ class LinkedInErrorLogger:
         
         self._update_error_metrics(structured_log)
         self._check_alert_thresholds(structured_log)
+    
+    def log_media_upload_error(self, error_details: Dict[str, Any], context: Optional[Dict] = None):
+        """
+        Log media upload-related errors with comprehensive tracking.
+        
+        Args:
+            error_details: Dictionary containing error information
+            context: Additional context information
+        """
+        structured_log = self._create_structured_log(
+            category=self.CATEGORY_MEDIA_UPLOAD,
+            severity=self.SEVERITY_ERROR,
+            error_details=error_details,
+            context=context
+        )
+        
+        # Analyze media upload specific issues
+        error_message = error_details.get('message', '').lower()
+        image_url = error_details.get('image_url', '')
+        
+        # Categorize media upload issues
+        if 'timeout' in error_message:
+            structured_log['media_issue_type'] = 'upload_timeout'
+        elif 'too large' in error_message or 'file size' in error_message:
+            structured_log['media_issue_type'] = 'file_too_large'
+        elif 'invalid' in error_message and 'format' in error_message:
+            structured_log['media_issue_type'] = 'invalid_format'
+        elif 'download' in error_message:
+            structured_log['media_issue_type'] = 'download_failed'
+        elif 'register' in error_message:
+            structured_log['media_issue_type'] = 'registration_failed'
+        elif 'quota' in error_message or 'limit' in error_message:
+            structured_log['media_issue_type'] = 'quota_exceeded'
+            structured_log['severity'] = self.SEVERITY_WARNING
+        else:
+            structured_log['media_issue_type'] = 'unknown_media_error'
+        
+        # Add media-specific context
+        if image_url:
+            structured_log['image_url'] = image_url
+            # Extract image file extension for analysis
+            if '.' in image_url:
+                file_extension = image_url.split('.')[-1].lower()
+                structured_log['image_format'] = file_extension
+        
+        # Check if fallback was used
+        fallback_used = context and context.get('fallback_to_text', False)
+        if fallback_used:
+            structured_log['fallback_used'] = True
+            structured_log['severity'] = self.SEVERITY_WARNING
+            logger.warning(f"LinkedIn media upload failed, fallback used: {self._format_log_message(structured_log)}")
+        else:
+            logger.error(f"LinkedIn media upload error: {self._format_log_message(structured_log)}")
+        
+        self._update_error_metrics(structured_log)
+        self._track_media_upload_patterns(structured_log)
+        
+        # Check for critical media upload issues
+        if structured_log['media_issue_type'] in ['quota_exceeded', 'registration_failed']:
+            self._check_alert_thresholds(structured_log)
     
     def log_fallback_attempt(self, original_error: Dict[str, Any], fallback_type: str, 
                            fallback_result: Dict[str, Any], context: Optional[Dict] = None):
@@ -477,6 +538,39 @@ class LinkedInErrorLogger:
         
         cache.set(pattern_key, current_pattern, timeout=self.cache_ttl)
     
+    def _track_media_upload_patterns(self, structured_log: Dict[str, Any]):
+        """
+        Track media upload error patterns for analysis.
+        
+        Args:
+            structured_log: Structured log entry
+        """
+        pattern_key = f"{self.cache_prefix}_media_upload_pattern"
+        
+        current_pattern = cache.get(pattern_key, {
+            'issue_types': {},
+            'image_formats': {},
+            'fallback_usage': 0,
+            'total_attempts': 0
+        })
+        
+        current_pattern['total_attempts'] += 1
+        
+        # Track issue types
+        issue_type = structured_log.get('media_issue_type', 'unknown')
+        current_pattern['issue_types'][issue_type] = current_pattern['issue_types'].get(issue_type, 0) + 1
+        
+        # Track image formats that fail
+        image_format = structured_log.get('image_format')
+        if image_format:
+            current_pattern['image_formats'][image_format] = current_pattern['image_formats'].get(image_format, 0) + 1
+        
+        # Track fallback usage
+        if structured_log.get('fallback_used'):
+            current_pattern['fallback_usage'] += 1
+        
+        cache.set(pattern_key, current_pattern, timeout=self.cache_ttl)
+    
     def get_error_summary(self, hours: int = 24) -> Dict[str, Any]:
         """
         Get a summary of errors from the last specified hours.
@@ -499,6 +593,7 @@ class LinkedInErrorLogger:
             self.CATEGORY_AUTHENTICATION,
             self.CATEGORY_RATE_LIMITING,
             self.CATEGORY_CONTENT_VALIDATION,
+            self.CATEGORY_MEDIA_UPLOAD,
             self.CATEGORY_NETWORK,
             self.CATEGORY_SERVER_ERROR,
             self.CATEGORY_CONFIGURATION

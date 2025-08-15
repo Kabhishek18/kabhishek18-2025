@@ -407,6 +407,33 @@ class LinkedInPost(models.Model):
         help_text="Blog post URL that was included in the LinkedIn post"
     )
     
+    # Image-related fields
+    media_ids = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="LinkedIn media IDs for uploaded images"
+    )
+    image_urls = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Original image URLs that were processed"
+    )
+    image_upload_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending'),
+            ('success', 'Success'),
+            ('failed', 'Failed'),
+            ('skipped', 'Skipped'),
+        ],
+        default='pending',
+        help_text="Status of image upload process"
+    )
+    image_error_message = models.TextField(
+        blank=True,
+        help_text="Error message if image upload failed"
+    )
+    
     # Timestamps
     created_at = models.DateTimeField(
         auto_now_add=True,
@@ -559,6 +586,57 @@ class LinkedInPost(models.Model):
         if self.pk:
             self.save(update_fields=['posted_title', 'posted_content', 'posted_url'])
         # If it's a new object, the fields will be saved when save() is called later
+
+    def has_images(self):
+        """Check if the post has associated images"""
+        return bool(self.media_ids or self.image_urls)
+
+    def is_image_upload_successful(self):
+        """Check if image upload was successful"""
+        return self.image_upload_status == 'success'
+
+    def is_image_upload_failed(self):
+        """Check if image upload failed"""
+        return self.image_upload_status == 'failed'
+
+    def mark_image_upload_success(self, media_ids, image_urls):
+        """Mark image upload as successful with media IDs and URLs"""
+        self.image_upload_status = 'success'
+        self.media_ids = media_ids if isinstance(media_ids, list) else [media_ids]
+        self.image_urls = image_urls if isinstance(image_urls, list) else [image_urls]
+        self.image_error_message = ''
+        
+        logger.info(
+            f"Image upload successful for LinkedIn post '{self.post.title}'. "
+            f"Media IDs: {self.media_ids}, Image URLs: {len(self.image_urls)} images"
+        )
+        
+        if self.pk:
+            self.save(update_fields=['image_upload_status', 'media_ids', 'image_urls', 'image_error_message'])
+
+    def mark_image_upload_failed(self, error_message):
+        """Mark image upload as failed with error message"""
+        self.image_upload_status = 'failed'
+        self.image_error_message = error_message
+        
+        logger.error(
+            f"Image upload failed for LinkedIn post '{self.post.title}': {error_message}"
+        )
+        
+        if self.pk:
+            self.save(update_fields=['image_upload_status', 'image_error_message'])
+
+    def mark_image_upload_skipped(self, reason="No images available"):
+        """Mark image upload as skipped"""
+        self.image_upload_status = 'skipped'
+        self.image_error_message = reason
+        
+        logger.debug(
+            f"Image upload skipped for LinkedIn post '{self.post.title}': {reason}"
+        )
+        
+        if self.pk:
+            self.save(update_fields=['image_upload_status', 'image_error_message'])
 
     def get_retry_delay_display(self):
         """Get human-readable retry delay"""

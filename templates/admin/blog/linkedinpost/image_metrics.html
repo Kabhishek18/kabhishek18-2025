@@ -1,0 +1,188 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+    &rsaquo; <a href="{% url 'admin:blog_linkedinpost_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+    &rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="module">
+    <h1>{{ title }}</h1>
+    
+    <!-- Current Status -->
+    <div class="module">
+        <h2>Current System Status</h2>
+        <table class="table">
+            <tr>
+                <th>Health Status</th>
+                <td>
+                    {% if current_status.health_status == 'healthy' %}
+                        <span style="color: green; font-weight: bold;">✓ Healthy</span>
+                    {% elif current_status.health_status == 'warning' %}
+                        <span style="color: orange; font-weight: bold;">⚠ Warning</span>
+                    {% else %}
+                        <span style="color: red; font-weight: bold;">✗ Critical</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th>Image Upload Enabled</th>
+                <td>{{ current_status.image_upload_enabled|yesno:"Yes,No" }}</td>
+            </tr>
+            <tr>
+                <th>Image Processing Enabled</th>
+                <td>{{ current_status.image_processing_enabled|yesno:"Yes,No" }}</td>
+            </tr>
+            <tr>
+                <th>Active Processing Sessions</th>
+                <td>{{ current_status.active_processing_sessions }}</td>
+            </tr>
+            <tr>
+                <th>Recent Success Rate</th>
+                <td>{{ current_status.recent_success_rate }}%</td>
+            </tr>
+            <tr>
+                <th>Average Processing Time</th>
+                <td>{{ current_status.average_processing_time }}s</td>
+            </tr>
+        </table>
+    </div>
+    
+    <!-- 24 Hour Metrics -->
+    <div class="module">
+        <h2>Last 24 Hours</h2>
+        <table class="table">
+            <tr>
+                <th>Total Attempts</th>
+                <td>{{ metrics_24h.total_attempts }}</td>
+            </tr>
+            <tr>
+                <th>Successful Uploads</th>
+                <td style="color: green;">{{ metrics_24h.successful_uploads }}</td>
+            </tr>
+            <tr>
+                <th>Failed Uploads</th>
+                <td style="color: red;">{{ metrics_24h.failed_uploads }}</td>
+            </tr>
+            <tr>
+                <th>Success Rate</th>
+                <td>
+                    {% if metrics_24h.success_rate_percent >= 90 %}
+                        <span style="color: green; font-weight: bold;">{{ metrics_24h.success_rate_percent }}%</span>
+                    {% elif metrics_24h.success_rate_percent >= 70 %}
+                        <span style="color: orange; font-weight: bold;">{{ metrics_24h.success_rate_percent }}%</span>
+                    {% else %}
+                        <span style="color: red; font-weight: bold;">{{ metrics_24h.success_rate_percent }}%</span>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+        
+        <h3>Processing Times</h3>
+        <table class="table">
+            <tr>
+                <th>Average</th>
+                <td>{{ metrics_24h.processing_times.average_seconds }}s</td>
+            </tr>
+            <tr>
+                <th>Minimum</th>
+                <td>{{ metrics_24h.processing_times.minimum_seconds }}s</td>
+            </tr>
+            <tr>
+                <th>Maximum</th>
+                <td>{{ metrics_24h.processing_times.maximum_seconds }}s</td>
+            </tr>
+            <tr>
+                <th>Total Samples</th>
+                <td>{{ metrics_24h.processing_times.total_samples }}</td>
+            </tr>
+        </table>
+        
+        {% if metrics_24h.error_breakdown %}
+        <h3>Error Breakdown</h3>
+        <table class="table">
+            {% for error_type, count in metrics_24h.error_breakdown.items %}
+            <tr>
+                <th>{{ error_type|capfirst }}</th>
+                <td>{{ count }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+    </div>
+    
+    <!-- 7 Day Metrics -->
+    <div class="module">
+        <h2>Last 7 Days</h2>
+        <table class="table">
+            <tr>
+                <th>Total Attempts</th>
+                <td>{{ metrics_7d.total_attempts }}</td>
+            </tr>
+            <tr>
+                <th>Successful Uploads</th>
+                <td style="color: green;">{{ metrics_7d.successful_uploads }}</td>
+            </tr>
+            <tr>
+                <th>Failed Uploads</th>
+                <td style="color: red;">{{ metrics_7d.failed_uploads }}</td>
+            </tr>
+            <tr>
+                <th>Success Rate</th>
+                <td>{{ metrics_7d.success_rate_percent }}%</td>
+            </tr>
+            <tr>
+                <th>Average Processing Time</th>
+                <td>{{ metrics_7d.processing_times.average_seconds }}s</td>
+            </tr>
+        </table>
+        
+        {% if metrics_7d.daily_statistics %}
+        <h3>Daily Statistics</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Total</th>
+                    <th>Success</th>
+                    <th>Failed</th>
+                    <th>Success Rate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for date, stats in metrics_7d.daily_statistics.items %}
+                <tr>
+                    <td>{{ date }}</td>
+                    <td>{{ stats.total }}</td>
+                    <td style="color: green;">{{ stats.success }}</td>
+                    <td style="color: red;">{{ stats.failure }}</td>
+                    <td>
+                        {% if stats.total > 0 %}
+                            {% widthratio stats.success stats.total 100 %}%
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+    
+    <div class="module">
+        <p><strong>Last Updated:</strong> {{ metrics_24h.last_updated }}</p>
+        <p>
+            <a href="{% url 'admin:blog_linkedinpost_changelist' %}" class="button">Back to LinkedIn Posts</a>
+            <a href="{% url 'admin:linkedin_image_health' %}" class="button">View Health Dashboard</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

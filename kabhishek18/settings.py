@@ -676,6 +676,21 @@ LOGGING['loggers'].update({
         'level': 'WARNING',
         'propagate': False,
     },
+    'blog.services.linkedin_image_service': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+        'propagate': False,
+    },
+    'blog.services.linkedin_service': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+        'propagate': False,
+    },
+    'blog.utils.image_processor': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+        'propagate': False,
+    },
 })
 
 # Security Settings
@@ -751,9 +766,50 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@kabhishek18.com')
 SITE_ID = 1
 SITE_NAME = os.getenv('SITE_NAME', 'Digital Codex')
 SITE_URL = os.getenv('SITE_URL', 'http://127.0.0.1:8000')
+SITE_DOMAIN = os.getenv('SITE_DOMAIN', 'https://kabhishek18.com')
 
 # LinkedIn
 LINKEDIN_CLIENT_ID = os.getenv("LINKEDIN_CLIENT_ID","")
 LINKEDIN_CLIENT_SECRET = os.getenv("LINKEDIN_CLIENT_SECRET","")
 LINKEDIN_REDIRECT_URI = os.getenv("LINKEDIN_REDIRECT_URI",SITE_URL)
 LINKEDIN_ENCRYPTION_KEY = os.getenv("LINKEDIN_ENCRYPTION_KEY")
+
+# LinkedIn Image Integration Settings
+LINKEDIN_IMAGE_SETTINGS = {
+    # Feature flags
+    'ENABLE_IMAGE_UPLOAD': os.getenv('LINKEDIN_ENABLE_IMAGE_UPLOAD', 'True').lower() == 'true',
+    'ENABLE_IMAGE_PROCESSING': os.getenv('LINKEDIN_ENABLE_IMAGE_PROCESSING', 'True').lower() == 'true',
+    'ENABLE_OPEN_GRAPH_IMAGES': os.getenv('LINKEDIN_ENABLE_OPEN_GRAPH_IMAGES', 'True').lower() == 'true',
+    
+    # Image processing settings
+    'MAX_IMAGES_PER_POST': int(os.getenv('LINKEDIN_MAX_IMAGES_PER_POST', '1')),
+    'IMAGE_QUALITY': int(os.getenv('LINKEDIN_IMAGE_QUALITY', '85')),
+    'RESIZE_LARGE_IMAGES': os.getenv('LINKEDIN_RESIZE_LARGE_IMAGES', 'True').lower() == 'true',
+    'CACHE_PROCESSED_IMAGES': os.getenv('LINKEDIN_CACHE_PROCESSED_IMAGES', 'True').lower() == 'true',
+    
+    # Image requirements (LinkedIn specifications)
+    'MIN_IMAGE_WIDTH': int(os.getenv('LINKEDIN_MIN_IMAGE_WIDTH', '200')),
+    'MIN_IMAGE_HEIGHT': int(os.getenv('LINKEDIN_MIN_IMAGE_HEIGHT', '200')),
+    'MAX_IMAGE_WIDTH': int(os.getenv('LINKEDIN_MAX_IMAGE_WIDTH', '7680')),
+    'MAX_IMAGE_HEIGHT': int(os.getenv('LINKEDIN_MAX_IMAGE_HEIGHT', '4320')),
+    'RECOMMENDED_WIDTH': int(os.getenv('LINKEDIN_RECOMMENDED_WIDTH', '1200')),
+    'RECOMMENDED_HEIGHT': int(os.getenv('LINKEDIN_RECOMMENDED_HEIGHT', '627')),
+    'MAX_FILE_SIZE_MB': int(os.getenv('LINKEDIN_MAX_FILE_SIZE_MB', '20')),
+    'SUPPORTED_FORMATS': ['JPEG', 'PNG', 'GIF'],
+    
+    # Fallback and error handling
+    'FALLBACK_TO_TEXT_ONLY': os.getenv('LINKEDIN_FALLBACK_TO_TEXT_ONLY', 'True').lower() == 'true',
+    'RETRY_FAILED_UPLOADS': os.getenv('LINKEDIN_RETRY_FAILED_UPLOADS', 'True').lower() == 'true',
+    'MAX_RETRY_ATTEMPTS': int(os.getenv('LINKEDIN_MAX_RETRY_ATTEMPTS', '3')),
+    'RETRY_DELAY_SECONDS': int(os.getenv('LINKEDIN_RETRY_DELAY_SECONDS', '60')),
+    
+    # Monitoring and logging
+    'ENABLE_DETAILED_LOGGING': os.getenv('LINKEDIN_ENABLE_DETAILED_LOGGING', 'True').lower() == 'true',
+    'LOG_IMAGE_PROCESSING_METRICS': os.getenv('LINKEDIN_LOG_IMAGE_PROCESSING_METRICS', 'True').lower() == 'true',
+    'TRACK_UPLOAD_SUCCESS_RATE': os.getenv('LINKEDIN_TRACK_UPLOAD_SUCCESS_RATE', 'True').lower() == 'true',
+    
+    # Performance settings
+    'IMAGE_PROCESSING_TIMEOUT': int(os.getenv('LINKEDIN_IMAGE_PROCESSING_TIMEOUT', '30')),
+    'UPLOAD_TIMEOUT': int(os.getenv('LINKEDIN_UPLOAD_TIMEOUT', '60')),
+    'CONCURRENT_UPLOADS': int(os.getenv('LINKEDIN_CONCURRENT_UPLOADS', '2')),
+}

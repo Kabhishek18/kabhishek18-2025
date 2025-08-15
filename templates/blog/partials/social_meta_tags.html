@@ -1,0 +1,69 @@
+<!-- Enhanced Open Graph Meta Tags for Social Sharing -->
+<meta property="og:title" content="{{ post.title }}">
+<meta property="og:description" content="{{ post.excerpt|striptags|truncatechars:160 }}">
+<meta property="og:url" content="{{ canonical_url }}">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="The Digital Architect">
+
+<!-- Open Graph Image Tags with Comprehensive Metadata -->
+<meta property="og:image" content="{{ image_url }}">
+<meta property="og:image:url" content="{{ image_url }}">
+<meta property="og:image:secure_url" content="{{ image_url }}">
+<meta property="og:image:width" content="{{ image_width }}">
+<meta property="og:image:height" content="{{ image_height }}">
+<meta property="og:image:alt" content="{{ image_alt }}">
+<meta property="og:image:type" content="{{ image_type }}">
+
+<!-- Additional Open Graph Image for LinkedIn Optimization -->
+{% if linkedin_optimized_image %}
+<meta property="og:image" content="{{ linkedin_optimized_image }}">
+<meta property="og:image:url" content="{{ linkedin_optimized_image }}">
+<meta property="og:image:secure_url" content="{{ linkedin_optimized_image }}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="627">
+<meta property="og:image:alt" content="{{ image_alt }}">
+<meta property="og:image:type" content="image/jpeg">
+{% endif %}
+
+<!-- Fallback Images for Better Social Sharing -->
+{% if fallback_images %}
+{% for fallback_image in fallback_images %}
+<meta property="og:image" content="{{ fallback_image.url }}">
+<meta property="og:image:width" content="{{ fallback_image.width }}">
+<meta property="og:image:height" content="{{ fallback_image.height }}">
+<meta property="og:image:alt" content="{{ fallback_image.alt }}">
+<meta property="og:image:type" content="{{ fallback_image.type }}">
+{% endfor %}
+{% endif %}
+
+<!-- Article-specific Open Graph Tags -->
+<meta property="article:published_time" content="{{ post.created_at|date:'c' }}">
+<meta property="article:modified_time" content="{{ post.updated_at|date:'c' }}">
+<meta property="article:author" content="{{ post.author.get_full_name|default:post.author.username }}">
+{% for category in post.categories.all %}
+<meta property="article:section" content="{{ category.name }}">
+{% endfor %}
+{% for tag in post.tags.all %}
+<meta property="article:tag" content="{{ tag.name }}">
+{% endfor %}
+
+<!-- Twitter Card Meta Tags with Enhanced Image Support -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ post.title }}">
+<meta name="twitter:description" content="{{ post.excerpt|striptags|truncatechars:160 }}">
+<meta name="twitter:image" content="{{ image_url }}">
+<meta name="twitter:image:alt" content="{{ image_alt }}">
+<meta name="twitter:image:width" content="{{ image_width }}">
+<meta name="twitter:image:height" content="{{ image_height }}">
+<meta name="twitter:site" content="@kabhishek18">
+<meta name="twitter:creator" content="@kabhishek18">
+
+<!-- LinkedIn-specific Meta Tags -->
+<meta property="og:locale" content="en_US">
+<meta name="author" content="{{ post.author.get_full_name|default:post.author.username }}">
+
+<!-- Additional SEO Meta Tags -->
+<meta name="description" content="{{ post.excerpt|striptags|truncatechars:160 }}">
+<meta name="keywords" content="{% for tag in post.tags.all %}{{ tag.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if post.tags.all %}, {% endif %}{{ post.author.get_full_name|default:post.author.username }}, blog, technology">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="{{ canonical_url }}">

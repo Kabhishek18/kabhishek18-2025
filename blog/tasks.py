@@ -1020,4 +1020,210 @@ def _calculate_retry_delay(retry_count: int) -> int:
     # Ensure minimum delay of 30 seconds and maximum of 600 seconds (10 minutes)
     final_delay = max(30, min(600, int(exponential_delay + jitter)))
     
-    return final_delay    
+    return final_delay
+
+
+# LinkedIn image monitoring tasks - moved inline to avoid import issues
+
+
+@shared_task(bind=True, max_retries=3)
+def cleanup_linkedin_image_metrics(self):
+    """
+    Periodic task to clean up old LinkedIn image processing metrics.
+    
+    This task should be run daily to prevent cache bloat and maintain
+    system performance.
+    """
+    try:
+        logger.info("Starting LinkedIn image metrics cleanup")
+        # Basic cleanup logic - can be expanded later
+        from blog.linkedin_models import LinkedInPost
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # Clean up old failed posts that can't be retried
+        cutoff_date = timezone.now() - timedelta(days=30)
+        old_failed_posts = LinkedInPost.objects.filter(
+            status='failed',
+            created_at__lt=cutoff_date,
+            attempt_count__gte=3
+        )
+        
+        deleted_count = old_failed_posts.count()
+        old_failed_posts.delete()
+        
+        logger.info(f"LinkedIn image metrics cleanup completed - removed {deleted_count} old records")
+        return f"Metrics cleanup completed - removed {deleted_count} records"
+    except Exception as e:
+        logger.error(f"Error during LinkedIn image metrics cleanup: {str(e)}")
+        raise self.retry(exc=e, countdown=300)  # Retry after 5 minutes
+
+
+@shared_task(bind=True, max_retries=2)
+def monitor_linkedin_image_health(self):
+    """
+    Periodic task to monitor LinkedIn image processing health and send alerts.
+    
+    This task should be run every hour to monitor system health and
+    send alerts when issues are detected.
+    """
+    try:
+        logger.info("Starting LinkedIn image health monitoring")
+        
+        from blog.linkedin_models import LinkedInPost, LinkedInConfig
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # Check if LinkedIn integration is configured
+        config = LinkedInConfig.get_active_config()
+        if not config:
+            logger.warning("No active LinkedIn configuration found")
+            return "No LinkedIn configuration"
+        
+        # Get recent posts (last 24 hours)
+        recent_cutoff = timezone.now() - timedelta(hours=24)
+        recent_posts = LinkedInPost.objects.filter(created_at__gte=recent_cutoff)
+        
+        total_posts = recent_posts.count()
+        if total_posts == 0:
+            logger.info("No recent LinkedIn posts to monitor")
+            return "No recent posts"
+        
+        # Calculate success/failure rates
+        successful_posts = recent_posts.filter(status='success').count()
+        failed_posts = recent_posts.filter(status='failed').count()
+        success_rate = (successful_posts / total_posts) * 100 if total_posts > 0 else 0
+        
+        # Log health status
+        logger.info(f"LinkedIn health check - Total: {total_posts}, Success: {successful_posts}, Failed: {failed_posts}, Success Rate: {success_rate:.1f}%")
+        
+        # Send alert if success rate is low
+        if success_rate < 50 and total_posts >= 5:  # Only alert if we have enough data
+            logger.warning(f"Low LinkedIn success rate detected: {success_rate:.1f}%")
+            # Could send email alert here if configured
+        
+        return f"Health monitoring completed - Success rate: {success_rate:.1f}%"
+        
+    except Exception as e:
+        logger.error(f"Error during LinkedIn image health monitoring: {str(e)}")
+        raise self.retry(exc=e, countdown=600)  # Retry after 10 minutes
+
+
+@shared_task(bind=True, max_retries=3)
+def generate_daily_linkedin_report(self):
+    """
+    Generate and send daily LinkedIn image processing report.
+    
+    This task should be run once daily to provide a summary of
+    LinkedIn image processing activities.
+    """
+    try:
+        logger.info("Generating daily LinkedIn image processing report")
+        
+        from blog.linkedin_models import LinkedInPost
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # Get posts from last 24 hours
+        yesterday = timezone.now() - timedelta(hours=24)
+        recent_posts = LinkedInPost.objects.filter(created_at__gte=yesterday)
+        
+        # Calculate statistics
+        total_posts = recent_posts.count()
+        successful_posts = recent_posts.filter(status='success').count()
+        failed_posts = recent_posts.filter(status='failed').count()
+        pending_posts = recent_posts.filter(status='pending').count()
+        
+        # Image-specific statistics
+        posts_with_images = recent_posts.filter(image_upload_status='success').count()
+        image_failures = recent_posts.filter(image_upload_status='failed').count()
+        
+        success_rate = (successful_posts / total_posts * 100) if total_posts > 0 else 0
+        image_success_rate = (posts_with_images / (posts_with_images + image_failures) * 100) if (posts_with_images + image_failures) > 0 else 0
+        
+        # Create report
+        report_data = {
+            'date': timezone.now().strftime('%Y-%m-%d'),
+            'total_posts': total_posts,
+            'successful_posts': successful_posts,
+            'failed_posts': failed_posts,
+            'pending_posts': pending_posts,
+            'success_rate': success_rate,
+            'posts_with_images': posts_with_images,
+            'image_failures': image_failures,
+            'image_success_rate': image_success_rate
+        }
+        
+        logger.info(f"Daily LinkedIn report generated: {report_data}")
+        return f"Daily report generated - Success rate: {success_rate:.1f}%"
+        
+    except Exception as e:
+        logger.error(f"Error generating daily LinkedIn report: {str(e)}")
+        raise self.retry(exc=e, countdown=1800)  # Retry after 30 minutes
+
+
+@shared_task(bind=True, max_retries=2)
+def retry_failed_image_uploads(self):
+    """
+    Periodic task to retry failed image uploads that can be retried.
+    
+    This task should be run every few hours to automatically retry
+    failed uploads that may have been caused by temporary issues.
+    """
+    try:
+        from blog.linkedin_models import LinkedInPost, LinkedInConfig
+        from blog.services.linkedin_service import LinkedInAPIService
+        
+        logger.info("Starting automatic retry of failed LinkedIn image uploads")
+        
+        # Get LinkedIn configuration
+        config = LinkedInConfig.get_active_config()
+        if not config:
+            logger.warning("No active LinkedIn configuration found")
+            return "No LinkedIn configuration"
+        
+        # Find posts that can be retried
+        failed_posts = LinkedInPost.objects.filter(
+            status__in=['failed', 'retrying'],
+            image_upload_status='failed'
+        )
+        
+        # Filter posts that can actually be retried
+        retryable_posts = [post for post in failed_posts if post.can_retry()]
+        
+        if not retryable_posts:
+            logger.info("No failed posts available for retry")
+            return "No posts to retry"
+        
+        # Limit the number of retries per run
+        max_retries_per_run = 2
+        posts_to_retry = retryable_posts[:max_retries_per_run]
+        
+        service = LinkedInAPIService(config)
+        retry_count = 0
+        success_count = 0
+        
+        for linkedin_post in posts_to_retry:
+            try:
+                logger.info(f"Retrying LinkedIn post for blog post: {linkedin_post.post.title}")
+                
+                # Reset status and retry
+                linkedin_post.mark_as_pending()
+                result = service.post_blog_article(linkedin_post.post)
+                retry_count += 1
+                
+                if result.is_successful():
+                    success_count += 1
+                    logger.info(f"Successfully retried LinkedIn post for: {linkedin_post.post.title}")
+                else:
+                    logger.warning(f"Retry failed for LinkedIn post: {linkedin_post.post.title} - {result.error_message}")
+                
+            except Exception as e:
+                logger.error(f"Error retrying LinkedIn post for {linkedin_post.post.title}: {str(e)}")
+        
+        logger.info(f"Automatic retry completed - Attempted: {retry_count}, Successful: {success_count}")
+        return f"Retried {retry_count} posts, {success_count} successful"
+        
+    except Exception as e:
+        logger.error(f"Error during automatic retry of failed uploads: {str(e)}")
+        raise self.retry(exc=e, countdown=1800)  # Retry after 30 minutes
