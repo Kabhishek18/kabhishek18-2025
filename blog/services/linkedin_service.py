@@ -1420,14 +1420,17 @@ class LinkedInAPIService:
         # Create a mock post object for formatting
         class MockPost:
             def __init__(self, title, content, url):
+                self.id = 0  # Add missing id attribute
                 self.title = title
                 self.excerpt = content
                 self.content = content
+                self.slug = 'mock-post'  # Add slug attribute
                 self.tags = MockTags()
+                self._url = url  # Store the URL for get_absolute_url
             
             def get_absolute_url(self):
                 from urllib.parse import urlparse
-                parsed = urlparse(url)
+                parsed = urlparse(self._url)
                 return parsed.path
         
         class MockTags:
