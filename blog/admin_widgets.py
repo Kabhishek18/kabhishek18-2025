@@ -133,13 +133,9 @@ class HashtagRulesWidget(forms.Widget):
         """Extract value from form data"""
         value = data.get(name)
         if value:
-            try:
-                # Validate JSON
-                parsed = json.loads(value)
-                return parsed
-            except json.JSONDecodeError:
-                return value
-        return {}
+            # Return the string value as-is, let the form clean method handle JSON parsing
+            return value
+        return '{}'
 
 
 class HashtagBlacklistWidget(forms.Widget):
@@ -227,10 +223,9 @@ class HashtagBlacklistWidget(forms.Widget):
         """Extract value from form data"""
         value = data.get(name)
         if value:
-            # Split by lines and clean up
-            lines = [line.strip().lower() for line in value.split('\n') if line.strip()]
-            return list(set(lines))  # Remove duplicates
-        return []
+            # Return the string value as-is, let the form clean method handle parsing
+            return value
+        return '[]'
 
 
 class HashtagPreviewWidget(forms.Widget):
@@ -443,13 +438,9 @@ class CategoryImageOverridesWidget(forms.Widget):
         """Extract value from form data"""
         value = data.get(name)
         if value:
-            try:
-                # Validate JSON
-                parsed = json.loads(value)
-                return parsed
-            except json.JSONDecodeError:
-                return value
-        return {}
+            # Return the string value as-is, let the form clean method handle JSON parsing
+            return value
+        return '{}'
 
 
 class ImagePostingPreviewWidget(forms.Widget):

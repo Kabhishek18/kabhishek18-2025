@@ -77,19 +77,19 @@ class LinkedInConfigAdminForm(forms.ModelForm):
     )
     
     # Hashtag configuration fields with custom widgets
-    custom_hashtag_rules = forms.JSONField(
+    custom_hashtag_rules = forms.CharField(
         widget=HashtagRulesWidget(),
         required=False,
         help_text="Define custom hashtag rules for different categories in JSON format"
     )
-    hashtag_blacklist = forms.JSONField(
+    hashtag_blacklist = forms.CharField(
         widget=HashtagBlacklistWidget(),
         required=False,
         help_text="List of words/phrases to exclude from hashtag generation"
     )
     
     # Image posting configuration fields with custom widgets
-    category_image_overrides = forms.JSONField(
+    category_image_overrides = forms.CharField(
         widget=CategoryImageOverridesWidget(),
         required=False,
         help_text="Override image posting settings for specific categories in JSON format"
@@ -147,10 +147,27 @@ class LinkedInConfigAdminForm(forms.ModelForm):
         )
         
         # Set initial values for hashtag fields if they're empty
-        if not self.instance.custom_hashtag_rules:
-            self.fields['custom_hashtag_rules'].initial = {}
-        if not self.instance.hashtag_blacklist:
-            self.fields['hashtag_blacklist'].initial = []
+        if self.instance and self.instance.pk:
+            # Convert dict/list to JSON string for display
+            if self.instance.custom_hashtag_rules:
+                self.fields['custom_hashtag_rules'].initial = json.dumps(self.instance.custom_hashtag_rules, indent=2)
+            else:
+                self.fields['custom_hashtag_rules'].initial = '{}'
+            
+            if self.instance.hashtag_blacklist:
+                self.fields['hashtag_blacklist'].initial = json.dumps(self.instance.hashtag_blacklist, indent=2)
+            else:
+                self.fields['hashtag_blacklist'].initial = '[]'
+            
+            if self.instance.category_image_overrides:
+                self.fields['category_image_overrides'].initial = json.dumps(self.instance.category_image_overrides, indent=2)
+            else:
+                self.fields['category_image_overrides'].initial = '{}'
+        else:
+            # Set defaults for new instances
+            self.fields['custom_hashtag_rules'].initial = '{}'
+            self.fields['hashtag_blacklist'].initial = '[]'
+            self.fields['category_image_overrides'].initial = '{}'
     
     def clean_max_hashtags(self):
         """Validate max_hashtags field"""
@@ -168,10 +185,14 @@ class LinkedInConfigAdminForm(forms.ModelForm):
         """Validate and clean custom hashtag rules"""
         rules = self.cleaned_data.get('custom_hashtag_rules')
         
-        if not rules:
+        if not rules or rules.strip() == '':
             return {}
         
+        # Always expect string input from form
         if isinstance(rules, str):
+            rules = rules.strip()
+            if rules == '{}' or rules == '':
+                return {}
             try:
                 rules = json.loads(rules)
             except json.JSONDecodeError as e:
@@ -223,10 +244,14 @@ class LinkedInConfigAdminForm(forms.ModelForm):
         """Validate and clean hashtag blacklist"""
         blacklist = self.cleaned_data.get('hashtag_blacklist')
         
-        if not blacklist:
+        if not blacklist or blacklist.strip() == '':
             return []
         
+        # Always expect string input from form
         if isinstance(blacklist, str):
+            blacklist = blacklist.strip()
+            if blacklist == '[]' or blacklist == '':
+                return []
             try:
                 blacklist = json.loads(blacklist)
             except json.JSONDecodeError:
@@ -265,10 +290,14 @@ class LinkedInConfigAdminForm(forms.ModelForm):
         """Validate and clean category image overrides"""
         overrides = self.cleaned_data.get('category_image_overrides')
         
-        if not overrides:
+        if not overrides or overrides.strip() == '':
             return {}
         
+        # Always expect string input from form
         if isinstance(overrides, str):
+            overrides = overrides.strip()
+            if overrides == '{}' or overrides == '':
+                return {}
             try:
                 overrides = json.loads(overrides)
             except json.JSONDecodeError as e:
