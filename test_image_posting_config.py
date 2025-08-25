@@ -8,7 +8,7 @@ import sys
 import django
 
 # Setup Django environment
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'your_project.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'kabhishek18.settings')
 django.setup()
 
 from blog.linkedin_models import LinkedInConfig
