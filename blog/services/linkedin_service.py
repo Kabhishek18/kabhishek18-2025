@@ -955,7 +955,7 @@ class LinkedInAPIService:
                        f"has_url={bool(url)}, has_image={bool(image_url)}")
             
             # Check if image posting is enabled in configuration
-            if image_url and not self.config.should_include_image_in_post():
+            if image_url and not self.config.should_include_images():
                 logger.info("Image posting is disabled in configuration, creating text-only post")
                 image_url = None  # Clear image_url to force text-only posting
             

@@ -38,9 +38,9 @@ def test_image_posting_config():
     
     print(f"Config created/updated: enable_image_posting={config.enable_image_posting}")
     
-    # Test the should_include_image_in_post method
-    should_include = config.should_include_image_in_post()
-    print(f"should_include_image_in_post() returned: {should_include}")
+    # Test the should_include_images method
+    should_include = config.should_include_images()
+    print(f"should_include_images() returned: {should_include}")
     
     if should_include:
         print("❌ FAIL: Image posting should be disabled but method returned True")
@@ -53,8 +53,8 @@ def test_image_posting_config():
     config.image_posting_strategy = 'always'
     config.save()
     
-    should_include = config.should_include_image_in_post()
-    print(f"After enabling: should_include_image_in_post() returned: {should_include}")
+    should_include = config.should_include_images()
+    print(f"After enabling: should_include_images() returned: {should_include}")
     
     if not should_include:
         print("❌ FAIL: Image posting should be enabled but method returned False")
