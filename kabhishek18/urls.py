@@ -63,7 +63,7 @@ if settings.DEBUG:
         # API schema
         path('swagger.json', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     ]
-    # Add media file serving for development
+    # Add media file serving for development (static files are served automatically when DEBUG=True)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # IMPORTANT: The "catch-all" pattern for the core app MUST be the LAST one

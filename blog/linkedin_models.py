@@ -2,8 +2,10 @@ from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from django.core.cache import cache
 from datetime import timedelta
 import logging
+import time
 from .utils.encryption import credential_encryption
 
 logger = logging.getLogger(__name__)
@@ -38,6 +40,48 @@ class LinkedInConfig(models.Model):
         default=True,
         help_text="Whether this LinkedIn integration is active"
     )
+    
+    # Hashtag Configuration
+    enable_hashtags = models.BooleanField(
+        default=True,
+        help_text="Enable automatic hashtag generation for LinkedIn posts"
+    )
+    max_hashtags = models.PositiveIntegerField(
+        default=5,
+        help_text="Maximum number of hashtags per LinkedIn post"
+    )
+    custom_hashtag_rules = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Custom hashtag rules per category (JSON format)"
+    )
+    hashtag_blacklist = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Words to exclude from hashtag generation (JSON array)"
+    )
+    
+    # Image Posting Configuration
+    enable_image_posting = models.BooleanField(
+        default=True,
+        help_text="Include images in LinkedIn posts when available"
+    )
+    image_posting_strategy = models.CharField(
+        max_length=20,
+        choices=[
+            ('always', 'Always include images when available'),
+            ('never', 'Never include images (text-only posts)'),
+            ('category_based', 'Based on post category settings')
+        ],
+        default='always',
+        help_text="Strategy for including images in LinkedIn posts"
+    )
+    category_image_overrides = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Category-specific image posting overrides (JSON format)"
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -69,6 +113,12 @@ class LinkedInConfig(models.Model):
         # Validate token expiration
         self._validate_token_expiration()
         
+        # Validate hashtag configuration
+        self._validate_hashtag_config()
+        
+        # Validate image posting configuration
+        self._validate_image_posting_config()
+        
         # Validate that we have required credentials for active configs
         if self.is_active:
             if not self.client_id:
@@ -82,8 +132,67 @@ class LinkedInConfig(models.Model):
                 logger.warning("Active LinkedIn configuration has no access token - authentication required")
 
     def save(self, *args, **kwargs):
+        # Track if this is a new instance or update
+        is_new = self.pk is None
+        old_values = {}
+        
+        # Get old values for comparison if updating
+        if not is_new:
+            try:
+                old_instance = LinkedInConfig.objects.get(pk=self.pk)
+                old_values = {
+                    'enable_hashtags': old_instance.enable_hashtags,
+                    'max_hashtags': old_instance.max_hashtags,
+                    'enable_image_posting': old_instance.enable_image_posting,
+                    'image_posting_strategy': old_instance.image_posting_strategy,
+                    'is_active': old_instance.is_active
+                }
+            except LinkedInConfig.DoesNotExist:
+                pass
+        
         self.full_clean()
         super().save(*args, **kwargs)
+        
+        # Log configuration changes
+        try:
+            new_values = {
+                'enable_hashtags': self.enable_hashtags,
+                'max_hashtags': self.max_hashtags,
+                'enable_image_posting': self.enable_image_posting,
+                'image_posting_strategy': self.image_posting_strategy,
+                'is_active': self.is_active
+            }
+            
+            if is_new:
+                self.log_configuration_change('created')
+                # Import here to avoid circular import
+                try:
+                    from .services.linkedin_metrics_logger import linkedin_metrics_logger
+                    linkedin_metrics_logger.log_configuration_change(
+                        self.id, 'created', None, new_values
+                    )
+                except ImportError:
+                    logger.warning("Could not import linkedin_metrics_logger for configuration logging")
+            else:
+                # Check if significant values changed
+                significant_changes = []
+                for key, new_value in new_values.items():
+                    old_value = old_values.get(key)
+                    if old_value != new_value:
+                        significant_changes.append(key)
+                
+                if significant_changes:
+                    self.log_configuration_change('updated', f"Changed: {', '.join(significant_changes)}")
+                    # Import here to avoid circular import
+                    try:
+                        from .services.linkedin_metrics_logger import linkedin_metrics_logger
+                        linkedin_metrics_logger.log_configuration_change(
+                            self.id, 'updated', old_values, new_values
+                        )
+                    except ImportError:
+                        logger.warning("Could not import linkedin_metrics_logger for configuration logging")
+        except Exception as e:
+            logger.error(f"Error logging configuration change: {e}")
 
     def _validate_client_id(self):
         """Validate LinkedIn client ID format"""
@@ -101,6 +210,127 @@ class LinkedInConfig(models.Model):
         """Validate token expiration date"""
         if self.token_expires_at and self.token_expires_at <= timezone.now():
             logger.warning(f"LinkedIn token for config {self.id} has expired")
+    
+    def _validate_hashtag_config(self):
+        """Validate hashtag configuration fields with comprehensive logging"""
+        config_issues = []
+        
+        # Validate max_hashtags is reasonable
+        if self.max_hashtags is not None:
+            if not isinstance(self.max_hashtags, int):
+                config_issues.append(f"max_hashtags must be an integer, got {type(self.max_hashtags)}")
+                raise ValidationError("Maximum hashtags must be an integer")
+            elif self.max_hashtags < 0:
+                config_issues.append(f"max_hashtags is negative: {self.max_hashtags}")
+                raise ValidationError("Maximum hashtags must be between 0 and 30")
+            elif self.max_hashtags > 30:
+                config_issues.append(f"max_hashtags too high: {self.max_hashtags} (LinkedIn recommends ≤5)")
+                logger.warning(f"LinkedIn config {self.id}: max_hashtags set to {self.max_hashtags}, which is higher than LinkedIn's recommended limit of 5")
+                raise ValidationError("Maximum hashtags must be between 0 and 30")
+            elif self.max_hashtags == 0:
+                logger.warning(f"LinkedIn config {self.id}: max_hashtags set to 0 - no hashtags will be generated")
+        
+        # Validate custom_hashtag_rules is a dictionary
+        if self.custom_hashtag_rules is not None:
+            if not isinstance(self.custom_hashtag_rules, dict):
+                config_issues.append(f"custom_hashtag_rules must be a dictionary, got {type(self.custom_hashtag_rules)}")
+                raise ValidationError("Custom hashtag rules must be a valid JSON object")
+            else:
+                # Validate the structure of custom rules
+                try:
+                    for category, rules in self.custom_hashtag_rules.items():
+                        if not isinstance(category, str):
+                            config_issues.append(f"Category key must be string: {category}")
+                        if rules is not None and not isinstance(rules, (dict, list)):
+                            config_issues.append(f"Rules for category '{category}' must be dict or list, got {type(rules)}")
+                except Exception as e:
+                    config_issues.append(f"Error validating custom hashtag rules: {e}")
+                    logger.error(f"LinkedIn config {self.id}: Error validating custom hashtag rules: {e}")
+        
+        # Validate hashtag_blacklist is a list
+        if self.hashtag_blacklist is not None:
+            if not isinstance(self.hashtag_blacklist, list):
+                config_issues.append(f"hashtag_blacklist must be a list, got {type(self.hashtag_blacklist)}")
+                raise ValidationError("Hashtag blacklist must be a valid JSON array")
+            else:
+                # Validate blacklist items
+                try:
+                    for i, item in enumerate(self.hashtag_blacklist):
+                        if not isinstance(item, str):
+                            config_issues.append(f"Blacklist item {i} must be string, got {type(item)}")
+                    
+                    if len(self.hashtag_blacklist) > 100:
+                        logger.warning(f"LinkedIn config {self.id}: hashtag_blacklist is very large ({len(self.hashtag_blacklist)} items)")
+                        
+                except Exception as e:
+                    config_issues.append(f"Error validating hashtag blacklist: {e}")
+                    logger.error(f"LinkedIn config {self.id}: Error validating hashtag blacklist: {e}")
+        
+        # Log configuration issues if any
+        if config_issues:
+            logger.warning(f"LinkedIn config {self.id} hashtag configuration issues: {config_issues}")
+    
+    def _validate_image_posting_config(self):
+        """Validate image posting configuration fields with comprehensive logging"""
+        config_issues = []
+        
+        # Validate image_posting_strategy is one of the allowed choices
+        valid_strategies = ['always', 'never', 'category_based']
+        if self.image_posting_strategy:
+            if self.image_posting_strategy not in valid_strategies:
+                config_issues.append(f"Invalid image posting strategy: {self.image_posting_strategy}")
+                logger.error(f"LinkedIn config {self.id}: Invalid image posting strategy '{self.image_posting_strategy}', must be one of: {valid_strategies}")
+                raise ValidationError(f"Image posting strategy must be one of: {', '.join(valid_strategies)}")
+            else:
+                logger.debug(f"LinkedIn config {self.id}: Image posting strategy set to '{self.image_posting_strategy}'")
+        
+        # Validate category_image_overrides is a dictionary
+        if self.category_image_overrides is not None:
+            if not isinstance(self.category_image_overrides, dict):
+                config_issues.append(f"category_image_overrides must be a dictionary, got {type(self.category_image_overrides)}")
+                raise ValidationError("Category image overrides must be a valid JSON object")
+            else:
+                # Validate the structure of category overrides
+                try:
+                    for category, override in self.category_image_overrides.items():
+                        if not isinstance(category, str):
+                            config_issues.append(f"Category key must be string: {category}")
+                        
+                        if override is not None:
+                            if isinstance(override, bool):
+                                # Simple boolean override is valid
+                                pass
+                            elif isinstance(override, dict):
+                                # Dictionary override should have valid keys
+                                valid_keys = ['enable_images', 'strategy', 'description']
+                                for key in override.keys():
+                                    if key not in valid_keys:
+                                        config_issues.append(f"Invalid key '{key}' in category '{category}' override")
+                                
+                                # Validate enable_images if present
+                                if 'enable_images' in override and not isinstance(override['enable_images'], bool):
+                                    config_issues.append(f"enable_images for category '{category}' must be boolean")
+                            else:
+                                config_issues.append(f"Override for category '{category}' must be boolean or dict, got {type(override)}")
+                    
+                    logger.debug(f"LinkedIn config {self.id}: Category image overrides configured for {len(self.category_image_overrides)} categories")
+                    
+                except Exception as e:
+                    config_issues.append(f"Error validating category image overrides: {e}")
+                    logger.error(f"LinkedIn config {self.id}: Error validating category image overrides: {e}")
+        
+        # Log configuration issues if any
+        if config_issues:
+            logger.warning(f"LinkedIn config {self.id} image posting configuration issues: {config_issues}")
+        
+        # Log configuration summary for monitoring
+        if self.enable_image_posting:
+            logger.info(f"LinkedIn config {self.id}: Image posting enabled with strategy '{self.image_posting_strategy}'")
+            if self.category_image_overrides:
+                override_count = len(self.category_image_overrides)
+                logger.debug(f"LinkedIn config {self.id}: {override_count} category-specific image overrides configured")
+        else:
+            logger.info(f"LinkedIn config {self.id}: Image posting globally disabled")
 
     def _encrypt_field(self, value):
         """Encrypt a field value using the credential encryption utility"""
@@ -339,6 +569,372 @@ class LinkedInConfig(models.Model):
             logger.error(log_message)
         else:
             logger.debug(log_message)
+    
+    def get_hashtag_config(self):
+        """
+        Get hashtag configuration as a dictionary.
+        
+        This method returns the complete hashtag configuration for use by the
+        HashtagGenerator class. It includes all hashtag-related settings with
+        proper defaults and validation.
+        
+        Returns:
+            dict: Hashtag configuration settings containing:
+                - enable_hashtags (bool): Whether hashtag generation is enabled
+                - max_hashtags (int): Maximum number of hashtags per post (0-30)
+                - custom_hashtag_rules (dict): Category-specific hashtag rules
+                - hashtag_blacklist (list): Words to exclude from hashtag generation
+        
+        Example:
+            config = linkedin_config.get_hashtag_config()
+            # Returns:
+            # {
+            #     'enable_hashtags': True,
+            #     'max_hashtags': 5,
+            #     'custom_hashtag_rules': {
+            #         'technology': {
+            #             'required_hashtags': ['#Tech', '#Programming'],
+            #             'suggested_hashtags': ['#Development', '#Coding'],
+            #             'max_hashtags': 4,
+            #             'priority': 1
+            #         }
+            #     },
+            #     'hashtag_blacklist': ['spam', 'clickbait']
+            # }
+        
+        Note:
+            - Returns empty dict/list for None values to prevent errors
+            - All values are validated during model save
+            - Configuration is cached for performance
+        """
+        return {
+            'enable_hashtags': self.enable_hashtags,
+            'max_hashtags': self.max_hashtags,
+            'custom_hashtag_rules': self.custom_hashtag_rules or {},
+            'hashtag_blacklist': self.hashtag_blacklist or []
+        }
+    
+    def get_image_posting_config(self):
+        """
+        Get image posting configuration as a dictionary.
+        
+        This method returns the complete image posting configuration for use by the
+        LinkedInContentFormatter service. It includes all image-related settings
+        with proper defaults.
+        
+        Returns:
+            dict: Image posting configuration settings containing:
+                - enable_image_posting (bool): Whether image posting is globally enabled
+                - image_posting_strategy (str): Strategy for image inclusion
+                    - 'always': Include images when available
+                    - 'never': Never include images (text-only)
+                    - 'category_based': Use category-specific rules
+        
+        Example:
+            config = linkedin_config.get_image_posting_config()
+            # Returns:
+            # {
+            #     'enable_image_posting': True,
+            #     'image_posting_strategy': 'category_based'
+            # }
+        
+        Strategy Descriptions:
+            - 'always': All posts include images if featured image exists,
+                       fallback to text-only if no image available
+            - 'never': All posts are text-only, images are ignored
+            - 'category_based': Image inclusion based on category_image_overrides
+        
+        Note:
+            - Strategy defaults to 'always' if not set
+            - Used in conjunction with should_include_images() for decisions
+            - Configuration is validated during model save
+        """
+        return {
+            'enable_image_posting': self.enable_image_posting,
+            'image_posting_strategy': self.image_posting_strategy
+        }
+    
+    def should_include_images(self, blog_post=None):
+        """
+        Determine if images should be included for a specific post based on configuration with error handling.
+        
+        Args:
+            blog_post: The blog post instance (optional, for category-based decisions)
+            
+        Returns:
+            bool: True if images should be included, False otherwise
+        """
+        start_time = time.time()
+        post_id = getattr(blog_post, 'id', 'unknown') if blog_post else 'none'
+        post_title = getattr(blog_post, 'title', 'Unknown Title') if blog_post else 'No Post'
+        
+        try:
+            # Check global image posting setting
+            if not self.enable_image_posting:
+                decision_time = time.time() - start_time
+                logger.info(f"Image posting globally disabled for post {post_id} ('{post_title}') - decision made in {decision_time:.3f}s")
+                self._log_image_posting_metrics(post_id, 'globally_disabled', False, decision_time, 'global_setting')
+                return False
+            
+            # Get strategy with fallback
+            strategy = getattr(self, 'image_posting_strategy', 'always')
+            
+            if strategy == 'never':
+                decision_time = time.time() - start_time
+                logger.info(f"Image posting strategy 'never' for post {post_id} ('{post_title}') - decision made in {decision_time:.3f}s")
+                self._log_image_posting_metrics(post_id, 'strategy_never', False, decision_time, 'strategy_setting')
+                return False
+            elif strategy == 'always':
+                decision_time = time.time() - start_time
+                logger.info(f"Image posting strategy 'always' for post {post_id} ('{post_title}') - decision made in {decision_time:.3f}s")
+                self._log_image_posting_metrics(post_id, 'strategy_always', True, decision_time, 'strategy_setting')
+                return True
+            elif strategy == 'category_based':
+                if not blog_post:
+                    decision_time = time.time() - start_time
+                    logger.debug(f"Category-based strategy but no blog post provided, defaulting to enabled - decision made in {decision_time:.3f}s")
+                    self._log_image_posting_metrics('none', 'category_based_no_post', True, decision_time, 'fallback')
+                    return True
+                
+                try:
+                    result = self._should_include_images_category_based(blog_post)
+                    decision_time = time.time() - start_time
+                    logger.info(f"Category-based image decision for post {post_id} ('{post_title}'): {result} - decision made in {decision_time:.3f}s")
+                    self._log_image_posting_metrics(post_id, 'category_based_success', result, decision_time, 'category_rules')
+                    return result
+                except Exception as e:
+                    decision_time = time.time() - start_time
+                    logger.warning(f"Error in category-based image decision for post {post_id}: {e} - fallback to enabled in {decision_time:.3f}s")
+                    self._log_image_posting_metrics(post_id, 'category_based_error', True, decision_time, 'fallback', error=str(e))
+                    return True  # Fallback to enabled
+            else:
+                decision_time = time.time() - start_time
+                logger.warning(f"Unknown image posting strategy '{strategy}' for post {post_id}, defaulting to enabled - decision made in {decision_time:.3f}s")
+                self._log_image_posting_metrics(post_id, 'unknown_strategy', True, decision_time, 'fallback', error=f"Unknown strategy: {strategy}")
+                return True
+            
+        except Exception as e:
+            decision_time = time.time() - start_time
+            logger.error(f"Critical error determining image posting decision for post {post_id}: {e} - fallback to enabled in {decision_time:.3f}s")
+            self._log_image_posting_metrics(post_id, 'critical_error', True, decision_time, 'fallback', error=str(e))
+            # Safe fallback - default to image posting enabled
+            return True
+    
+    def _should_include_images_category_based(self, blog_post):
+        """
+        Helper method for category-based image posting decisions with error handling.
+        
+        Args:
+            blog_post: The blog post instance
+            
+        Returns:
+            bool: True if images should be included based on category rules
+        """
+        try:
+            # Check if post has categories
+            if not hasattr(blog_post, 'categories'):
+                logger.debug("Blog post has no categories attribute, defaulting to enabled")
+                return True
+            
+            try:
+                if not blog_post.categories.exists():
+                    logger.debug("Blog post has no categories, defaulting to enabled")
+                    return True
+            except Exception as e:
+                logger.warning(f"Error checking if categories exist: {e}")
+                return True
+            
+            # Get category-specific overrides with error handling
+            try:
+                category_overrides = self.category_image_overrides or {}
+                if not isinstance(category_overrides, dict):
+                    logger.warning(f"Invalid category_image_overrides format: {type(category_overrides)}")
+                    category_overrides = {}
+            except Exception as e:
+                logger.warning(f"Error accessing category_image_overrides: {e}")
+                category_overrides = {}
+            
+            # Check each category for overrides
+            try:
+                for category in blog_post.categories.all():
+                    try:
+                        category_key = category.slug if hasattr(category, 'slug') else str(category.id)
+                        
+                        # Check for explicit override
+                        if category_key in category_overrides:
+                            override_value = category_overrides[category_key]
+                            
+                            if isinstance(override_value, bool):
+                                logger.debug(f"Category '{category_key}' has explicit image override: {override_value}")
+                                return override_value
+                            elif isinstance(override_value, dict):
+                                enable_images = override_value.get('enable_images', True)
+                                logger.debug(f"Category '{category_key}' has dict image override: {enable_images}")
+                                return enable_images
+                            else:
+                                logger.warning(f"Invalid override value for category '{category_key}': {override_value}")
+                                
+                    except Exception as e:
+                        logger.warning(f"Error processing category override: {e}")
+                        continue
+                
+                # No specific override found, use default
+                logger.debug("No category-specific image overrides found, defaulting to enabled")
+                return True
+                
+            except Exception as e:
+                logger.warning(f"Error iterating through categories: {e}")
+                return True
+            
+        except Exception as e:
+            logger.error(f"Critical error in category-based image decision: {e}")
+            return True  # Safe fallback
+    
+    def get_image_posting_strategy_display(self):
+        """
+        Get human-readable display text for image posting strategy.
+        
+        Returns:
+            str: Display text for the strategy
+        """
+        strategy_map = {
+            'always': 'Always include images when available',
+            'never': 'Never include images (text-only posts)',
+            'category_based': 'Based on post category settings'
+        }
+        return strategy_map.get(self.image_posting_strategy, 'Unknown strategy')
+    
+    def _log_image_posting_metrics(self, post_id, decision_type, include_images, decision_time, 
+                                 decision_source, error=None, categories=None):
+        """
+        Log comprehensive image posting decision metrics for monitoring and analysis.
+        
+        Args:
+            post_id: Blog post ID
+            decision_type: Type of decision made (strategy_always, category_based_success, etc.)
+            include_images: Whether images will be included
+            decision_time: Time taken to make decision
+            decision_source: Source of the decision (strategy_setting, category_rules, fallback)
+            error: Error message if applicable
+            categories: List of post categories if applicable
+        """
+        try:
+            # Create metrics entry
+            metrics = {
+                'post_id': post_id,
+                'decision_type': decision_type,
+                'include_images': include_images,
+                'decision_time_ms': round(decision_time * 1000, 2),
+                'decision_source': decision_source,
+                'config_id': self.id,
+                'strategy': self.image_posting_strategy,
+                'global_enabled': self.enable_image_posting,
+                'timestamp': time.time()
+            }
+            
+            if error:
+                metrics['error'] = error
+            
+            if categories:
+                metrics['categories'] = categories
+            
+            # Cache metrics for monitoring dashboard
+            cache_key = f"linkedin_image_posting_metrics_{post_id}"
+            cache.set(cache_key, metrics, timeout=86400)  # 24 hours
+            
+            # Update aggregate metrics
+            self._update_image_posting_aggregate_metrics(decision_type, include_images, decision_time, bool(error))
+            
+        except Exception as e:
+            logger.error(f"Error logging image posting metrics for post {post_id}: {e}")
+    
+    def _update_image_posting_aggregate_metrics(self, decision_type, include_images, decision_time, has_error):
+        """
+        Update aggregate image posting decision metrics for monitoring.
+        
+        Args:
+            decision_type: Type of decision made
+            include_images: Whether images will be included
+            decision_time: Time taken for decision
+            has_error: Whether an error occurred
+        """
+        try:
+            cache_key = "linkedin_image_posting_aggregate_metrics"
+            current_metrics = cache.get(cache_key, {
+                'total_decisions': 0,
+                'images_included_count': 0,
+                'images_excluded_count': 0,
+                'error_count': 0,
+                'avg_decision_time': 0,
+                'decision_types': {},
+                'last_updated': time.time()
+            })
+            
+            current_metrics['total_decisions'] += 1
+            current_metrics['last_updated'] = time.time()
+            
+            if include_images:
+                current_metrics['images_included_count'] += 1
+            else:
+                current_metrics['images_excluded_count'] += 1
+            
+            if has_error:
+                current_metrics['error_count'] += 1
+            
+            # Track decision types
+            current_metrics['decision_types'][decision_type] = current_metrics['decision_types'].get(decision_type, 0) + 1
+            
+            # Update average decision time
+            if current_metrics['total_decisions'] > 0:
+                current_avg = current_metrics['avg_decision_time']
+                new_avg = ((current_avg * (current_metrics['total_decisions'] - 1)) + decision_time) / current_metrics['total_decisions']
+                current_metrics['avg_decision_time'] = round(new_avg, 3)
+            
+            cache.set(cache_key, current_metrics, timeout=86400)  # 24 hours
+            
+        except Exception as e:
+            logger.error(f"Error updating image posting aggregate metrics: {e}")
+    
+    def get_image_posting_metrics_summary(self):
+        """
+        Get a summary of image posting decision metrics for admin display.
+        
+        Returns:
+            dict: Metrics summary
+        """
+        try:
+            cache_key = "linkedin_image_posting_aggregate_metrics"
+            metrics = cache.get(cache_key, {})
+            
+            if not metrics:
+                return {'status': 'no_data', 'message': 'No image posting metrics available'}
+            
+            total_decisions = metrics.get('total_decisions', 0)
+            if total_decisions == 0:
+                return {'status': 'no_decisions', 'message': 'No image posting decisions recorded'}
+            
+            images_included = metrics.get('images_included_count', 0)
+            images_excluded = metrics.get('images_excluded_count', 0)
+            error_count = metrics.get('error_count', 0)
+            
+            summary = {
+                'status': 'active',
+                'total_decisions': total_decisions,
+                'images_included_count': images_included,
+                'images_excluded_count': images_excluded,
+                'images_included_percentage': round((images_included / total_decisions) * 100, 1),
+                'error_count': error_count,
+                'error_percentage': round((error_count / total_decisions) * 100, 1),
+                'avg_decision_time_ms': round(metrics.get('avg_decision_time', 0) * 1000, 2),
+                'decision_types': metrics.get('decision_types', {}),
+                'last_updated': metrics.get('last_updated')
+            }
+            
+            return summary
+            
+        except Exception as e:
+            logger.error(f"Error getting image posting metrics summary: {e}")
+            return {'status': 'error', 'message': f'Error retrieving metrics: {e}'}
 
 
 class LinkedInPost(models.Model):
