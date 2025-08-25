@@ -954,7 +954,12 @@ class LinkedInAPIService:
             logger.info(f"Creating LinkedIn post: title_len={len(title)}, content_len={len(content)}, "
                        f"has_url={bool(url)}, has_image={bool(image_url)}")
             
-            # Try to create post with image if image_url is provided
+            # Check if image posting is enabled in configuration
+            if image_url and not self.config.should_include_image_in_post():
+                logger.info("Image posting is disabled in configuration, creating text-only post")
+                image_url = None  # Clear image_url to force text-only posting
+            
+            # Try to create post with image if image_url is provided and enabled
             if image_url:
                 try:
                     logger.info(f"Attempting to create LinkedIn post with image: {image_url}")
@@ -1763,25 +1768,32 @@ class LinkedInAPIService:
             
             formatter = LinkedInContentFormatter()
             
-            # Get comprehensive image information for LinkedIn posting
-            image_info = LinkedInImageService.get_image_for_linkedin_post(blog_post, validate=True)
+            # Check if images should be included based on LinkedIn configuration
+            should_include_images = self.config.should_include_images(blog_post) if self.config else True
+            
+            # Get comprehensive image information for LinkedIn posting only if images are enabled
+            image_info = None
+            image_url = None
+            
+            if should_include_images:
+                image_info = LinkedInImageService.get_image_for_linkedin_post(blog_post, validate=True)
+                image_url = image_info.get('url') if image_info else None
+                
+                if image_info:
+                    logger.info(f"Found LinkedIn-compatible image for post '{blog_post.title}': {image_url}")
+                    logger.debug(f"Image metadata: {image_info.get('metadata', {}).get('format')} "
+                               f"{image_info.get('metadata', {}).get('width')}x{image_info.get('metadata', {}).get('height')}")
+                else:
+                    logger.info(f"No LinkedIn-compatible image found for post '{blog_post.title}'")
+            else:
+                logger.info(f"Image posting disabled by configuration for post '{blog_post.title}'")
             
             # Format content with image optimization
             formatted_content = formatter.format_post_content(
                 blog_post, 
                 include_excerpt=True, 
-                optimize_for_images=bool(image_info)
+                optimize_for_images=bool(image_info and should_include_images)
             )
-            
-            # Extract image URL if available
-            image_url = image_info.get('url') if image_info else None
-            
-            if image_info:
-                logger.info(f"Found LinkedIn-compatible image for post '{blog_post.title}': {image_url}")
-                logger.debug(f"Image metadata: {image_info.get('metadata', {}).get('format')} "
-                           f"{image_info.get('metadata', {}).get('width')}x{image_info.get('metadata', {}).get('height')}")
-            else:
-                logger.info(f"No LinkedIn-compatible image found for post '{blog_post.title}'")
                 
         except Exception as e:
             logger.error(f"Failed to format content or get image for '{blog_post.title}': {e}")
@@ -1798,7 +1810,7 @@ class LinkedInAPIService:
         )
         
         # Track comprehensive image information if available
-        if image_info and image_url:
+        if image_info and image_url and should_include_images:
             # Store detailed image information
             linkedin_post.image_urls = [image_url]
             linkedin_post.image_upload_status = 'pending'
@@ -1812,7 +1824,9 @@ class LinkedInAPIService:
             logger.debug(f"Image tracking info for post '{blog_post.title}': {compatibility_info}")
         else:
             # Determine why no image was selected
-            if image_info is None:
+            if not should_include_images:
+                linkedin_post.mark_image_upload_skipped("Image posting disabled by configuration")
+            elif image_info is None:
                 linkedin_post.mark_image_upload_skipped("No suitable image found for post")
             else:
                 linkedin_post.mark_image_upload_skipped("Image found but not LinkedIn-compatible")
@@ -1821,7 +1835,7 @@ class LinkedInAPIService:
             logger.info(f"Attempting to post blog article '{blog_post.title}' to LinkedIn (attempt {attempt_count})")
             
             # Enhanced posting workflow with integrated image processing
-            if image_url:
+            if image_url and should_include_images:
                 logger.info(f"Posting with image integration for '{blog_post.title}'")
                 
                 # Validate image one more time before upload (safety check)
@@ -1837,6 +1851,10 @@ class LinkedInAPIService:
                     # Continue with text-only posting
                     image_url = None
                     linkedin_post.mark_image_upload_failed(f"Validation error: {str(validation_error)}")
+            elif image_url and not should_include_images:
+                # Image is available but disabled by configuration
+                logger.info(f"Image available but disabled by configuration for '{blog_post.title}' - posting text-only")
+                image_url = None
             
             # Create the LinkedIn post using the formatted content and validated image
             response_data = self.create_post(
