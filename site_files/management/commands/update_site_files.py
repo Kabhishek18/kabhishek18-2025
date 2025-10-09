@@ -64,6 +64,35 @@ class Command(BaseCommand):
                     self.style.WARNING('No configuration found. Created default configuration.')
                 )
         
+        # Update config with correct paths and site URL from environment
+        from django.conf import settings
+        import os
+        
+        # Use site URL from environment variable
+        site_url = os.getenv('SITE_URL', 'https://kabhishek18.com')
+        if config.site_url != site_url:
+            config.site_url = site_url
+            config.save()
+        
+        # Update paths to point to templates directory
+        template_paths = {
+            'sitemap_path': 'templates/sitemap.xml',
+            'robots_path': 'templates/robots.txt',
+            'security_path': 'templates/security.txt',
+            'llms_path': 'templates/humans.txt'
+        }
+        
+        updated = False
+        for field, path in template_paths.items():
+            if getattr(config, field) != path:
+                setattr(config, field, path)
+                updated = True
+        
+        if updated:
+            config.save()
+            if verbose:
+                self.stdout.write('Updated configuration paths to use templates directory')
+        
         # Determine which files to update
         update_all = options.get('all', False)
         update_sitemap = options.get('sitemap', False) or update_all or config.update_sitemap
@@ -399,7 +428,7 @@ Sitemap: {sitemap_url}
         if verbose:
             self.stdout.write('Updating security.txt...')
         
-        security_content = f'''Contact: mailto:developer@{config.site_url.replace("https://", "").replace("http://", "")}
+        security_content = f'''Contact: mailto:developer@kabhishek18.com
 Expires: {(timezone.now() + timezone.timedelta(days=365)).strftime('%Y-%m-%dT%H:%M:%S.%fZ')}
 Preferred-Languages: en
 Canonical: {config.site_url}/.well-known/security.txt
