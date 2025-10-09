@@ -216,7 +216,7 @@ class ContentTopicsManager:
                 return {}
                 
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            model = genai.GenerativeModel('gemini-2.5-flash')
             
             current_date = datetime.now().strftime("%Y-%m-%d")
             
@@ -423,7 +423,7 @@ def get_ai_generated_content(existing_categories: list, topic: str = None, force
         raise CommandError("GEMINI_API_KEY environment variable not found.")
 
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-2.5-flash')
 
     # Get content parameters
     if not topic:
@@ -558,7 +558,7 @@ def expand_content(ai_data: dict, depth_config: dict, topic: str) -> dict:
     """Expand content if it's too short"""
     api_key = os.getenv("GEMINI_API_KEY")
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-2.5-flash')
     
     expansion_prompt = f"""
     The following blog post content needs to be expanded to meet quality standards.
