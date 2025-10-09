@@ -190,6 +190,30 @@ class Command(BaseCommand):
         <priority>0.9</priority>
     </url>''')
         
+        # Health Dashboard
+        sitemap_urls.append(f'''    <url>
+        <loc>{config.site_url}/dashboard/health/</loc>
+        <lastmod>{timezone.now().strftime('%Y-%m-%d')}</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>''')
+        
+        # API Documentation (if in production, you might want to exclude this)
+        if settings.DEBUG:
+            sitemap_urls.append(f'''    <url>
+        <loc>{config.site_url}/swagger/</loc>
+        <lastmod>{timezone.now().strftime('%Y-%m-%d')}</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.3</priority>
+    </url>''')
+            
+            sitemap_urls.append(f'''    <url>
+        <loc>{config.site_url}/redoc/</loc>
+        <lastmod>{timezone.now().strftime('%Y-%m-%d')}</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.3</priority>
+    </url>''')
+        
         # Categories
         categories = Category.objects.all()
         for category in categories:
@@ -209,6 +233,21 @@ class Command(BaseCommand):
         <changefreq>weekly</changefreq>
         <priority>0.6</priority>
     </url>''')
+        
+        # Custom pages from core app
+        try:
+            from core.models import Page
+            custom_pages = Page.objects.filter(is_published=True).exclude(slug='home')  # Exclude home as it's already included
+            for page in custom_pages:
+                sitemap_urls.append(f'''    <url>
+        <loc>{config.site_url}/{page.slug}/</loc>
+        <lastmod>{page.updated_at.strftime('%Y-%m-%d')}</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+    </url>''')
+        except ImportError:
+            # Core app might not have Page model
+            custom_pages = []
         
         # Published blog posts
         posts = Post.objects.filter(status='published').order_by('-updated_at')
@@ -243,10 +282,16 @@ class Command(BaseCommand):
             f.write(sitemap_content)
         
         if verbose:
+            try:
+                from core.models import Page
+                custom_pages_count = Page.objects.filter(is_published=True).exclude(slug='home').count()
+            except ImportError:
+                custom_pages_count = 0
+                
             self.stdout.write(
                 self.style.SUCCESS(
                     f'Sitemap updated with {len(sitemap_urls)} URLs '
-                    f'({len(categories)} categories, {len(tags)} tags, {len(posts)} blog posts)'
+                    f'({len(categories)} categories, {len(tags)} tags, {len(posts)} blog posts, {custom_pages_count} custom pages)'
                 )
             )
     
