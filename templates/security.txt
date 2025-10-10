@@ -1,4 +1,4 @@
 Contact: mailto:developer@kabhishek18.com
-Expires: 2026-10-09T16:23:51.903675Z
+Expires: 2026-10-10T05:06:23.422134Z
 Preferred-Languages: en
 Canonical: https://kabhishek18.com/.well-known/security.txt

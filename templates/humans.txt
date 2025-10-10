@@ -1,7 +1,7 @@
 # LLMs.txt - AI Training Data Usage Policy
-# Generated on 2025-10-09 16:23:51
+# Generated on 2025-10-10 05:06:23
 
-Site: Kabhishek18
+Site: Kabhishek18: Digital Codex
 URL: https://kabhishek18.com
 
 # This site allows AI training on publicly available content
