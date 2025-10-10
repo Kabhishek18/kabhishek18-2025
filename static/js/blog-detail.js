@@ -27,6 +27,7 @@ class BlogDetailManager {
         this.setupCommentSystem();
         this.setupSmoothScrolling();
         this.setupKeyboardShortcuts();
+        this.setupCodeBlockCopyButtons(); // Task 6.2: Enhanced copy button functionality
         
         console.log('Blog Detail Manager initialized');
     }
@@ -529,6 +530,379 @@ class BlogDetailManager {
             document.body.removeChild(textArea);
             return Promise.resolve();
         }
+    }
+    
+    // Task 7.1: Enhanced Copy Button Functionality with Keyboard Navigation Support
+    setupCodeBlockCopyButtons() {
+        // Find all code blocks and add copy buttons
+        const codeBlocks = document.querySelectorAll('pre');
+        
+        codeBlocks.forEach((codeBlock, index) => {
+            // Skip if copy button already exists
+            if (codeBlock.querySelector('.copy-btn')) return;
+            
+            // Create copy button with enhanced accessibility - Requirement 2.1
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-btn';
+            copyBtn.innerHTML = 'Copy';
+            copyBtn.setAttribute('type', 'button');
+            
+            // Task 7.1: Add proper ARIA labels for screen readers - Requirement 2.2
+            const codeId = `code-block-${index}`;
+            const language = this.getCodeLanguage(codeBlock);
+            const ariaLabel = language ? 
+                `Copy ${language} code to clipboard` : 
+                'Copy code to clipboard';
+            
+            copyBtn.setAttribute('aria-label', ariaLabel);
+            copyBtn.setAttribute('aria-describedby', codeId);
+            copyBtn.setAttribute('role', 'button');
+            copyBtn.setAttribute('tabindex', '0'); // Ensure keyboard accessibility
+            
+            // Add code block ID and accessibility attributes
+            codeBlock.setAttribute('id', codeId);
+            codeBlock.setAttribute('role', 'region');
+            codeBlock.setAttribute('aria-label', language ? 
+                `${language} code example` : 
+                'Code example');
+            
+            // Position the button
+            codeBlock.style.position = 'relative';
+            codeBlock.appendChild(copyBtn);
+            
+            // Enhanced event handling for keyboard and touch devices - Requirement 2.1
+            this.setupCopyButtonEvents(copyBtn, codeBlock, index);
+        });
+        
+        // Task 7.1: Set up keyboard navigation between code blocks
+        this.setupCodeBlockNavigation(codeBlocks);
+        
+        console.log(`Initialized accessible copy buttons for ${codeBlocks.length} code blocks`);
+    }
+    
+    // Task 7.1: Set up keyboard navigation between code blocks - Requirement 2.1
+    setupCodeBlockNavigation(codeBlocks) {
+        if (codeBlocks.length <= 1) return;
+        
+        // Add skip links for keyboard users
+        this.addCodeBlockSkipLinks(codeBlocks);
+        
+        // Set up keyboard shortcuts for navigating between code blocks
+        document.addEventListener('keydown', (e) => {
+            // Only handle shortcuts when not in an input field
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+                return;
+            }
+            
+            // Ctrl/Cmd + Arrow keys to navigate between code blocks
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+                e.preventDefault();
+                
+                const currentFocus = document.activeElement;
+                let currentIndex = -1;
+                
+                // Find current code block index
+                codeBlocks.forEach((block, index) => {
+                    if (block.contains(currentFocus) || block === currentFocus) {
+                        currentIndex = index;
+                    }
+                });
+                
+                let nextIndex;
+                if (e.key === 'ArrowDown') {
+                    nextIndex = currentIndex < codeBlocks.length - 1 ? currentIndex + 1 : 0;
+                } else {
+                    nextIndex = currentIndex > 0 ? currentIndex - 1 : codeBlocks.length - 1;
+                }
+                
+                // Focus the copy button of the next code block
+                const nextCodeBlock = codeBlocks[nextIndex];
+                const nextCopyBtn = nextCodeBlock.querySelector('.copy-btn');
+                if (nextCopyBtn) {
+                    nextCopyBtn.focus();
+                    this.announceToScreenReader(`Navigated to code block ${nextIndex + 1} of ${codeBlocks.length}`);
+                }
+            }
+        });
+    }
+    
+    // Task 7.1: Add skip links for better keyboard navigation - Requirement 2.1
+    addCodeBlockSkipLinks(codeBlocks) {
+        codeBlocks.forEach((codeBlock, index) => {
+            if (index < codeBlocks.length - 1) {
+                const skipLink = document.createElement('a');
+                skipLink.href = `#code-block-${index + 1}`;
+                skipLink.className = 'skip-to-next-code';
+                skipLink.textContent = `Skip to next code block (${index + 2} of ${codeBlocks.length})`;
+                skipLink.setAttribute('aria-label', `Skip to code block ${index + 2}`);
+                
+                skipLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const nextCodeBlock = codeBlocks[index + 1];
+                    const nextCopyBtn = nextCodeBlock.querySelector('.copy-btn');
+                    if (nextCopyBtn) {
+                        nextCopyBtn.focus();
+                        this.announceToScreenReader(`Skipped to code block ${index + 2}`);
+                    }
+                });
+                
+                // Insert skip link before the copy button
+                const copyBtn = codeBlock.querySelector('.copy-btn');
+                if (copyBtn) {
+                    codeBlock.insertBefore(skipLink, copyBtn);
+                }
+            }
+        });
+    }
+    
+    // Task 7.1: Helper method to extract code language from context
+    getCodeLanguage(codeBlock) {
+        // Try to find language from parent code-block structure
+        const codeBlockContainer = codeBlock.closest('.code-block');
+        if (codeBlockContainer) {
+            const languageElement = codeBlockContainer.querySelector('.code-language');
+            if (languageElement) {
+                return languageElement.textContent.trim();
+            }
+        }
+        
+        // Try to find language from class names (common pattern)
+        const classNames = codeBlock.className || '';
+        const languageMatch = classNames.match(/language-(\w+)/);
+        if (languageMatch) {
+            return languageMatch[1];
+        }
+        
+        // Try to find from code element classes
+        const codeElement = codeBlock.querySelector('code');
+        if (codeElement) {
+            const codeClassNames = codeElement.className || '';
+            const codeLanguageMatch = codeClassNames.match(/language-(\w+)/);
+            if (codeLanguageMatch) {
+                return codeLanguageMatch[1];
+            }
+        }
+        
+        return null;
+    }
+    
+    setupCopyButtonEvents(copyBtn, codeBlock, index) {
+        let touchStartTime = 0;
+        let touchTimeout = null;
+        
+        // Handle click/tap events
+        const handleCopyAction = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Task 7.1: Update ARIA attributes during action - Requirement 2.2
+            copyBtn.setAttribute('aria-busy', 'true');
+            copyBtn.setAttribute('aria-label', 'Copying code...');
+            
+            // Get code content, excluding the copy button
+            const codeContent = this.getCodeContent(codeBlock);
+            
+            try {
+                await this.copyToClipboard(codeContent);
+                this.showCopySuccess(copyBtn);
+                this.showNotification('Code copied to clipboard!', 'success');
+                
+                // Task 7.1: Update ARIA attributes for success state - Requirement 2.2
+                copyBtn.setAttribute('aria-busy', 'false');
+                copyBtn.setAttribute('aria-label', 'Code copied successfully');
+                
+                // Announce to screen readers
+                this.announceToScreenReader('Code copied to clipboard');
+                
+                // Analytics tracking (if available)
+                if (typeof gtag !== 'undefined') {
+                    gtag('event', 'code_copy', {
+                        'event_category': 'engagement',
+                        'event_label': 'code_block',
+                        'custom_parameter_1': index
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to copy code:', error);
+                this.showCopyError(copyBtn);
+                this.showNotification('Failed to copy code. Please try again.', 'error');
+                
+                // Task 7.1: Update ARIA attributes for error state - Requirement 2.2
+                copyBtn.setAttribute('aria-busy', 'false');
+                copyBtn.setAttribute('aria-label', 'Failed to copy code. Try again.');
+                
+                // Announce error to screen readers
+                this.announceToScreenReader('Failed to copy code. Please try again.');
+            }
+        };
+        
+        // Standard click event
+        copyBtn.addEventListener('click', handleCopyAction);
+        
+        // Task 7.1: Enhanced keyboard navigation support - Requirement 2.1, 2.2
+        copyBtn.addEventListener('keydown', (e) => {
+            switch (e.key) {
+                case 'Enter':
+                case ' ':
+                    e.preventDefault();
+                    handleCopyAction(e);
+                    break;
+                case 'Escape':
+                    // Allow users to blur the button with Escape
+                    copyBtn.blur();
+                    break;
+                case 'Tab':
+                    // Let Tab work normally for navigation
+                    break;
+                default:
+                    // Prevent other keys from triggering actions
+                    break;
+            }
+        });
+        
+        // Enhanced touch handling for better mobile experience - Requirement 3.4
+        copyBtn.addEventListener('touchstart', (e) => {
+            touchStartTime = Date.now();
+            copyBtn.classList.add('touch-active');
+            
+            // Clear any existing timeout
+            if (touchTimeout) {
+                clearTimeout(touchTimeout);
+            }
+            
+            // Prevent accidental double-taps
+            touchTimeout = setTimeout(() => {
+                copyBtn.classList.remove('touch-active');
+            }, 200);
+        }, { passive: true });
+        
+        copyBtn.addEventListener('touchend', (e) => {
+            const touchDuration = Date.now() - touchStartTime;
+            
+            // Only trigger if it was a quick tap (not a long press)
+            if (touchDuration < 500) {
+                e.preventDefault();
+                handleCopyAction(e);
+            }
+            
+            copyBtn.classList.remove('touch-active');
+            
+            if (touchTimeout) {
+                clearTimeout(touchTimeout);
+            }
+        }, { passive: false });
+        
+        // Prevent context menu on long press for mobile
+        copyBtn.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+        
+        // Task 7.1: Enhanced focus handling for keyboard navigation - Requirement 2.1
+        copyBtn.addEventListener('focus', (e) => {
+            // Update ARIA state for focus
+            copyBtn.setAttribute('aria-expanded', 'true');
+            
+            // Add visual focus indicator class
+            copyBtn.classList.add('keyboard-focused');
+            
+            // Announce focus to screen readers if using keyboard
+            if (e.detail === 0) { // Keyboard focus (not mouse)
+                this.announceToScreenReader(`Copy button focused for code block ${index + 1}`);
+            }
+        });
+        
+        copyBtn.addEventListener('blur', () => {
+            // Reset ARIA state
+            copyBtn.setAttribute('aria-expanded', 'false');
+            
+            // Remove visual focus indicator
+            copyBtn.classList.remove('keyboard-focused');
+            
+            // Reset ARIA label to original state after a delay
+            setTimeout(() => {
+                const language = this.getCodeLanguage(codeBlock);
+                const originalLabel = language ? 
+                    `Copy ${language} code to clipboard` : 
+                    'Copy code to clipboard';
+                copyBtn.setAttribute('aria-label', originalLabel);
+            }, 1000);
+        });
+        
+        // Task 7.1: Add support for right-click context menu with keyboard shortcut info
+        copyBtn.addEventListener('contextmenu', (e) => {
+            // Only prevent default on touch devices
+            if ('ontouchstart' in window) {
+                e.preventDefault();
+            }
+        });
+    }
+    
+    // Task 7.1: Helper method to announce messages to screen readers - Requirement 2.2
+    announceToScreenReader(message) {
+        // Create or update live region for screen reader announcements
+        let liveRegion = document.getElementById('copy-announcements');
+        
+        if (!liveRegion) {
+            liveRegion = document.createElement('div');
+            liveRegion.id = 'copy-announcements';
+            liveRegion.setAttribute('aria-live', 'polite');
+            liveRegion.setAttribute('aria-atomic', 'true');
+            liveRegion.style.position = 'absolute';
+            liveRegion.style.left = '-10000px';
+            liveRegion.style.width = '1px';
+            liveRegion.style.height = '1px';
+            liveRegion.style.overflow = 'hidden';
+            document.body.appendChild(liveRegion);
+        }
+        
+        // Clear previous message and set new one
+        liveRegion.textContent = '';
+        setTimeout(() => {
+            liveRegion.textContent = message;
+        }, 100);
+        
+        // Clear the message after it's been announced
+        setTimeout(() => {
+            liveRegion.textContent = '';
+        }, 3000);
+    }
+    
+    getCodeContent(codeBlock) {
+        // Clone the code block to avoid modifying the original
+        const clone = codeBlock.cloneNode(true);
+        
+        // Remove the copy button from the clone
+        const copyBtn = clone.querySelector('.copy-btn');
+        if (copyBtn) {
+            copyBtn.remove();
+        }
+        
+        // Get the text content, preserving line breaks and indentation
+        return clone.textContent || clone.innerText || '';
+    }
+    
+    showCopySuccess(copyBtn) {
+        const originalText = copyBtn.innerHTML;
+        copyBtn.innerHTML = '✓ Copied';
+        copyBtn.classList.add('success');
+        
+        // Reset after 2 seconds
+        setTimeout(() => {
+            copyBtn.innerHTML = originalText;
+            copyBtn.classList.remove('success');
+        }, 2000);
+    }
+    
+    showCopyError(copyBtn) {
+        const originalText = copyBtn.innerHTML;
+        copyBtn.innerHTML = '✗ Error';
+        copyBtn.classList.add('error');
+        
+        // Reset after 2 seconds
+        setTimeout(() => {
+            copyBtn.innerHTML = originalText;
+            copyBtn.classList.remove('error');
+        }, 2000);
     }
     
     getCookie(name) {

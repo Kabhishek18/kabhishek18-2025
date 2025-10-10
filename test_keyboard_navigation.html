@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Keyboard Navigation - Simplified Code Blocks</title>
+    <link rel="stylesheet" href="static/css/simplified-code-blocks.css">
+    <style>
+        /* CSS Variables for testing */
+        :root {
+            --primary-bg: #0a0a0a;
+            --surface-bg: #1e1e1e;
+            --text-primary: #ffffff;
+            --text-secondary: #e5e5e5;
+            --text-muted: #a1a1a1;
+            --text-dimmed: #666666;
+            --border-subtle: rgba(255, 255, 255, 0.1);
+            --border-default: rgba(0, 217, 255, 0.2);
+            --accent-cyan: #00d9ff;
+            --accent-green: #00ff88;
+            --accent-orange: #ff6b35;
+            --space-xs: 0.25rem;
+            --space-sm: 0.5rem;
+            --space-md: 1rem;
+            --space-lg: 1.5rem;
+            --text-xs: 0.75rem;
+            --text-sm: 0.875rem;
+            --radius-sm: 0.375rem;
+            --radius-md: 0.5rem;
+            --animation-fast: 0.15s;
+        }
+
+        body {
+            background: var(--primary-bg);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            padding: var(--space-lg);
+            line-height: 1.6;
+        }
+
+        .code-block {
+            background: var(--surface-bg);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            margin: var(--space-lg) 0;
+            overflow: hidden;
+        }
+
+        .code-header {
+            padding: var(--space-sm) var(--space-md);
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .code-language {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: var(--text-xs);
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        h1, h2 {
+            color: var(--text-primary);
+            margin-bottom: var(--space-md);
+        }
+
+        p {
+            margin-bottom: var(--space-md);
+            color: var(--text-secondary);
+        }
+
+        .instructions {
+            background: var(--surface-bg);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: var(--space-md);
+            margin-bottom: var(--space-lg);
+        }
+
+        .instructions h3 {
+            color: var(--accent-cyan);
+            margin-bottom: var(--space-sm);
+        }
+
+        .instructions ul {
+            margin-left: var(--space-md);
+        }
+
+        .instructions li {
+            margin-bottom: var(--space-xs);
+        }
+
+        .instructions kbd {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border-subtle);
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-family: monospace;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+    <h1>Keyboard Navigation Test - Simplified Code Blocks</h1>
+    
+    <div class="instructions">
+        <h3>Keyboard Navigation Instructions</h3>
+        <p>This page tests Task 7.1: Keyboard navigation support for code blocks.</p>
+        <ul>
+            <li><kbd>Tab</kbd> - Navigate to copy buttons</li>
+            <li><kbd>Enter</kbd> or <kbd>Space</kbd> - Activate copy button</li>
+            <li><kbd>Ctrl/Cmd + ↓</kbd> - Navigate to next code block</li>
+            <li><kbd>Ctrl/Cmd + ↑</kbd> - Navigate to previous code block</li>
+            <li><kbd>Escape</kbd> - Blur focused copy button</li>
+        </ul>
+        <p><strong>Screen Reader Users:</strong> Code blocks are announced with language information and copy status updates.</p>
+    </div>
+
+    <h2>Python Example</h2>
+    <div class="code-block">
+        <div class="code-header">
+            <span class="code-language">Python</span>
+        </div>
+        <pre><code>def hello_world():
+    """A simple hello world function."""
+    print("Hello, World!")
+    return "success"
+
+# Call the function
+result = hello_world()
+print(f"Function returned: {result}")</code></pre>
+    </div>
+
+    <h2>JavaScript Example</h2>
+    <div class="code-block">
+        <div class="code-header">
+            <span class="code-language">JavaScript</span>
+        </div>
+        <pre><code>function greet(name) {
+    // Greet a person by name
+    console.log(`Hello, ${name}!`);
+    return true;
+}
+
+// Usage example
+const success = greet("World");
+console.log("Greeting successful:", success);</code></pre>
+    </div>
+
+    <h2>CSS Example</h2>
+    <div class="code-block">
+        <div class="code-header">
+            <span class="code-language">CSS</span>
+        </div>
+        <pre><code>.copy-btn {
+    background: transparent;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    opacity: 0.7;
+    transition: opacity 0.15s ease;
+}
+
+.copy-btn:focus {
+    outline: 2px solid var(--accent-cyan);
+    outline-offset: 2px;
+}</code></pre>
+    </div>
+
+    <h2>HTML Example</h2>
+    <div class="code-block">
+        <div class="code-header">
+            <span class="code-language">HTML</span>
+        </div>
+        <pre><code>&lt;button class="copy-btn" 
+        aria-label="Copy HTML code to clipboard"
+        tabindex="0"&gt;
+    Copy
+&lt;/button&gt;</code></pre>
+    </div>
+
+    <script>
+        // Simplified version of the BlogDetailManager for testing
+        class KeyboardNavigationTest {
+            constructor() {
+                this.init();
+            }
+            
+            init() {
+                this.setupCodeBlockCopyButtons();
+            }
+            
+            // Task 7.1: Enhanced Copy Button Functionality with Keyboard Navigation Support
+            setupCodeBlockCopyButtons() {
+                const codeBlocks = document.querySelectorAll('pre');
+                
+                codeBlocks.forEach((codeBlock, index) => {
+                    if (codeBlock.querySelector('.copy-btn')) return;
+                    
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'copy-btn';
+                    copyBtn.innerHTML = 'Copy';
+                    copyBtn.setAttribute('type', 'button');
+                    
+                    const codeId = `code-block-${index}`;
+                    const language = this.getCodeLanguage(codeBlock);
+                    const ariaLabel = language ? 
+                        `Copy ${language} code to clipboard` : 
+                        'Copy code to clipboard';
+                    
+                    copyBtn.setAttribute('aria-label', ariaLabel);
+                    copyBtn.setAttribute('aria-describedby', codeId);
+                    copyBtn.setAttribute('role', 'button');
+                    copyBtn.setAttribute('tabindex', '0');
+                    
+                    codeBlock.setAttribute('id', codeId);
+                    codeBlock.setAttribute('role', 'region');
+                    codeBlock.setAttribute('aria-label', language ? 
+                        `${language} code example` : 
+                        'Code example');
+                    
+                    codeBlock.style.position = 'relative';
+                    codeBlock.appendChild(copyBtn);
+                    
+                    this.setupCopyButtonEvents(copyBtn, codeBlock, index);
+                });
+                
+                this.setupCodeBlockNavigation(codeBlocks);
+                console.log(`Initialized accessible copy buttons for ${codeBlocks.length} code blocks`);
+            }
+            
+            getCodeLanguage(codeBlock) {
+                const codeBlockContainer = codeBlock.closest('.code-block');
+                if (codeBlockContainer) {
+                    const languageElement = codeBlockContainer.querySelector('.code-language');
+                    if (languageElement) {
+                        return languageElement.textContent.trim();
+                    }
+                }
+                return null;
+            }
+            
+            setupCopyButtonEvents(copyBtn, codeBlock, index) {
+                const handleCopyAction = async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    copyBtn.setAttribute('aria-busy', 'true');
+                    copyBtn.setAttribute('aria-label', 'Copying code...');
+                    
+                    const codeContent = this.getCodeContent(codeBlock);
+                    
+                    try {
+                        await this.copyToClipboard(codeContent);
+                        this.showCopySuccess(copyBtn);
+                        
+                        copyBtn.setAttribute('aria-busy', 'false');
+                        copyBtn.setAttribute('aria-label', 'Code copied successfully');
+                        this.announceToScreenReader('Code copied to clipboard');
+                        
+                    } catch (error) {
+                        console.error('Failed to copy code:', error);
+                        this.showCopyError(copyBtn);
+                        
+                        copyBtn.setAttribute('aria-busy', 'false');
+                        copyBtn.setAttribute('aria-label', 'Failed to copy code. Try again.');
+                        this.announceToScreenReader('Failed to copy code. Please try again.');
+                    }
+                };
+                
+                copyBtn.addEventListener('click', handleCopyAction);
+                
+                copyBtn.addEventListener('keydown', (e) => {
+                    switch (e.key) {
+                        case 'Enter':
+                        case ' ':
+                            e.preventDefault();
+                            handleCopyAction(e);
+                            break;
+                        case 'Escape':
+                            copyBtn.blur();
+                            break;
+                    }
+                });
+                
+                copyBtn.addEventListener('focus', (e) => {
+                    copyBtn.setAttribute('aria-expanded', 'true');
+                    copyBtn.classList.add('keyboard-focused');
+                    
+                    if (e.detail === 0) {
+                        this.announceToScreenReader(`Copy button focused for code block ${index + 1}`);
+                    }
+                });
+                
+                copyBtn.addEventListener('blur', () => {
+                    copyBtn.setAttribute('aria-expanded', 'false');
+                    copyBtn.classList.remove('keyboard-focused');
+                    
+                    setTimeout(() => {
+                        const language = this.getCodeLanguage(codeBlock);
+                        const originalLabel = language ? 
+                            `Copy ${language} code to clipboard` : 
+                            'Copy code to clipboard';
+                        copyBtn.setAttribute('aria-label', originalLabel);
+                    }, 1000);
+                });
+            }
+            
+            setupCodeBlockNavigation(codeBlocks) {
+                if (codeBlocks.length <= 1) return;
+                
+                this.addCodeBlockSkipLinks(codeBlocks);
+                
+                document.addEventListener('keydown', (e) => {
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+                        return;
+                    }
+                    
+                    if ((e.ctrlKey || e.metaKey) && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+                        e.preventDefault();
+                        
+                        const currentFocus = document.activeElement;
+                        let currentIndex = -1;
+                        
+                        codeBlocks.forEach((block, index) => {
+                            if (block.contains(currentFocus) || block === currentFocus) {
+                                currentIndex = index;
+                            }
+                        });
+                        
+                        let nextIndex;
+                        if (e.key === 'ArrowDown') {
+                            nextIndex = currentIndex < codeBlocks.length - 1 ? currentIndex + 1 : 0;
+                        } else {
+                            nextIndex = currentIndex > 0 ? currentIndex - 1 : codeBlocks.length - 1;
+                        }
+                        
+                        const nextCodeBlock = codeBlocks[nextIndex];
+                        const nextCopyBtn = nextCodeBlock.querySelector('.copy-btn');
+                        if (nextCopyBtn) {
+                            nextCopyBtn.focus();
+                            this.announceToScreenReader(`Navigated to code block ${nextIndex + 1} of ${codeBlocks.length}`);
+                        }
+                    }
+                });
+            }
+            
+            addCodeBlockSkipLinks(codeBlocks) {
+                codeBlocks.forEach((codeBlock, index) => {
+                    if (index < codeBlocks.length - 1) {
+                        const skipLink = document.createElement('a');
+                        skipLink.href = `#code-block-${index + 1}`;
+                        skipLink.className = 'skip-to-next-code';
+                        skipLink.textContent = `Skip to next code block (${index + 2} of ${codeBlocks.length})`;
+                        skipLink.setAttribute('aria-label', `Skip to code block ${index + 2}`);
+                        
+                        skipLink.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            const nextCodeBlock = codeBlocks[index + 1];
+                            const nextCopyBtn = nextCodeBlock.querySelector('.copy-btn');
+                            if (nextCopyBtn) {
+                                nextCopyBtn.focus();
+                                this.announceToScreenReader(`Skipped to code block ${index + 2}`);
+                            }
+                        });
+                        
+                        const copyBtn = codeBlock.querySelector('.copy-btn');
+                        if (copyBtn) {
+                            codeBlock.insertBefore(skipLink, copyBtn);
+                        }
+                    }
+                });
+            }
+            
+            getCodeContent(codeBlock) {
+                const clone = codeBlock.cloneNode(true);
+                const copyBtn = clone.querySelector('.copy-btn');
+                if (copyBtn) copyBtn.remove();
+                const skipLink = clone.querySelector('.skip-to-next-code');
+                if (skipLink) skipLink.remove();
+                return clone.textContent || clone.innerText || '';
+            }
+            
+            async copyToClipboard(text) {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(text);
+                } else {
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-999999px';
+                    textArea.style.top = '-999999px';
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    document.execCommand('copy');
+                    textArea.remove();
+                }
+            }
+            
+            showCopySuccess(copyBtn) {
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = '✓ Copied';
+                copyBtn.classList.add('success');
+                
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalText;
+                    copyBtn.classList.remove('success');
+                }, 2000);
+            }
+            
+            showCopyError(copyBtn) {
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = '✗ Error';
+                copyBtn.classList.add('error');
+                
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalText;
+                    copyBtn.classList.remove('error');
+                }, 2000);
+            }
+            
+            announceToScreenReader(message) {
+                let liveRegion = document.getElementById('copy-announcements');
+                
+                if (!liveRegion) {
+                    liveRegion = document.createElement('div');
+                    liveRegion.id = 'copy-announcements';
+                    liveRegion.setAttribute('aria-live', 'polite');
+                    liveRegion.setAttribute('aria-atomic', 'true');
+                    liveRegion.style.position = 'absolute';
+                    liveRegion.style.left = '-10000px';
+                    liveRegion.style.width = '1px';
+                    liveRegion.style.height = '1px';
+                    liveRegion.style.overflow = 'hidden';
+                    document.body.appendChild(liveRegion);
+                }
+                
+                liveRegion.textContent = '';
+                setTimeout(() => {
+                    liveRegion.textContent = message;
+                }, 100);
+                
+                setTimeout(() => {
+                    liveRegion.textContent = '';
+                }, 3000);
+            }
+        }
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function () {
+            new KeyboardNavigationTest();
+        });
+    </script>
+</body>
+</html>
