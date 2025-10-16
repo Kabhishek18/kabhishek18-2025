@@ -56,7 +56,8 @@ INSTALLED_APPS = [
     'core',
     'blog',
     'api',
-    'site_files'
+    'site_files',
+    'roadmap'
 ]
 
 MIDDLEWARE = [
@@ -394,6 +395,18 @@ UNFOLD = {
                 ],
             },
             {
+                "title": _("Resume Parser"),
+                "separator": True,
+                "items": [
+                    {
+                        "title": _("Parser Configuration"),
+                        "icon": "settings",
+                        "link": reverse_lazy("admin:roadmap_resumeparserconfig_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                ],
+            },
+            {
                 "title": _("System Monitoring"),
                 "separator": True,
                 "items": [
@@ -691,6 +704,21 @@ LOGGING['loggers'].update({
         'level': 'INFO',
         'propagate': False,
     },
+    'roadmap.services': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+        'propagate': False,
+    },
+    'roadmap.views': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+        'propagate': False,
+    },
+    'roadmap.utils': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+        'propagate': False,
+    },
 })
 
 # Security Settings
@@ -812,4 +840,27 @@ LINKEDIN_IMAGE_SETTINGS = {
     'IMAGE_PROCESSING_TIMEOUT': int(os.getenv('LINKEDIN_IMAGE_PROCESSING_TIMEOUT', '30')),
     'UPLOAD_TIMEOUT': int(os.getenv('LINKEDIN_UPLOAD_TIMEOUT', '60')),
     'CONCURRENT_UPLOADS': int(os.getenv('LINKEDIN_CONCURRENT_UPLOADS', '2')),
+}
+
+# Resume Parser Settings
+RESUME_PARSER_SETTINGS = {
+    # File upload settings
+    'MAX_FILE_SIZE_MB': int(os.getenv('RESUME_PARSER_MAX_FILE_SIZE', '10')),
+    'ALLOWED_FILE_TYPES': ['application/pdf'],
+    'TEMP_FILE_CLEANUP_TIMEOUT': int(os.getenv('RESUME_PARSER_CLEANUP_TIMEOUT', '300')),  # seconds
+    
+    # AI Backend settings
+    'DEFAULT_BACKEND': os.getenv('RESUME_PARSER_DEFAULT_BACKEND', 'auto'),
+    'GEMINI_API_KEY': os.getenv('GEMINI_API_KEY', ''),
+    'SPACY_MODEL': os.getenv('SPACY_MODEL', 'en_core_web_sm'),
+    
+    # Processing settings
+    'PROCESSING_TIMEOUT': int(os.getenv('RESUME_PARSER_PROCESSING_TIMEOUT', '60')),  # seconds
+    'ENABLE_FALLBACK': os.getenv('RESUME_PARSER_ENABLE_FALLBACK', 'True').lower() == 'true',
+    'CONFIDENCE_THRESHOLD': float(os.getenv('RESUME_PARSER_CONFIDENCE_THRESHOLD', '0.5')),
+    
+    # Security settings
+    'ENABLE_FILE_VALIDATION': os.getenv('RESUME_PARSER_ENABLE_FILE_VALIDATION', 'True').lower() == 'true',
+    'ENABLE_CONTENT_SANITIZATION': os.getenv('RESUME_PARSER_ENABLE_CONTENT_SANITIZATION', 'True').lower() == 'true',
+    'LOG_SENSITIVE_DATA': os.getenv('RESUME_PARSER_LOG_SENSITIVE_DATA', 'False').lower() == 'true',
 }

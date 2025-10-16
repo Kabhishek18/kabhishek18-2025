@@ -29,6 +29,9 @@ urlpatterns = [
     # API URLs - specific prefix with versioning
     path('api/v1/', include('api.urls')),
     
+    # Roadmap/Resume Parser API URLs
+    path('api/roadmap/', include('roadmap.urls')),
+    
     # Blog URLs - specific prefix
     path('blog/', include('blog.urls', namespace='blog')),
 

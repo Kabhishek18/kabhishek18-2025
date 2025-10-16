@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Parser</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        input[type="file"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+        
+        .submit-btn {
+            background: #007bff;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .submit-btn:hover {
+            background: #0056b3;
+        }
+        
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .results {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .error {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: 5px;
+        }
+        
+        .result-section {
+            margin-bottom: 20px;
+        }
+        
+        .result-section h3 {
+            color: #495057;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+        
+        .skill-tag {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            padding: 3px 8px;
+            margin: 2px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        
+        .experience-item, .education-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .backend-status {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .backend-item {
+            display: inline-block;
+            margin: 5px 10px 5px 0;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+        }
+        
+        .backend-available {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .backend-unavailable {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Resume Parser</h1>
+        
+        <!-- Backend Status -->
+        <div class="backend-status">
+            <strong>Available Backends:</strong><br>
+            {% for backend, status in backend_status.items %}
+                <span class="backend-item {% if status.available %}backend-available{% else %}backend-unavailable{% endif %}">
+                    {{ status.backend_name }}
+                </span>
+            {% endfor %}
+        </div>
+        
+        <!-- Upload Form -->
+        <form id="resumeForm" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="resume_file">📄 Select PDF Resume:</label>
+                <input type="file" id="resume_file" name="resume_file" accept=".pdf" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="processing_backend">🔧 Processing Backend:</label>
+                <select id="processing_backend" name="processing_backend">
+                    {% for value, label in backend_choices %}
+                        <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="include_raw_text" name="include_raw_text">
+                    <label for="include_raw_text">Include raw extracted text</label>
+                </div>
+            </div>
+            
+            <button type="submit" class="submit-btn" id="submitBtn">
+                🚀 Parse Resume
+            </button>
+        </form>
+        
+        <!-- Loading State -->
+        <div id="loading" class="loading">
+            <p>⏳ Processing your resume... Please wait.</p>
+        </div>
+        
+        <!-- Error Display -->
+        <div id="error" class="error">
+            <strong>❌ Error:</strong> <span id="errorMessage"></span>
+        </div>
+        
+        <!-- Results Display -->
+        <div id="results" class="results">
+            <h2>✅ Parsing Results</h2>
+            
+            <div class="result-section">
+                <h3>👤 Personal Information</h3>
+                <p><strong>Name:</strong> <span id="resultName">-</span></p>
+                <p><strong>Email:</strong> <span id="resultEmail">-</span></p>
+                <p><strong>Phone:</strong> <span id="resultPhone">-</span></p>
+            </div>
+            
+            <div class="result-section">
+                <h3>🛠️ Skills</h3>
+                <div id="resultSkills"></div>
+            </div>
+            
+            <div class="result-section">
+                <h3>💼 Work Experience</h3>
+                <div id="resultExperience"></div>
+            </div>
+            
+            <div class="result-section">
+                <h3>🎓 Education</h3>
+                <div id="resultEducation"></div>
+            </div>
+            
+            <div class="result-section">
+                <h3>📊 Processing Info</h3>
+                <p><strong>Backend Used:</strong> <span id="backendUsed">-</span></p>
+                <p><strong>Processing Time:</strong> <span id="processingTime">-</span> seconds</p>
+                <p><strong>Confidence Score:</strong> <span id="confidenceScore">-</span></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('resumeForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+            const error = document.getElementById('error');
+            
+            // Reset states
+            results.style.display = 'none';
+            error.style.display = 'none';
+            loading.style.display = 'block';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
+            
+            try {
+                const response = await fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayResults(data.data);
+                } else {
+                    showError(data.error || 'Processing failed');
+                }
+            } catch (err) {
+                showError('Network error: ' + err.message);
+            } finally {
+                loading.style.display = 'none';
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🚀 Parse Resume';
+            }
+        });
+        
+        function displayResults(data) {
+            // Personal info
+            document.getElementById('resultName').textContent = data.name || 'Not found';
+            document.getElementById('resultEmail').textContent = data.email || 'Not found';
+            document.getElementById('resultPhone').textContent = data.phone || 'Not found';
+            
+            // Skills
+            const skillsContainer = document.getElementById('resultSkills');
+            skillsContainer.innerHTML = '';
+            if (data.skills && data.skills.length > 0) {
+                data.skills.forEach(skill => {
+                    const skillTag = document.createElement('span');
+                    skillTag.className = 'skill-tag';
+                    skillTag.textContent = skill;
+                    skillsContainer.appendChild(skillTag);
+                });
+            } else {
+                skillsContainer.innerHTML = '<p>No skills found</p>';
+            }
+            
+            // Experience
+            const expContainer = document.getElementById('resultExperience');
+            expContainer.innerHTML = '';
+            if (data.experience && data.experience.length > 0) {
+                data.experience.forEach(exp => {
+                    const expDiv = document.createElement('div');
+                    expDiv.className = 'experience-item';
+                    expDiv.innerHTML = `
+                        <h4>${exp.job_title || 'Unknown Position'} at ${exp.company || 'Unknown Company'}</h4>
+                        <p><strong>Duration:</strong> ${exp.duration || 'Not specified'}</p>
+                        <p>${exp.description || 'No description available'}</p>
+                    `;
+                    expContainer.appendChild(expDiv);
+                });
+            } else {
+                expContainer.innerHTML = '<p>No work experience found</p>';
+            }
+            
+            // Education
+            const eduContainer = document.getElementById('resultEducation');
+            eduContainer.innerHTML = '';
+            if (data.education && data.education.length > 0) {
+                data.education.forEach(edu => {
+                    const eduDiv = document.createElement('div');
+                    eduDiv.className = 'education-item';
+                    eduDiv.innerHTML = `
+                        <h4>${edu.degree || 'Unknown Degree'}</h4>
+                        <p><strong>Institution:</strong> ${edu.institution || 'Unknown'}</p>
+                        <p><strong>Year:</strong> ${edu.year || 'Not specified'}</p>
+                        <p><strong>Field:</strong> ${edu.field || 'Not specified'}</p>
+                    `;
+                    eduContainer.appendChild(eduDiv);
+                });
+            } else {
+                eduContainer.innerHTML = '<p>No education information found</p>';
+            }
+            
+            // Meta info
+            document.getElementById('backendUsed').textContent = data.processing_backend_used || 'Unknown';
+            document.getElementById('processingTime').textContent = data.processing_time_seconds || 'Unknown';
+            document.getElementById('confidenceScore').textContent = 
+                data.confidence_score ? (data.confidence_score * 100).toFixed(1) + '%' : 'Unknown';
+            
+            document.getElementById('results').style.display = 'block';
+        }
+        
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('error').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
