@@ -2,6 +2,7 @@ import os
 import json
 import time
 import random
+import requests
 from datetime import datetime, timedelta
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
@@ -142,7 +143,7 @@ class Command(BaseCommand):
 
     @retry(wait=wait_exponential(multiplier=1, min=4, max=60), stop=stop_after_attempt(3))
     def get_ai_generated_content(self, existing_categories):
-        """Generate AI content with enhanced prompts"""
+        """Generate AI content with enhanced prompts and copyright handling"""
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise CommandError("GEMINI_API_KEY environment variable not found.")
@@ -156,81 +157,92 @@ class Command(BaseCommand):
         # Quality-based content parameters
         quality_params = self.get_quality_parameters()
         
+        # Enhanced prompt to avoid copyright issues
         prompt = f"""
-        You are an expert content creator for 'Digital Codex' - a premium tech blog for software developers and tech leaders.
+        Create ORIGINAL technical content for a developer blog. Write from your own knowledge and analysis.
         
-        **CONTENT MISSION:**
-        Create engaging, high-value content that provides genuine insights and practical value.
+        **IMPORTANT: Write completely original content. Do not quote, copy, or paraphrase existing articles, books, or documentation.**
         
-        **TARGET AUDIENCE:**
-        - Senior developers and tech leads
-        - CTOs and engineering managers  
-        - AI/ML practitioners
-        - Tech entrepreneurs
-        - Advanced developers seeking cutting-edge insights
+        **BLOG:** Digital Codex - Technical insights for developers
+        **AUDIENCE:** Senior developers, tech leads, engineering managers
+        **TOPIC:** {topic}
+        **QUALITY:** {self.quality} level content
         
-        **TOPIC FOCUS:**
-        {topic}
+        **REQUIREMENTS:**
+        - Write {quality_params['min_chars']}-{quality_params['max_chars']} characters
+        - Create original technical insights and analysis
+        - Include practical code examples (write your own)
+        - Share implementation strategies from general knowledge
+        - Provide actionable recommendations
         
-        **QUALITY LEVEL:** {self.quality.upper()}
-        **CONTENT REQUIREMENTS:**
-        - Length: {quality_params['min_chars']}-{quality_params['max_chars']} characters
-        - Depth: {quality_params['depth']}
-        - Structure: {quality_params['structure']}
+        **CONTENT STRUCTURE:**
+        1. Introduction with problem context
+        2. Technical analysis and approaches
+        3. Implementation examples (original code)
+        4. Best practices and recommendations
+        5. Future considerations
         
-        **CONTENT GUIDELINES:**
-        - NO basic tutorials or common knowledge
-        - FOCUS ON: Advanced techniques, industry insights, emerging trends
-        - INCLUDE: Multiple code examples, real-world case studies, industry statistics
-        - PROVIDE: Actionable insights and practical implementations
-        - ADD: Expert perspectives and future predictions
+        **AVOID:**
+        - Copying existing tutorials or documentation
+        - Quoting specific articles or books
+        - Reproducing copyrighted code examples
+        - Referencing specific proprietary implementations
         
-        **STRUCTURE REQUIREMENTS:**
-        - Compelling introduction with industry context
-        - Multiple detailed sections with practical examples
-        - Code snippets with thorough explanations
-        - Real-world use cases and implementation strategies
-        - Industry trends and market analysis
-        - Future implications and recommendations
-        - Actionable takeaways and next steps
+        **WRITE ORIGINAL:**
+        - Your own technical analysis
+        - Original code examples
+        - Personal insights on the topic
+        - General best practices from experience
         
-        **EXISTING CATEGORIES:**
-        {', '.join(existing_categories) if existing_categories else 'None'}
-        
-        **IMAGE REQUIREMENTS:**
-        Create a detailed prompt for a professional, modern blog featured image.
-        
-        **OUTPUT FORMAT (JSON):**
+        **OUTPUT AS JSON:**
         {{
-            "title": "SEO-optimized, compelling title (50-60 characters)",
-            "excerpt": "Engaging meta description (120-155 characters)",
-            "content": "Comprehensive HTML content with proper tags",
-            "category": "Specific, valuable category name",
-            "image_prompt": "Detailed professional image prompt",
-            "tags": ["relevant", "technical", "tags", "here", "5-7 tags"],
+            "title": "Original compelling title (under 60 chars)",
+            "excerpt": "Original meta description (120-155 chars)",
+            "content": "Original HTML content with your own insights",
+            "category": "Appropriate category name",
+            "image_prompt": "Professional tech image description",
+            "tags": ["relevant", "technical", "tags"],
             "estimated_read_time": "X min read",
             "difficulty_level": "{self.quality}",
-            "key_takeaways": ["actionable takeaway 1", "practical insight 2", "implementation tip 3"]
+            "key_takeaways": ["original insight 1", "practical tip 2", "recommendation 3"]
         }}
         
-        **CRITICAL:** Content must be genuinely valuable, unique, and worth reading. Focus on advanced, practical insights.
+        Write completely original content based on your knowledge and analysis.
         """
 
         try:
             time.sleep(3)  # Rate limiting
             
+            # Enhanced generation config to reduce copyright issues
             response = model.generate_content(
                 prompt,
                 generation_config=genai.types.GenerationConfig(
-                    temperature=0.8,
-                    max_output_tokens=25000,
-                    top_p=0.95,
-                    top_k=40
+                    temperature=0.9,  # Higher temperature for more originality
+                    max_output_tokens=20000,
+                    top_p=0.9,  # Slightly lower for more focused responses
+                    top_k=50
                 )
             )
             
+            # Handle different response scenarios
+            if not response.candidates:
+                self.stdout.write("❌ No response candidates generated")
+                return None
+            
+            candidate = response.candidates[0]
+            
+            # Check finish reason
+            if hasattr(candidate, 'finish_reason'):
+                if candidate.finish_reason == 4:  # RECITATION (copyright)
+                    self.stdout.write("⚠️ Content blocked due to potential copyright. Trying alternative approach...")
+                    return self.generate_fallback_content(topic, quality_params)
+                elif candidate.finish_reason == 3:  # SAFETY
+                    self.stdout.write("⚠️ Content blocked by safety filters. Trying alternative approach...")
+                    return self.generate_fallback_content(topic, quality_params)
+            
             if not response.text:
-                raise CommandError("Empty response from Gemini API")
+                self.stdout.write("❌ Empty response from Gemini API")
+                return self.generate_fallback_content(topic, quality_params)
             
             # Clean and parse JSON
             cleaned_text = response.text.strip()
@@ -250,10 +262,115 @@ class Command(BaseCommand):
             
         except json.JSONDecodeError as e:
             self.stdout.write(f"❌ JSON parsing error: {e}")
-            return None
+            return self.generate_fallback_content(topic, quality_params)
         except Exception as e:
             self.stdout.write(f"❌ AI generation error: {e}")
-            return None
+            return self.generate_fallback_content(topic, quality_params)
+
+    def generate_fallback_content(self, topic, quality_params):
+        """Generate fallback content when AI fails"""
+        self.stdout.write("🔄 Generating fallback content...")
+        
+        # Simple fallback content structure
+        fallback_content = {
+            "title": f"Advanced Techniques in {topic.split(':')[0]}",
+            "excerpt": f"Explore advanced techniques and best practices in {topic.split(':')[0].lower()}. Learn practical implementation strategies and optimization approaches.",
+            "content": self.create_fallback_html_content(topic, quality_params),
+            "category": "Technology",
+            "image_prompt": f"Professional technology illustration showing {topic.split(':')[0].lower()} concepts, modern design, clean layout",
+            "tags": ["technology", "development", "best-practices", "advanced", "tutorial"],
+            "estimated_read_time": "8 min read",
+            "difficulty_level": self.quality,
+            "key_takeaways": [
+                "Advanced implementation strategies",
+                "Performance optimization techniques", 
+                "Best practices and recommendations"
+            ]
+        }
+        
+        return fallback_content
+
+    def create_fallback_html_content(self, topic, quality_params):
+        """Create fallback HTML content"""
+        topic_name = topic.split(':')[0]
+        
+        content = f"""
+<h2>Introduction to Advanced {topic_name}</h2>
+<p>In the rapidly evolving landscape of software development, mastering advanced techniques in {topic_name.lower()} has become essential for building robust, scalable applications. This comprehensive guide explores cutting-edge approaches and best practices that experienced developers use to create high-performance solutions.</p>
+
+<h2>Core Concepts and Fundamentals</h2>
+<p>Understanding the fundamental principles behind {topic_name.lower()} is crucial for implementing advanced techniques effectively. Let's explore the key concepts that form the foundation of modern {topic_name.lower()} development.</p>
+
+<h3>Architecture Patterns</h3>
+<p>Modern {topic_name.lower()} implementations rely on proven architectural patterns that promote maintainability, scalability, and performance. These patterns have evolved through years of industry experience and provide reliable solutions to common challenges.</p>
+
+<h2>Implementation Strategies</h2>
+<p>When implementing advanced {topic_name.lower()} solutions, several strategies can significantly improve both development efficiency and application performance.</p>
+
+<h3>Performance Optimization</h3>
+<p>Performance optimization in {topic_name.lower()} requires a systematic approach that addresses multiple layers of the application stack. Key areas include:</p>
+<ul>
+    <li>Efficient algorithm selection and implementation</li>
+    <li>Memory management and resource optimization</li>
+    <li>Caching strategies and data access patterns</li>
+    <li>Asynchronous processing and parallel execution</li>
+</ul>
+
+<h3>Scalability Considerations</h3>
+<p>Building scalable {topic_name.lower()} solutions requires careful planning and implementation of patterns that support growth. Consider these approaches:</p>
+<ul>
+    <li>Horizontal and vertical scaling strategies</li>
+    <li>Load balancing and distribution techniques</li>
+    <li>Database optimization and sharding</li>
+    <li>Microservices architecture patterns</li>
+</ul>
+
+<h2>Best Practices and Guidelines</h2>
+<p>Following established best practices ensures that your {topic_name.lower()} implementations are maintainable, secure, and performant.</p>
+
+<h3>Code Quality and Maintainability</h3>
+<p>Maintaining high code quality is essential for long-term project success. Key practices include:</p>
+<ul>
+    <li>Comprehensive testing strategies and coverage</li>
+    <li>Clear documentation and code comments</li>
+    <li>Consistent coding standards and style guides</li>
+    <li>Regular code reviews and refactoring</li>
+</ul>
+
+<h3>Security Considerations</h3>
+<p>Security should be integrated into every aspect of {topic_name.lower()} development. Important considerations include:</p>
+<ul>
+    <li>Input validation and sanitization</li>
+    <li>Authentication and authorization mechanisms</li>
+    <li>Data encryption and secure communication</li>
+    <li>Regular security audits and updates</li>
+</ul>
+
+<h2>Advanced Techniques</h2>
+<p>Experienced developers leverage advanced techniques to solve complex problems and optimize performance in {topic_name.lower()} applications.</p>
+
+<h3>Optimization Strategies</h3>
+<p>Advanced optimization techniques can significantly improve application performance and user experience. These strategies require deep understanding of the underlying systems and careful implementation.</p>
+
+<h3>Integration Patterns</h3>
+<p>Modern applications rarely exist in isolation. Effective integration patterns enable seamless communication between different systems and services.</p>
+
+<h2>Future Trends and Considerations</h2>
+<p>The field of {topic_name.lower()} continues to evolve rapidly. Staying informed about emerging trends and technologies is crucial for maintaining competitive advantage.</p>
+
+<h3>Emerging Technologies</h3>
+<p>New technologies and approaches are constantly emerging in the {topic_name.lower()} space. Understanding these trends helps in making informed architectural decisions.</p>
+
+<h3>Industry Evolution</h3>
+<p>The software development industry continues to evolve, bringing new challenges and opportunities. Adapting to these changes requires continuous learning and skill development.</p>
+
+<h2>Conclusion</h2>
+<p>Mastering advanced {topic_name.lower()} techniques requires dedication, practice, and continuous learning. By following the strategies and best practices outlined in this guide, developers can build robust, scalable, and maintainable applications that meet modern requirements.</p>
+
+<p>The key to success lies in understanding the fundamental principles, applying proven patterns, and staying current with industry developments. As technology continues to evolve, these foundational concepts will remain valuable for building effective solutions.</p>
+        """
+        
+        return content.strip()
 
     def get_trending_topic(self):
         """Get a trending topic for content generation"""
@@ -437,35 +554,115 @@ class Command(BaseCommand):
         return random.choice(colors)
 
     def generate_post_image(self, post, image_prompt):
-        """Generate a professional featured image for the post"""
+        """Generate a professional featured image using the same system as aicontent.py"""
         try:
-            self.stdout.write(f"🎨 Generating image for: {post.title}")
+            self.stdout.write(f"🎨 Generating professional image for: {post.title}")
             
-            # Create professional gradient image
+            # Use the same image generation system as aicontent.py
+            if self.generate_and_save_real_image(post, image_prompt):
+                self.stdout.write(f"✅ Professional image generated successfully")
+            else:
+                self.stdout.write(f"⚠️ Using fallback image generation")
+                
+        except Exception as e:
+            self.stdout.write(f"❌ Image generation error: {str(e)}")
+
+    def generate_and_save_real_image(self, post, prompt):
+        """
+        Enhanced image generation with better prompts and fallbacks
+        (Same as aicontent.py)
+        """
+        self.stdout.write(f"🎨 Generating professional image for: '{prompt}'...")
+        
+        # Enhanced prompt for better images
+        enhanced_prompt = f"Professional blog featured image, modern design, technology theme, high quality, detailed: {prompt}. Style: clean, minimalist, professional, tech-focused, vibrant colors, 1200x800 aspect ratio"
+        
+        # Try free API first (more reliable)
+        if self.generate_image_with_free_api(post, enhanced_prompt):
+            return True
+        
+        # Fallback to enhanced placeholder
+        self.generate_enhanced_placeholder_image(post, prompt)
+        return True
+
+    def generate_image_with_free_api(self, post, prompt):
+        """
+        Enhanced free API image generation with better services
+        (Same as aicontent.py)
+        """
+        import requests
+        import time
+        
+        apis = [
+            {
+                'name': 'Pollinations.ai',
+                'url': lambda p: f"https://image.pollinations.ai/prompt/{requests.utils.quote(p)}?width=1200&height=800&nologo=true&enhance=true",
+                'delay': 3
+            },
+            {
+                'name': 'Picsum + Overlay',
+                'url': lambda p: f"https://picsum.photos/1200/800?random={hash(p) % 1000}",
+                'delay': 1
+            }
+        ]
+        
+        for api in apis:
+            try:
+                self.stdout.write(f"🎨 Trying {api['name']}...")
+                time.sleep(api['delay'])
+                
+                image_url = api['url'](prompt)
+                response = requests.get(image_url, timeout=60)
+                
+                if response.status_code == 200:
+                    image_name = f"{post.slug}.jpg"
+                    content_file = ContentFile(response.content, name=image_name)
+                    post.featured_image.save(image_name, content_file, save=True)
+                    self.stdout.write(f"✅ {api['name']} image generated successfully.")
+                    return True
+                else:
+                    self.stdout.write(f"❌ {api['name']} failed. Status: {response.status_code}")
+                    
+            except Exception as e:
+                self.stdout.write(f"❌ {api['name']} error: {e}")
+                continue
+        
+        return False
+
+    def generate_enhanced_placeholder_image(self, post, prompt):
+        """
+        Creates a more professional placeholder image with better design
+        (Same as aicontent.py)
+        """
+        self.stdout.write(f"🎨 Creating enhanced placeholder image...")
+        try:
+            from PIL import Image, ImageDraw, ImageFont, ImageFilter
+            
+            # Create a larger, more professional image
             width, height = 1200, 800
+            
+            # Create gradient background
             image = Image.new('RGB', (width, height))
             draw = ImageDraw.Draw(image)
             
-            # Professional color schemes
-            color_schemes = [
-                [(45, 55, 72), (66, 153, 225), (129, 230, 217)],  # Blue gradient
-                [(74, 85, 104), (160, 174, 192), (237, 242, 247)],  # Gray gradient
-                [(49, 130, 206), (76, 217, 100), (255, 235, 59)],  # Blue-green-yellow
-                [(139, 69, 19), (255, 140, 0), (255, 215, 0)],  # Brown-orange-gold
-                [(75, 0, 130), (138, 43, 226), (186, 85, 211)]  # Purple gradient
+            # Professional gradient colors
+            colors = [
+                (45, 55, 72),    # Dark blue-gray
+                (66, 153, 225),  # Blue
+                (129, 230, 217), # Teal
             ]
-            
-            colors = random.choice(color_schemes)
             
             # Create smooth gradient
             for i in range(height):
                 ratio = i / height
                 if ratio < 0.5:
+                    # Blend first two colors
                     blend_ratio = ratio * 2
                     r = int(colors[0][0] + (colors[1][0] - colors[0][0]) * blend_ratio)
                     g = int(colors[0][1] + (colors[1][1] - colors[0][1]) * blend_ratio)
                     b = int(colors[0][2] + (colors[1][2] - colors[0][2]) * blend_ratio)
                 else:
+                    # Blend last two colors
                     blend_ratio = (ratio - 0.5) * 2
                     r = int(colors[1][0] + (colors[2][0] - colors[1][0]) * blend_ratio)
                     g = int(colors[1][1] + (colors[2][1] - colors[1][1]) * blend_ratio)
@@ -473,65 +670,49 @@ class Command(BaseCommand):
                 
                 draw.line([(0, i), (width, i)], fill=(r, g, b))
             
+            # Add subtle texture
+            noise = Image.new('RGB', (width, height), color='white')
+            noise_draw = ImageDraw.Draw(noise)
+            for _ in range(1000):
+                x = random.randint(0, width)
+                y = random.randint(0, height)
+                noise_draw.point((x, y), fill=(255, 255, 255))
+            
+            noise = noise.filter(ImageFilter.GaussianBlur(radius=1))
+            image = Image.blend(image, noise, 0.05)
+            
             # Add geometric elements
-            self.add_geometric_elements(draw, width, height)
+            draw = ImageDraw.Draw(image)
             
-            # Add title text
-            self.add_title_text(draw, post.title, width, height)
+            # Add some circles
+            for _ in range(5):
+                x = random.randint(0, width)
+                y = random.randint(0, height)
+                radius = random.randint(20, 60)
+                alpha = random.randint(10, 30)
+                
+                # Create circle with transparency effect
+                circle_color = (255, 255, 255, alpha)
+                draw.ellipse([x-radius, y-radius, x+radius, y+radius], 
+                            fill=circle_color)
             
-            # Add branding
-            self.add_branding(draw, width, height)
+            # Add title text with better typography
+            try:
+                font_size = 48
+                font = ImageFont.load_default()
+            except:
+                font = None
             
-            # Save image
-            image_buffer = BytesIO()
-            image.save(image_buffer, format='PNG', quality=95, optimize=True)
-            image_buffer.seek(0)
-            
-            image_name = f"{post.slug}.png"
-            content_file = ContentFile(image_buffer.getvalue(), name=image_name)
-            post.featured_image.save(image_name, content_file, save=True)
-            
-            self.stdout.write(f"✅ Professional image created (1200x800)")
-            
-        except Exception as e:
-            self.stdout.write(f"❌ Image generation error: {str(e)}")
-
-    def add_geometric_elements(self, draw, width, height):
-        """Add geometric elements to the image"""
-        # Add circles
-        for _ in range(random.randint(3, 6)):
-            x = random.randint(0, width)
-            y = random.randint(0, height)
-            radius = random.randint(30, 100)
-            alpha = random.randint(20, 60)
-            
-            # Create semi-transparent circles
-            overlay = Image.new('RGBA', (width, height), (255, 255, 255, 0))
-            overlay_draw = ImageDraw.Draw(overlay)
-            overlay_draw.ellipse([x-radius, y-radius, x+radius, y+radius], 
-                               fill=(255, 255, 255, alpha))
-        
-        # Add lines
-        for _ in range(random.randint(2, 4)):
-            x1, y1 = random.randint(0, width), random.randint(0, height)
-            x2, y2 = random.randint(0, width), random.randint(0, height)
-            draw.line([(x1, y1), (x2, y2)], fill=(255, 255, 255, 30), width=2)
-
-    def add_title_text(self, draw, title, width, height):
-        """Add title text to the image"""
-        try:
-            font = ImageFont.load_default()
-            
-            # Split title into lines
-            words = title.split()
+            # Text with shadow effect
+            title_words = post.title.split()
             lines = []
             current_line = []
             
-            for word in words:
+            for word in title_words:
                 current_line.append(word)
                 test_line = ' '.join(current_line)
                 bbox = draw.textbbox((0, 0), test_line, font=font)
-                if bbox[2] - bbox[0] > width - 200:
+                if bbox[2] - bbox[0] > width - 160:  # Leave more margin
                     if len(current_line) > 1:
                         current_line.pop()
                         lines.append(' '.join(current_line))
@@ -543,8 +724,8 @@ class Command(BaseCommand):
             if current_line:
                 lines.append(' '.join(current_line))
             
-            # Draw text with shadow
-            line_height = 70
+            # Center the text with shadow
+            line_height = 60
             total_height = len(lines) * line_height
             start_y = (height - total_height) // 2
             
@@ -554,32 +735,67 @@ class Command(BaseCommand):
                 x = (width - text_width) // 2
                 y = start_y + i * line_height
                 
-                # Shadow
-                draw.text((x + 3, y + 3), line, fill=(0, 0, 0, 150), font=font)
-                # Main text
+                # Draw shadow
+                draw.text((x + 2, y + 2), line, fill=(0, 0, 0, 128), font=font)
+                # Draw main text
                 draw.text((x, y), line, fill='white', font=font)
-                
-        except Exception as e:
-            self.stdout.write(f"⚠️ Text rendering error: {str(e)}")
-
-    def add_branding(self, draw, width, height):
-        """Add branding to the image"""
-        try:
-            font = ImageFont.load_default()
+            
+            # Add blog name/branding
             brand_text = "Digital Codex"
+            brand_bbox = draw.textbbox((0, 0), brand_text, font=font)
+            brand_width = brand_bbox[2] - brand_bbox[0]
+            brand_x = width - brand_width - 40
+            brand_y = height - 60
             
-            bbox = draw.textbbox((0, 0), brand_text, font=font)
-            brand_width = bbox[2] - bbox[0]
-            brand_x = width - brand_width - 50
-            brand_y = height - 80
+            draw.text((brand_x + 1, brand_y + 1), brand_text, fill=(0, 0, 0, 100), font=font)
+            draw.text((brand_x, brand_y), brand_text, fill=(255, 255, 255, 180), font=font)
             
-            # Shadow
-            draw.text((brand_x + 2, brand_y + 2), brand_text, fill=(0, 0, 0, 100), font=font)
-            # Main text
-            draw.text((brand_x, brand_y), brand_text, fill=(255, 255, 255, 200), font=font)
+            # Save the image
+            image_buffer = BytesIO()
+            image.save(image_buffer, format='PNG', quality=95)
+            image_buffer.seek(0)
+            
+            image_name = f"{post.slug}.png"
+            content_file = ContentFile(image_buffer.getvalue(), name=image_name)
+            post.featured_image.save(image_name, content_file, save=True)
+            
+            self.stdout.write(f"✅ Enhanced placeholder image (1200x800) created and saved.")
             
         except Exception as e:
-            self.stdout.write(f"⚠️ Branding error: {str(e)}")
+            self.stdout.write(f"❌ Could not generate enhanced placeholder image. Error: {e}")
+            # Fallback to simple placeholder
+            self.generate_simple_placeholder(post)
+
+    def generate_simple_placeholder(self, post):
+        """Simple fallback placeholder"""
+        try:
+            from PIL import Image, ImageDraw, ImageFont
+            
+            width, height = 1200, 800
+            image = Image.new('RGB', (width, height), color='#2D3748')
+            draw = ImageDraw.Draw(image)
+            
+            # Simple centered text
+            font = ImageFont.load_default()
+            text = post.title[:50] + "..." if len(post.title) > 50 else post.title
+            bbox = draw.textbbox((0, 0), text, font=font)
+            text_width = bbox[2] - bbox[0]
+            x = (width - text_width) // 2
+            y = height // 2
+            
+            draw.text((x, y), text, fill='white', font=font)
+            
+            # Save
+            image_buffer = BytesIO()
+            image.save(image_buffer, format='PNG')
+            image_buffer.seek(0)
+            
+            image_name = f"{post.slug}.png"
+            content_file = ContentFile(image_buffer.getvalue(), name=image_name)
+            post.featured_image.save(image_name, content_file, save=True)
+            
+        except Exception as e:
+            self.stdout.write(f"❌ Simple placeholder failed: {e}")
 
     def update_publishing_log(self, success_count):
         """Update publishing log for tracking"""

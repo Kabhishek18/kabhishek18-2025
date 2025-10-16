@@ -1227,3 +1227,184 @@ def retry_failed_image_uploads(self):
     except Exception as e:
         logger.error(f"Error during automatic retry of failed uploads: {str(e)}")
         raise self.retry(exc=e, countdown=1800)  # Retry after 30 minutes
+
+@shared_task(name="blog.tasks.auto_publish_premium_post")
+def auto_publish_premium_post():
+    """
+    Celery task to generate and publish one premium quality blog post.
+    
+    This task uses the enhanced auto_publish_content command with:
+    - Premium quality level (12,000-18,000 characters)
+    - Professional image generation
+    - SEO optimization
+    - Built-in safety limits
+    
+    Schedule 3 times per week in Django Admin:
+    - Task name: blog.tasks.auto_publish_premium_post
+    - Interval: Every 2-3 days
+    - No arguments needed
+    
+    Returns:
+        dict: Task result with success status and details
+    """
+    try:
+        logger.info("Starting automated premium blog post generation via Celery")
+        
+        # Call the enhanced auto_publish_content command
+        call_command('auto_publish_content', count=1, quality='premium')
+        
+        result = {
+            'success': True,
+            'message': f"Successfully generated 1 premium blog post",
+            'timestamp': timezone.now().isoformat(),
+            'quality': 'premium',
+            'count': 1
+        }
+        
+        logger.info(f"Celery task completed: {result['message']}")
+        return result
+        
+    except Exception as e:
+        error_result = {
+            'success': False,
+            'error': str(e),
+            'timestamp': timezone.now().isoformat(),
+            'quality': 'premium',
+            'count': 1
+        }
+        
+        logger.error(f"Celery task failed: {str(e)}")
+        return error_result
+
+
+@shared_task(name="blog.tasks.auto_publish_standard_post")  
+def auto_publish_standard_post():
+    """
+    Celery task to generate and publish one standard quality blog post.
+    
+    Alternative task for lighter content generation with:
+    - Standard quality level (8,000-12,000 characters)
+    - Professional image generation
+    - SEO optimization
+    
+    Returns:
+        dict: Task result with success status and details
+    """
+    try:
+        logger.info("Starting automated standard blog post generation via Celery")
+        
+        # Call the enhanced auto_publish_content command
+        call_command('auto_publish_content', count=1, quality='standard')
+        
+        result = {
+            'success': True,
+            'message': f"Successfully generated 1 standard blog post",
+            'timestamp': timezone.now().isoformat(),
+            'quality': 'standard',
+            'count': 1
+        }
+        
+        logger.info(f"Celery task completed: {result['message']}")
+        return result
+        
+    except Exception as e:
+        error_result = {
+            'success': False,
+            'error': str(e),
+            'timestamp': timezone.now().isoformat(),
+            'quality': 'standard',
+            'count': 1
+        }
+        
+        logger.error(f"Celery task failed: {str(e)}")
+        return error_result
+
+
+@shared_task(name="blog.tasks.auto_publish_expert_post")
+def auto_publish_expert_post():
+    """
+    Celery task to generate and publish one expert quality blog post.
+    
+    High-quality content generation with:
+    - Expert quality level (18,000-25,000 characters)
+    - Cutting-edge technical content
+    - Professional image generation
+    - Advanced SEO optimization
+    
+    Returns:
+        dict: Task result with success status and details
+    """
+    try:
+        logger.info("Starting automated expert blog post generation via Celery")
+        
+        # Call the enhanced auto_publish_content command
+        call_command('auto_publish_content', count=1, quality='expert')
+        
+        result = {
+            'success': True,
+            'message': f"Successfully generated 1 expert blog post",
+            'timestamp': timezone.now().isoformat(),
+            'quality': 'expert',
+            'count': 1
+        }
+        
+        logger.info(f"Celery task completed: {result['message']}")
+        return result
+        
+    except Exception as e:
+        error_result = {
+            'success': False,
+            'error': str(e),
+            'timestamp': timezone.now().isoformat(),
+            'quality': 'expert',
+            'count': 1
+        }
+        
+        logger.error(f"Celery task failed: {str(e)}")
+        return error_result
+
+
+@shared_task(name="blog.tasks.weekly_content_batch")
+def weekly_content_batch():
+    """
+    Generate 3 blog posts in one batch for weekly scheduling.
+    
+    This task generates 3 premium posts at once using the enhanced system:
+    - 3 premium quality posts
+    - Professional images for all posts
+    - SEO optimization
+    - Built-in safety features
+    
+    Returns:
+        dict: Task result with success status and details
+    """
+    try:
+        logger.info("Starting weekly content batch generation (3 premium posts)")
+        
+        # Generate 3 premium posts in one batch
+        call_command('auto_publish_content', count=3, quality='premium')
+        
+        result = {
+            'success': True,
+            'message': f"Successfully generated 3 premium blog posts in weekly batch",
+            'timestamp': timezone.now().isoformat(),
+            'quality': 'premium',
+            'count': 3,
+            'batch_type': 'weekly'
+        }
+        
+        logger.info(f"Weekly batch completed: {result['message']}")
+        return result
+        
+    except Exception as e:
+        error_result = {
+            'success': False,
+            'error': str(e),
+            'timestamp': timezone.now().isoformat(),
+            'quality': 'premium',
+            'count': 3,
+            'batch_type': 'weekly'
+        }
+        
+        logger.error(f"Weekly batch failed: {str(e)}")
+        return error_result
