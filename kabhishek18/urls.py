@@ -56,6 +56,11 @@ urlpatterns = [
         TemplateView.as_view(template_name="humans.txt", content_type="text/plain"),
         name="humans",
     ),
+    path(
+        "ads.txt",
+        TemplateView.as_view(template_name="ads.txt", content_type="text/plain"),
+        name="ads",
+    ),
 ]
 
 # Add Swagger URLs only when in DEBUG mode
