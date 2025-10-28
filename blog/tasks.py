@@ -42,7 +42,7 @@ def send_confirmation_email(subscriber_id):
         send_mail(
             subject='Confirm your newsletter subscription',
             message=plain_message,
-            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com'),
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'developer@kabhishek18.com'),
             recipient_list=[subscriber.email],
             html_message=html_message,
             fail_silently=False,
@@ -104,7 +104,7 @@ def send_new_post_notification(post_id):
                 send_mail(
                     subject=f'New post: {post.title}',
                     message=plain_message,
-                    from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com'),
+                    from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'Developer@kabhishek18.com'),
                     recipient_list=[subscriber.email],
                     html_message=html_message,
                     fail_silently=False,

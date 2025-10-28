@@ -477,13 +477,13 @@ class Command(BaseCommand):
     def get_or_create_author(self):
         """Get or create the author for posts"""
         try:
-            author = User.objects.get(username='admin')
+            author = User.objects.get(email='developer@kabhishek18.com')
         except User.DoesNotExist:
             author = User.objects.create_user(
                 username='admin',
-                email='admin@digitalcodex.com',
-                first_name='Digital',
-                last_name='Codex',
+                email='developer@kabhishek18.com',
+                first_name='Kumar',
+                last_name='Abhishek',
                 is_staff=True,
                 is_superuser=True
             )
