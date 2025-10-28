@@ -480,7 +480,7 @@ class Command(BaseCommand):
             author = User.objects.get(email='developer@kabhishek18.com')
         except User.DoesNotExist:
             author = User.objects.create_user(
-                username='admin',
+                username='Panda',
                 email='developer@kabhishek18.com',
                 first_name='Kumar',
                 last_name='Abhishek',
