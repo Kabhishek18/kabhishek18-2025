@@ -18,11 +18,12 @@ from unfold.contrib.forms.widgets import WysiwygWidget
 from .models import Post, Category, NewsletterSubscriber, Tag, Comment, SocialShare, AuthorProfile, MediaItem
 from .linkedin_models import LinkedInConfig, LinkedInPost
 from ckeditor.widgets import CKEditorWidget
+from .admin_quality import QualityScoreMixin, ContentQualityAdmin
 
 
 @admin.register(Post)
-class PostAdmin(ModelAdmin):
-    list_display = ('title', 'author', 'status', 'is_featured', 'view_count', 'engagement_score', 'linkedin_status', 'created_at')
+class PostAdmin(QualityScoreMixin, ModelAdmin):
+    list_display = ('title', 'author', 'status', 'quality_score_display', 'is_featured', 'view_count', 'engagement_score', 'linkedin_status', 'created_at')
     list_filter = ('status', 'is_featured', 'categories', 'tags', 'author', 'created_at', 'linkedin_posts__status')
     search_fields = ('title', 'excerpt', 'content')
     prepopulated_fields = {'slug': ('title',)}
@@ -63,7 +64,14 @@ class PostAdmin(ModelAdmin):
     )
     
     readonly_fields = ('view_count', 'linkedin_posting_info')
-    actions = ['mark_as_featured', 'unmark_as_featured', 'clear_content_cache', 'post_to_linkedin', 'retry_linkedin_posting']
+    actions = [
+        'mark_as_featured', 
+        'unmark_as_featured', 
+        'clear_content_cache', 
+        'post_to_linkedin', 
+        'retry_linkedin_posting',
+        'regenerate_low_quality_content'
+    ]
     
     def engagement_score(self, obj):
         """Calculate and display engagement score based on views, comments, and shares"""
@@ -99,6 +107,134 @@ class PostAdmin(ModelAdmin):
         ContentDiscoveryService.clear_content_caches()
         self.message_user(request, 'Content discovery caches cleared.')
     clear_content_cache.short_description = "Clear content discovery caches"
+    
+    def regenerate_low_quality_content(self, request, queryset):
+        """Regenerate content for posts with low quality scores"""
+        from blog.content_quality import generate_quality_report
+        import os
+        import google.generativeai as genai
+        from django.utils.text import slugify
+        
+        # Check for API key
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            self.message_user(
+                request,
+                '❌ GEMINI_API_KEY not found. Cannot regenerate content.',
+                messages.ERROR
+            )
+            return
+        
+        regenerated_count = 0
+        skipped_count = 0
+        
+        for post in queryset:
+            # Check current quality
+            report = generate_quality_report(post.content, post.title, post.excerpt)
+            
+            # Only regenerate if quality is low (< 75)
+            if report['score'] >= 75:
+                skipped_count += 1
+                continue
+            
+            try:
+                # Configure Gemini
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel('gemini-2.5-flash')
+                
+                # Create improvement prompt
+                prompt = f"""
+                Improve this blog post to meet high-quality standards.
+                
+                **Current Post:**
+                Title: {post.title}
+                Content: {post.content[:1000]}...
+                
+                **Quality Issues:**
+                {chr(10).join(f"- {issue}" for issue in report['issues'][:3])}
+                
+                **Requirements:**
+                - Minimum 1000 words
+                - Clear structure with H2/H3 headings
+                - Include practical examples
+                - Good readability (Flesch score 50+)
+                - Add bullet points and lists
+                - Include actionable recommendations
+                
+                **OUTPUT AS JSON:**
+                {{
+                    "title": "Improved title (under 60 chars)",
+                    "excerpt": "Improved meta description (120-155 chars)",
+                    "content": "Improved HTML content with better structure and examples"
+                }}
+                
+                Write high-quality, original content that addresses all quality issues.
+                """
+                
+                # Generate improved content
+                response = model.generate_content(
+                    prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        temperature=0.8,
+                        max_output_tokens=20000,
+                    )
+                )
+                
+                # Parse response
+                import json
+                import re
+                cleaned_text = response.text.strip()
+                if cleaned_text.startswith("```json"):
+                    cleaned_text = cleaned_text[7:]
+                if cleaned_text.endswith("```"):
+                    cleaned_text = cleaned_text[:-3]
+                cleaned_text = cleaned_text.strip()
+                
+                ai_data = json.loads(cleaned_text)
+                
+                # Update post
+                post.title = ai_data.get('title', post.title)
+                post.excerpt = ai_data.get('excerpt', post.excerpt)
+                post.content = ai_data.get('content', post.content)
+                
+                # Regenerate slug if title changed
+                base_slug = slugify(post.title)
+                slug = base_slug
+                counter = 1
+                while Post.objects.filter(slug=slug).exclude(id=post.id).exists():
+                    slug = f"{base_slug}-{counter}"
+                    counter += 1
+                post.slug = slug
+                
+                # Keep as draft for review
+                post.status = 'draft'
+                post.save()
+                
+                regenerated_count += 1
+                
+            except Exception as e:
+                self.message_user(
+                    request,
+                    f'❌ Error regenerating "{post.title}": {str(e)}',
+                    messages.ERROR
+                )
+        
+        # Show results
+        if regenerated_count > 0:
+            self.message_user(
+                request,
+                f'✅ Regenerated {regenerated_count} post(s) with improved content. Posts saved as drafts for review.',
+                messages.SUCCESS
+            )
+        
+        if skipped_count > 0:
+            self.message_user(
+                request,
+                f'ℹ️ Skipped {skipped_count} post(s) - already high quality (score ≥ 75)',
+                messages.INFO
+            )
+    
+    regenerate_low_quality_content.short_description = "🔄 Regenerate low-quality content (AI)"
     
     def linkedin_status(self, obj):
         """Display LinkedIn posting status"""
