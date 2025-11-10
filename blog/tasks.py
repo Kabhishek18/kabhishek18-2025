@@ -338,6 +338,173 @@ def cleanup_spam_attempts():
         raise
 
 
+@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+def regenerate_post_content_task(self, post_id):
+    """
+    Celery task to regenerate low-quality post content asynchronously.
+    
+    This prevents admin interface timeouts by processing in the background.
+    
+    Args:
+        post_id (int): ID of the post to regenerate
+        
+    Returns:
+        dict: Result information
+    """
+    from .models import Post
+    from .content_quality import generate_quality_report
+    from django.utils.text import slugify
+    import os
+    import google.generativeai as genai
+    import json
+    import time
+    
+    logger.info(f"Starting content regeneration for post ID {post_id}")
+    
+    try:
+        # Get the post
+        try:
+            post = Post.objects.get(id=post_id)
+        except Post.DoesNotExist:
+            error_msg = f"Post with ID {post_id} not found"
+            logger.error(error_msg)
+            return {'success': False, 'error': error_msg}
+        
+        # Check API key
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            error_msg = "GEMINI_API_KEY not found"
+            logger.error(error_msg)
+            return {'success': False, 'error': error_msg}
+        
+        # Check current quality
+        try:
+            report = generate_quality_report(post.content, post.title, post.excerpt)
+        except Exception as e:
+            logger.error(f"Quality check failed for post {post_id}: {str(e)}")
+            return {'success': False, 'error': f'Quality check failed: {str(e)}'}
+        
+        # Skip if already high quality
+        if report['score'] >= 75:
+            logger.info(f"Post {post_id} already high quality (score: {report['score']})")
+            return {
+                'success': True,
+                'skipped': True,
+                'score': report['score'],
+                'message': 'Post already high quality'
+            }
+        
+        # Configure Gemini
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        
+        # Create improvement prompt
+        prompt = f"""Improve this blog post to meet high-quality standards.
+
+**Current Post:**
+Title: {post.title}
+Content: {post.content[:1000]}...
+
+**Quality Issues:**
+{chr(10).join(f"- {issue}" for issue in report['issues'][:3])}
+
+**Requirements:**
+- Minimum 1000 words
+- Clear structure with H2/H3 headings
+- Include practical examples
+- Good readability (Flesch score 50+)
+- Add bullet points and lists
+- Include actionable recommendations
+
+**OUTPUT AS JSON:**
+{{
+    "title": "Improved title (under 60 chars)",
+    "excerpt": "Improved meta description (120-155 chars)",
+    "content": "Improved HTML content with better structure and examples"
+}}
+
+Write high-quality, original content that addresses all quality issues."""
+        
+        # Generate improved content with retry logic
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            try:
+                response = model.generate_content(
+                    prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        temperature=0.8,
+                        max_output_tokens=20000,
+                    )
+                )
+                break
+            except Exception as e:
+                if attempt < max_attempts - 1:
+                    logger.warning(f"Attempt {attempt + 1} failed, retrying: {str(e)}")
+                    time.sleep(5 * (attempt + 1))
+                else:
+                    raise
+        
+        # Parse response
+        cleaned_text = response.text.strip()
+        if cleaned_text.startswith("```json"):
+            cleaned_text = cleaned_text[7:]
+        if cleaned_text.endswith("```"):
+            cleaned_text = cleaned_text[:-3]
+        cleaned_text = cleaned_text.strip()
+        
+        ai_data = json.loads(cleaned_text)
+        
+        # Update post
+        old_title = post.title
+        post.title = ai_data.get('title', post.title)[:200]
+        post.excerpt = ai_data.get('excerpt', post.excerpt)[:500]
+        post.content = ai_data.get('content', post.content)
+        
+        # Regenerate slug if title changed
+        if post.title != old_title:
+            base_slug = slugify(post.title)
+            slug = base_slug
+            counter = 1
+            while Post.objects.filter(slug=slug).exclude(id=post.id).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            post.slug = slug
+        
+        # Save as draft for review
+        post.status = 'draft'
+        post.save()
+        
+        # Check new quality
+        new_report = generate_quality_report(post.content, post.title, post.excerpt)
+        
+        result = {
+            'success': True,
+            'post_id': post_id,
+            'post_title': post.title,
+            'old_score': report['score'],
+            'new_score': new_report['score'],
+            'improvement': new_report['score'] - report['score']
+        }
+        
+        logger.info(f"Successfully regenerated post {post_id}: {old_title} -> {post.title} (score: {report['score']:.0f} -> {new_report['score']:.0f})")
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error regenerating post {post_id}: {str(e)}")
+        
+        # Retry on certain errors
+        if self.request.retries < self.max_retries:
+            logger.info(f"Retrying post {post_id} (attempt {self.request.retries + 2})")
+            raise self.retry(countdown=60, exc=e)
+        
+        return {
+            'success': False,
+            'error': str(e),
+            'post_id': post_id
+        }
+
+
 
 
 @shared_task(name="blog.tasks.generate_ai_blog_post")

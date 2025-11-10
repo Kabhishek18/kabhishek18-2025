@@ -109,11 +109,8 @@ class PostAdmin(QualityScoreMixin, ModelAdmin):
     clear_content_cache.short_description = "Clear content discovery caches"
     
     def regenerate_low_quality_content(self, request, queryset):
-        """Regenerate content for posts with low quality scores"""
-        from blog.content_quality import generate_quality_report
+        """Regenerate content for posts with low quality scores (async via Celery)"""
         import os
-        import google.generativeai as genai
-        from django.utils.text import slugify
         
         # Check for API key
         api_key = os.getenv("GEMINI_API_KEY")
@@ -125,64 +122,107 @@ class PostAdmin(QualityScoreMixin, ModelAdmin):
             )
             return
         
+        # Limit to prevent timeout
+        post_count = queryset.count()
+        if post_count > 10:
+            self.message_user(
+                request,
+                f'⚠️ Too many posts selected ({post_count}). Please select 10 or fewer posts at a time.',
+                messages.WARNING
+            )
+            return
+        
+        # Check if Celery is available
+        try:
+            from blog.tasks import regenerate_post_content_task
+            use_celery = True
+        except ImportError:
+            use_celery = False
+        
+        if use_celery:
+            # Queue posts for async regeneration
+            queued_count = 0
+            for post in queryset:
+                try:
+                    regenerate_post_content_task.delay(post.id)
+                    queued_count += 1
+                except Exception as e:
+                    self.message_user(
+                        request,
+                        f'❌ Error queuing "{post.title}": {str(e)}',
+                        messages.ERROR
+                    )
+            
+            if queued_count > 0:
+                self.message_user(
+                    request,
+                    f'✅ Queued {queued_count} post(s) for regeneration. Check back in a few minutes.',
+                    messages.SUCCESS
+                )
+        else:
+            # Fallback to synchronous processing (with limits)
+            self._regenerate_sync(request, queryset)
+    
+    def _regenerate_sync(self, request, queryset):
+        """Synchronous regeneration fallback (with safety limits)"""
+        from blog.content_quality import generate_quality_report
+        import os
+        import google.generativeai as genai
+        from django.utils.text import slugify
+        import json
+        import time
+        
+        api_key = os.getenv("GEMINI_API_KEY")
         regenerated_count = 0
         skipped_count = 0
+        error_count = 0
         
-        for post in queryset:
-            # Check current quality
-            report = generate_quality_report(post.content, post.title, post.excerpt)
-            
-            # Only regenerate if quality is low (< 75)
-            if report['score'] >= 75:
-                skipped_count += 1
-                continue
-            
+        # Limit to 3 posts max for sync processing
+        posts_to_process = list(queryset[:3])
+        
+        for post in posts_to_process:
             try:
-                # Configure Gemini
+                # Check current quality (with timeout protection)
+                try:
+                    report = generate_quality_report(post.content, post.title, post.excerpt)
+                except Exception as e:
+                    self.message_user(
+                        request,
+                        f'⚠️ Could not check quality for "{post.title}": {str(e)}',
+                        messages.WARNING
+                    )
+                    continue
+                
+                # Only regenerate if quality is low (< 75)
+                if report['score'] >= 75:
+                    skipped_count += 1
+                    continue
+                
+                # Configure Gemini with timeout
                 genai.configure(api_key=api_key)
                 model = genai.GenerativeModel('gemini-2.5-flash')
                 
-                # Create improvement prompt
-                prompt = f"""
-                Improve this blog post to meet high-quality standards.
+                # Shorter prompt for faster processing
+                prompt = f"""Improve this blog post. Make it 1000+ words with clear H2 headings, examples, and good structure.
+
+Title: {post.title}
+Current content: {post.content[:500]}...
+
+Issues: {', '.join(report['issues'][:2])}
+
+Return JSON: {{"title": "improved title", "excerpt": "meta description", "content": "improved HTML content"}}"""
                 
-                **Current Post:**
-                Title: {post.title}
-                Content: {post.content[:1000]}...
-                
-                **Quality Issues:**
-                {chr(10).join(f"- {issue}" for issue in report['issues'][:3])}
-                
-                **Requirements:**
-                - Minimum 1000 words
-                - Clear structure with H2/H3 headings
-                - Include practical examples
-                - Good readability (Flesch score 50+)
-                - Add bullet points and lists
-                - Include actionable recommendations
-                
-                **OUTPUT AS JSON:**
-                {{
-                    "title": "Improved title (under 60 chars)",
-                    "excerpt": "Improved meta description (120-155 chars)",
-                    "content": "Improved HTML content with better structure and examples"
-                }}
-                
-                Write high-quality, original content that addresses all quality issues.
-                """
-                
-                # Generate improved content
+                # Generate with timeout protection
                 response = model.generate_content(
                     prompt,
                     generation_config=genai.types.GenerationConfig(
                         temperature=0.8,
-                        max_output_tokens=20000,
-                    )
+                        max_output_tokens=15000,  # Reduced for speed
+                    ),
+                    request_options={'timeout': 30}  # 30 second timeout
                 )
                 
                 # Parse response
-                import json
-                import re
                 cleaned_text = response.text.strip()
                 if cleaned_text.startswith("```json"):
                     cleaned_text = cleaned_text[7:]
@@ -193,11 +233,11 @@ class PostAdmin(QualityScoreMixin, ModelAdmin):
                 ai_data = json.loads(cleaned_text)
                 
                 # Update post
-                post.title = ai_data.get('title', post.title)
-                post.excerpt = ai_data.get('excerpt', post.excerpt)
+                post.title = ai_data.get('title', post.title)[:200]  # Limit length
+                post.excerpt = ai_data.get('excerpt', post.excerpt)[:500]
                 post.content = ai_data.get('content', post.content)
                 
-                # Regenerate slug if title changed
+                # Regenerate slug
                 base_slug = slugify(post.title)
                 slug = base_slug
                 counter = 1
@@ -206,16 +246,20 @@ class PostAdmin(QualityScoreMixin, ModelAdmin):
                     counter += 1
                 post.slug = slug
                 
-                # Keep as draft for review
+                # Save as draft
                 post.status = 'draft'
                 post.save()
                 
                 regenerated_count += 1
                 
+                # Rate limiting
+                time.sleep(2)
+                
             except Exception as e:
+                error_count += 1
                 self.message_user(
                     request,
-                    f'❌ Error regenerating "{post.title}": {str(e)}',
+                    f'❌ Error regenerating "{post.title}": {str(e)[:100]}',
                     messages.ERROR
                 )
         
@@ -223,7 +267,7 @@ class PostAdmin(QualityScoreMixin, ModelAdmin):
         if regenerated_count > 0:
             self.message_user(
                 request,
-                f'✅ Regenerated {regenerated_count} post(s) with improved content. Posts saved as drafts for review.',
+                f'✅ Regenerated {regenerated_count} post(s). Posts saved as drafts for review.',
                 messages.SUCCESS
             )
         
@@ -232,6 +276,13 @@ class PostAdmin(QualityScoreMixin, ModelAdmin):
                 request,
                 f'ℹ️ Skipped {skipped_count} post(s) - already high quality (score ≥ 75)',
                 messages.INFO
+            )
+        
+        if error_count > 0:
+            self.message_user(
+                request,
+                f'⚠️ {error_count} post(s) failed. Try regenerating them individually.',
+                messages.WARNING
             )
     
     regenerate_low_quality_content.short_description = "🔄 Regenerate low-quality content (AI)"
