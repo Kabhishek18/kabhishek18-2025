@@ -338,6 +338,135 @@ def cleanup_spam_attempts():
         raise
 
 
+@shared_task
+def adsense_audit_task(auto_fix=False):
+    """
+    Celery task to audit content for AdSense compliance.
+    
+    This task can be run periodically to ensure content quality.
+    
+    Args:
+        auto_fix (bool): If True, automatically unpublish low-quality posts
+        
+    Returns:
+        dict: Audit results
+    """
+    from .models import Post
+    from .content_quality import generate_quality_report
+    from django.utils.html import strip_tags
+    
+    logger.info(f"Starting AdSense audit (auto_fix={auto_fix})")
+    
+    MIN_WORDS = 300
+    MIN_SCORE = 70
+    
+    try:
+        # Get all published posts
+        posts = Post.objects.filter(status='published')
+        
+        if not posts.exists():
+            return {
+                'success': True,
+                'message': 'No published posts to audit',
+                'total': 0
+            }
+        
+        # Analyze posts
+        thin_content = []
+        low_quality = []
+        good_quality = []
+        excellent_quality = []
+        
+        for post in posts:
+            # Get word count
+            plain_text = strip_tags(post.content)
+            words = len(plain_text.split())
+            
+            # Get quality score
+            try:
+                report = generate_quality_report(post.content, post.title, post.excerpt)
+                score = report['score']
+            except Exception as e:
+                logger.error(f"Quality check failed for post {post.id}: {str(e)}")
+                score = 0
+            
+            post_info = {
+                'id': post.id,
+                'title': post.title,
+                'words': words,
+                'score': score
+            }
+            
+            # Categorize
+            if words < MIN_WORDS:
+                thin_content.append(post_info)
+            elif score < MIN_SCORE:
+                low_quality.append(post_info)
+            elif score >= 90:
+                excellent_quality.append(post_info)
+            else:
+                good_quality.append(post_info)
+        
+        # Auto-fix if enabled
+        unpublished_count = 0
+        if auto_fix:
+            # Unpublish thin content
+            for post_info in thin_content:
+                Post.objects.filter(id=post_info['id']).update(status='draft')
+                unpublished_count += 1
+                logger.info(f"Unpublished thin content: {post_info['title']} ({post_info['words']} words)")
+            
+            # Unpublish low quality
+            for post_info in low_quality:
+                Post.objects.filter(id=post_info['id']).update(status='draft')
+                unpublished_count += 1
+                logger.info(f"Unpublished low quality: {post_info['title']} (score: {post_info['score']:.0f})")
+        
+        result = {
+            'success': True,
+            'total_posts': posts.count(),
+            'excellent': len(excellent_quality),
+            'good': len(good_quality),
+            'low_quality': len(low_quality),
+            'thin_content': len(thin_content),
+            'issues_found': len(thin_content) + len(low_quality),
+            'unpublished': unpublished_count if auto_fix else 0,
+            'auto_fix_enabled': auto_fix
+        }
+        
+        logger.info(f"AdSense audit completed: {result}")
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"AdSense audit failed: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@shared_task
+def adsense_audit_report_task():
+    """
+    Run AdSense audit and send report (without auto-fix).
+    
+    This is safe to run periodically as it only reports issues.
+    """
+    return adsense_audit_task(auto_fix=False)
+
+
+@shared_task
+def adsense_audit_autofix_task():
+    """
+    Run AdSense audit with auto-fix enabled.
+    
+    This will automatically unpublish low-quality posts.
+    Use with caution - only enable if you want automatic unpublishing.
+    """
+    return adsense_audit_task(auto_fix=True)
+
+
 @shared_task(bind=True, max_retries=2, default_retry_delay=60)
 def regenerate_post_content_task(self, post_id):
     """
@@ -398,32 +527,89 @@ def regenerate_post_content_task(self, post_id):
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-2.5-flash')
         
-        # Create improvement prompt
-        prompt = f"""Improve this blog post to meet high-quality standards.
+        # Create improvement prompt - KEEP ORIGINAL TITLE AND TOPIC
+        prompt = f"""Improve the CONTENT of this blog post to score 95-100 on quality metrics.
+
+**IMPORTANT: Keep the SAME title and topic. Only improve the content quality.**
 
 **Current Post:**
 Title: {post.title}
-Content: {post.content[:1000]}...
+Topic: {post.title}
+Current Content: {post.content[:1000]}...
 
-**Quality Issues:**
+**Quality Issues to Fix:**
 {chr(10).join(f"- {issue}" for issue in report['issues'][:3])}
 
-**Requirements:**
-- Minimum 1000 words
-- Clear structure with H2/H3 headings
-- Include practical examples
-- Good readability (Flesch score 50+)
-- Add bullet points and lists
-- Include actionable recommendations
+**YOUR TASK:**
+Rewrite the CONTENT ONLY about the SAME topic ("{post.title}") to achieve 95-100 quality score.
+DO NOT change the title or topic. Only improve the content.
+
+**CRITICAL Requirements for 95-100 Score:**
+
+1. **Word Count (Target: 1200-1500 words)**
+   - Write comprehensive content about "{post.title}"
+   - Include multiple examples and use cases
+   - Add practical implementation details
+
+2. **Structure (Must Have):**
+   - At least 4-5 H2 section headings
+   - 2-3 H3 sub-headings under each H2
+   - 6+ well-organized paragraphs
+   - 2-3 bullet point lists (ul/ol)
+   - Code examples in <code> or <pre> tags (if technical)
+
+3. **Readability (Target: 50-60 Flesch score):**
+   - Use clear, concise sentences (15-20 words average)
+   - Mix short and medium sentences
+   - Use simple, direct language
+   - Break up long paragraphs
+
+4. **Content Quality:**
+   - Original insights about "{post.title}"
+   - Practical, actionable advice
+   - Real-world examples
+   - Step-by-step explanations
+   - Best practices and tips
+
+**STRUCTURE TEMPLATE:**
+<h2>Introduction to {post.title}</h2>
+<p>Hook and overview (2-3 paragraphs)</p>
+
+<h2>Understanding [Main Concept]</h2>
+<p>Detailed explanation</p>
+<h3>Key Points</h3>
+<ul>
+<li>Point 1 with details</li>
+<li>Point 2 with details</li>
+<li>Point 3 with details</li>
+</ul>
+
+<h2>Implementation Guide</h2>
+<p>Step-by-step guide</p>
+<h3>Example</h3>
+<p>Practical example with code if applicable</p>
+
+<h2>Best Practices</h2>
+<ul>
+<li>Practice 1</li>
+<li>Practice 2</li>
+<li>Practice 3</li>
+</ul>
+
+<h2>Common Pitfalls</h2>
+<p>What to avoid</p>
+
+<h2>Conclusion</h2>
+<p>Summary and next steps</p>
 
 **OUTPUT AS JSON:**
 {{
-    "title": "Improved title (under 60 chars)",
-    "excerpt": "Improved meta description (120-155 chars)",
-    "content": "Improved HTML content with better structure and examples"
+    "title": "{post.title}",
+    "excerpt": "Engaging meta description with keywords (140-155 chars)",
+    "content": "Complete HTML content following the structure above (1200-1500 words)"
 }}
 
-Write high-quality, original content that addresses all quality issues."""
+Write EXCELLENT content that will score 95-100. Be comprehensive, well-structured, and highly readable."""
         
         # Generate improved content with retry logic
         max_attempts = 3
@@ -454,21 +640,15 @@ Write high-quality, original content that addresses all quality issues."""
         
         ai_data = json.loads(cleaned_text)
         
-        # Update post
+        # Update post - KEEP ORIGINAL TITLE AND SLUG
         old_title = post.title
-        post.title = ai_data.get('title', post.title)[:200]
+        old_slug = post.slug
+        
+        # DO NOT change title or slug - only update content and excerpt
+        # post.title stays the same
+        # post.slug stays the same
         post.excerpt = ai_data.get('excerpt', post.excerpt)[:500]
         post.content = ai_data.get('content', post.content)
-        
-        # Regenerate slug if title changed
-        if post.title != old_title:
-            base_slug = slugify(post.title)
-            slug = base_slug
-            counter = 1
-            while Post.objects.filter(slug=slug).exclude(id=post.id).exists():
-                slug = f"{base_slug}-{counter}"
-                counter += 1
-            post.slug = slug
         
         # Save as draft for review
         post.status = 'draft'
@@ -480,13 +660,15 @@ Write high-quality, original content that addresses all quality issues."""
         result = {
             'success': True,
             'post_id': post_id,
-            'post_title': post.title,
+            'post_title': post.title,  # Same as before
             'old_score': report['score'],
             'new_score': new_report['score'],
-            'improvement': new_report['score'] - report['score']
+            'improvement': new_report['score'] - report['score'],
+            'title_unchanged': True,
+            'slug_unchanged': True
         }
         
-        logger.info(f"Successfully regenerated post {post_id}: {old_title} -> {post.title} (score: {report['score']:.0f} -> {new_report['score']:.0f})")
+        logger.info(f"Successfully regenerated post {post_id}: {old_title} (score: {report['score']:.0f} -> {new_report['score']:.0f})")
         
         return result
         

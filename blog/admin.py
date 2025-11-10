@@ -202,15 +202,17 @@ class PostAdmin(QualityScoreMixin, ModelAdmin):
                 genai.configure(api_key=api_key)
                 model = genai.GenerativeModel('gemini-2.5-flash')
                 
-                # Shorter prompt for faster processing
-                prompt = f"""Improve this blog post. Make it 1000+ words with clear H2 headings, examples, and good structure.
+                # Prompt - KEEP ORIGINAL TITLE
+                prompt = f"""Improve the CONTENT of this blog post. Keep the SAME title and topic.
 
-Title: {post.title}
+Title: {post.title} (DO NOT CHANGE)
 Current content: {post.content[:500]}...
 
 Issues: {', '.join(report['issues'][:2])}
 
-Return JSON: {{"title": "improved title", "excerpt": "meta description", "content": "improved HTML content"}}"""
+Rewrite the content about "{post.title}" to be 1200+ words with clear H2 headings, examples, and good structure.
+
+Return JSON: {{"title": "{post.title}", "excerpt": "improved meta description", "content": "improved HTML content about {post.title}"}}"""
                 
                 # Generate with timeout protection
                 response = model.generate_content(
@@ -232,19 +234,10 @@ Return JSON: {{"title": "improved title", "excerpt": "meta description", "conten
                 
                 ai_data = json.loads(cleaned_text)
                 
-                # Update post
-                post.title = ai_data.get('title', post.title)[:200]  # Limit length
+                # Update post - KEEP ORIGINAL TITLE AND SLUG
+                # DO NOT change title or slug
                 post.excerpt = ai_data.get('excerpt', post.excerpt)[:500]
                 post.content = ai_data.get('content', post.content)
-                
-                # Regenerate slug
-                base_slug = slugify(post.title)
-                slug = base_slug
-                counter = 1
-                while Post.objects.filter(slug=slug).exclude(id=post.id).exists():
-                    slug = f"{base_slug}-{counter}"
-                    counter += 1
-                post.slug = slug
                 
                 # Save as draft
                 post.status = 'draft'

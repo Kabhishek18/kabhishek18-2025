@@ -30,10 +30,16 @@ class Command(BaseCommand):
         parser.add_argument('--count', type=int, default=1, help='Number of posts to generate')
         parser.add_argument('--schedule', choices=['now', 'daily', 'weekly'], default='now', 
                           help='Publishing schedule')
-        parser.add_argument('--quality', choices=['standard', 'premium', 'expert'], default='premium',
-                          help='Content quality level')
+        parser.add_argument('--quality', choices=['standard', 'premium', 'expert'], default='expert',
+                          help='Content quality level (default: expert for highest quality)')
         parser.add_argument('--dry-run', action='store_true', help='Generate but don\'t publish')
         parser.add_argument('--force', action='store_true', help='Force generation even if quota reached')
+        parser.add_argument('--min-quality-score', type=int, default=90,
+                          help='Minimum quality score required (default: 90)')
+        parser.add_argument('--max-retries', type=int, default=3,
+                          help='Maximum retries if quality too low (default: 3)')
+        parser.add_argument('--author', type=str,
+                          help='Author username or email')
 
     def handle(self, *args, **options):
         self.count = options['count']
@@ -41,6 +47,9 @@ class Command(BaseCommand):
         self.quality = options['quality']
         self.dry_run = options['dry_run']
         self.force = options['force']
+        self.min_quality_score = options.get('min_quality_score', 90)
+        self.max_retries = options.get('max_retries', 3)
+        self.author_identifier = options.get('author')
         
         # Check if we should publish today
         if not self.should_publish_today() and not self.force:
@@ -106,40 +115,82 @@ class Command(BaseCommand):
         return today_posts < 3
 
     def generate_single_post(self, post_number):
-        """Generate a single high-quality post"""
-        try:
-            # Get existing categories for context
-            existing_categories = list(Category.objects.values_list('name', flat=True))
-            
-            # Generate AI content
-            ai_data = self.get_ai_generated_content(existing_categories)
-            
-            if not ai_data:
-                return None
-            
-            # Get or create author
-            author = self.get_or_create_author()
-            
-            # Create the post
-            post = self.create_post_from_ai_data(ai_data, author)
-            
-            if post:
+        """Generate a single HIGHEST QUALITY post with retry logic"""
+        from blog.content_quality import generate_quality_report
+        
+        self.stdout.write(f"\n🎯 Generating post {post_number} (Target quality: {self.min_quality_score}+)")
+        
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                self.stdout.write(f"   Attempt {attempt}/{self.max_retries}...")
+                
+                # Get existing categories for context
+                existing_categories = list(Category.objects.values_list('name', flat=True))
+                
+                # Generate AI content with quality focus
+                ai_data = self.get_ai_generated_content(existing_categories)
+                
+                if not ai_data:
+                    self.stdout.write(f"   ⚠️ No content generated, retrying...")
+                    time.sleep(5)
+                    continue
+                
+                # Get or create author
+                author = self.get_or_create_author()
+                
+                # Create the post
+                post = self.create_post_from_ai_data(ai_data, author)
+                
+                if not post:
+                    self.stdout.write(f"   ⚠️ Post creation failed, retrying...")
+                    time.sleep(5)
+                    continue
+                
                 # Generate and attach image
                 self.generate_post_image(post, ai_data.get('image_prompt', ''))
                 
                 # Add categories and tags
                 self.add_categories_and_tags(post, ai_data)
                 
-                # Set publishing status
-                if not self.dry_run:
-                    post.status = 'published'
-                    post.save()
+                # Check quality BEFORE publishing
+                self.stdout.write(f"   🔍 Checking quality...")
+                quality_report = generate_quality_report(post.content, post.title, post.excerpt)
+                quality_score = quality_report['score']
                 
-                return post
+                self.stdout.write(f"   📊 Quality Score: {quality_score:.1f}/100")
                 
-        except Exception as e:
-            self.stdout.write(f"❌ Error in generate_single_post: {str(e)}")
-            return None
+                # Check if quality meets minimum requirement
+                if quality_score >= self.min_quality_score:
+                    # Quality is excellent!
+                    if not self.dry_run:
+                        post.status = 'published'
+                        post.save()
+                    
+                    self.stdout.write(f"   ✅ EXCELLENT! Quality score {quality_score:.1f} meets requirement ({self.min_quality_score}+)")
+                    return post
+                else:
+                    # Quality too low, delete and retry
+                    self.stdout.write(f"   ⚠️ Quality score {quality_score:.1f} below requirement ({self.min_quality_score})")
+                    
+                    if attempt < self.max_retries:
+                        self.stdout.write(f"   🔄 Deleting and retrying...")
+                        post.delete()
+                        time.sleep(5)  # Wait before retry
+                    else:
+                        # Last attempt, keep as draft
+                        post.status = 'draft'
+                        post.save()
+                        self.stdout.write(f"   ⚠️ Max retries reached. Saved as draft for manual review.")
+                        return post
+                        
+            except Exception as e:
+                self.stdout.write(f"   ❌ Error in attempt {attempt}: {str(e)}")
+                if attempt < self.max_retries:
+                    time.sleep(5)
+                else:
+                    return None
+        
+        return None
 
     @retry(wait=wait_exponential(multiplier=1, min=4, max=60), stop=stop_after_attempt(3))
     def get_ai_generated_content(self, existing_categories):
@@ -157,57 +208,102 @@ class Command(BaseCommand):
         # Quality-based content parameters
         quality_params = self.get_quality_parameters()
         
-        # Enhanced prompt to avoid copyright issues
+        # HIGHEST QUALITY prompt - targets 95-100 quality score
         prompt = f"""
-        Create ORIGINAL technical content for a developer blog. Write from your own knowledge and analysis.
+        Create EXCEPTIONAL, HIGHEST QUALITY technical content that will score 95-100 on quality metrics.
         
-        **IMPORTANT: Write completely original content. Do not quote, copy, or paraphrase existing articles, books, or documentation.**
+        **CRITICAL: This must be EXCELLENT content - comprehensive, well-structured, and highly valuable.**
         
-        **BLOG:** Digital Codex - Technical insights for developers
+        **BLOG:** Digital Codex - Premium technical insights
         **AUDIENCE:** Senior developers, tech leads, engineering managers
         **TOPIC:** {topic}
-        **QUALITY:** {self.quality} level content
+        **QUALITY LEVEL:** {self.quality} (HIGHEST STANDARDS)
+        **TARGET SCORE:** 95-100/100
         
-        **REQUIREMENTS:**
-        - Write {quality_params['min_chars']}-{quality_params['max_chars']} characters
-        - Create original technical insights and analysis
-        - Include practical code examples (write your own)
-        - Share implementation strategies from general knowledge
-        - Provide actionable recommendations
+        **MANDATORY REQUIREMENTS FOR 95-100 SCORE:**
         
-        **CONTENT STRUCTURE:**
-        1. Introduction with problem context
-        2. Technical analysis and approaches
-        3. Implementation examples (original code)
-        4. Best practices and recommendations
-        5. Future considerations
+        1. **LENGTH:** {quality_params['min_words']}-2000 words ({quality_params['min_chars']}-{quality_params['max_chars']} characters)
         
-        **AVOID:**
-        - Copying existing tutorials or documentation
-        - Quoting specific articles or books
-        - Reproducing copyrighted code examples
-        - Referencing specific proprietary implementations
+        2. **STRUCTURE (CRITICAL):**
+           - 5-6 H2 main sections
+           - 2-3 H3 subsections under each H2
+           - 8-10 well-organized paragraphs
+           - 3-4 bullet point lists (ul/ol)
+           - 2-3 code examples in <code> or <pre> tags
+           - Clear, logical flow
         
-        **WRITE ORIGINAL:**
-        - Your own technical analysis
-        - Original code examples
-        - Personal insights on the topic
-        - General best practices from experience
+        3. **READABILITY (Target Flesch 50-60):**
+           - Use clear, concise sentences (15-20 words average)
+           - Mix short and medium sentences
+           - Simple, direct language
+           - Break up long paragraphs
+           - Use active voice
+        
+        4. **CONTENT QUALITY:**
+           - Original insights and analysis
+           - Practical, actionable advice
+           - Real-world examples
+           - Step-by-step explanations
+           - Best practices and tips
+           - Common pitfalls to avoid
+           - Future trends and considerations
+        
+        **REQUIRED STRUCTURE TEMPLATE:**
+        
+        <h2>Introduction</h2>
+        <p>Hook and overview (2-3 paragraphs explaining the problem/topic)</p>
+        
+        <h2>Understanding [Main Concept]</h2>
+        <p>Detailed explanation of core concepts</p>
+        <h3>Key Components</h3>
+        <ul>
+        <li>Component 1 with detailed explanation</li>
+        <li>Component 2 with detailed explanation</li>
+        <li>Component 3 with detailed explanation</li>
+        </ul>
+        
+        <h2>Implementation Guide</h2>
+        <p>Step-by-step implementation details</p>
+        <h3>Code Example</h3>
+        <pre><code>// Practical, working code example
+        // With comments explaining each part
+        </code></pre>
+        
+        <h2>Best Practices</h2>
+        <ul>
+        <li>Best practice 1 with explanation</li>
+        <li>Best practice 2 with explanation</li>
+        <li>Best practice 3 with explanation</li>
+        </ul>
+        
+        <h2>Common Pitfalls and Solutions</h2>
+        <p>What to avoid and how to handle issues</p>
+        <h3>Troubleshooting</h3>
+        <ul>
+        <li>Problem 1 and solution</li>
+        <li>Problem 2 and solution</li>
+        </ul>
+        
+        <h2>Advanced Techniques</h2>
+        <p>Advanced concepts and optimization strategies</p>
+        
+        <h2>Conclusion and Next Steps</h2>
+        <p>Summary and actionable next steps</p>
         
         **OUTPUT AS JSON:**
         {{
-            "title": "Original compelling title (under 60 chars)",
-            "excerpt": "Original meta description (120-155 chars)",
-            "content": "Original HTML content with your own insights",
-            "category": "Appropriate category name",
+            "title": "Compelling, clear title (50-60 chars)",
+            "excerpt": "Engaging meta description with keywords (140-155 chars)",
+            "content": "Complete HTML content following structure above ({quality_params['min_words']}-2000 words)",
+            "category": "Appropriate category",
             "image_prompt": "Professional tech image description",
             "tags": ["relevant", "technical", "tags"],
-            "estimated_read_time": "X min read",
+            "estimated_read_time": "8-10 min read",
             "difficulty_level": "{self.quality}",
-            "key_takeaways": ["original insight 1", "practical tip 2", "recommendation 3"]
+            "key_takeaways": ["actionable insight 1", "practical tip 2", "key recommendation 3"]
         }}
         
-        Write completely original content based on your knowledge and analysis.
+        Write EXCEPTIONAL content that will score 95-100. Be comprehensive, well-structured, and highly valuable.
         """
 
         try:
@@ -244,15 +340,37 @@ class Command(BaseCommand):
                 self.stdout.write("❌ Empty response from Gemini API")
                 return self.generate_fallback_content(topic, quality_params)
             
-            # Clean and parse JSON
+            # Clean and parse JSON with better error handling
             cleaned_text = response.text.strip()
+            
+            # Remove markdown code blocks
             if cleaned_text.startswith("```json"):
                 cleaned_text = cleaned_text[7:]
+            elif cleaned_text.startswith("```"):
+                cleaned_text = cleaned_text[3:]
             if cleaned_text.endswith("```"):
                 cleaned_text = cleaned_text[:-3]
             cleaned_text = cleaned_text.strip()
             
-            ai_data = json.loads(cleaned_text)
+            # Fix common JSON issues
+            # Replace control characters that break JSON
+            cleaned_text = cleaned_text.replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t')
+            # But restore newlines in JSON structure
+            cleaned_text = cleaned_text.replace('\\n', '\n')
+            
+            try:
+                ai_data = json.loads(cleaned_text)
+            except json.JSONDecodeError as json_err:
+                # Try to extract JSON from response
+                import re
+                json_match = re.search(r'\{.*\}', cleaned_text, re.DOTALL)
+                if json_match:
+                    try:
+                        ai_data = json.loads(json_match.group())
+                    except:
+                        raise json_err
+                else:
+                    raise json_err
             
             # Validate content
             if not self.validate_ai_content(ai_data, quality_params):
@@ -421,29 +539,32 @@ class Command(BaseCommand):
         return random.choice(trending_topics)
 
     def get_quality_parameters(self):
-        """Get quality parameters based on selected quality level"""
+        """Get quality parameters based on selected quality level - HIGHEST STANDARDS"""
         quality_configs = {
             'standard': {
-                'min_chars': 8000,
-                'max_chars': 12000,
-                'depth': 'comprehensive with practical examples',
-                'structure': 'well-organized with clear sections'
+                'min_chars': 6000,   # ~1000 words
+                'max_chars': 10000,  # ~1500 words
+                'min_words': 1000,   # Target word count
+                'depth': 'comprehensive with practical examples and code',
+                'structure': 'well-organized with 4+ H2 sections, multiple lists'
             },
             'premium': {
-                'min_chars': 12000,
-                'max_chars': 18000,
-                'depth': 'expert-level with advanced techniques',
-                'structure': 'detailed analysis with industry insights'
+                'min_chars': 8000,   # ~1200 words
+                'max_chars': 12000,  # ~1800 words
+                'min_words': 1200,   # Target word count
+                'depth': 'expert-level with advanced techniques and real examples',
+                'structure': 'detailed analysis with 5+ H2 sections, code examples, lists'
             },
             'expert': {
-                'min_chars': 18000,
-                'max_chars': 25000,
-                'depth': 'cutting-edge with research-backed insights',
-                'structure': 'comprehensive deep-dive with case studies'
+                'min_chars': 10000,  # ~1500 words
+                'max_chars': 15000,  # ~2000 words
+                'min_words': 1500,   # Target word count
+                'depth': 'cutting-edge with research-backed insights and case studies',
+                'structure': 'comprehensive deep-dive with 6+ H2 sections, multiple examples, code, lists'
             }
         }
         
-        return quality_configs.get(self.quality, quality_configs['premium'])
+        return quality_configs.get(self.quality, quality_configs['expert'])
 
     def validate_ai_content(self, ai_data, quality_params):
         """Validate AI-generated content meets quality standards"""
@@ -476,17 +597,45 @@ class Command(BaseCommand):
 
     def get_or_create_author(self):
         """Get or create the author for posts"""
-        try:
-            author = User.objects.get(email='developer@kabhishek18.com')
-        except User.DoesNotExist:
-            author = User.objects.create_user(
-                username='Panda',
-                email='developer@kabhishek18.com',
-                first_name='Kumar',
-                last_name='Abhishek',
-                is_staff=True,
-                is_superuser=True
-            )
+        # If author specified via command line
+        if hasattr(self, 'author_identifier') and self.author_identifier:
+            try:
+                # Try username first
+                author = User.objects.get(username=self.author_identifier)
+                return author
+            except User.DoesNotExist:
+                try:
+                    # Try email
+                    author = User.objects.get(email=self.author_identifier)
+                    return author
+                except User.DoesNotExist:
+                    self.stdout.write(f"⚠️ Author '{self.author_identifier}' not found, using default")
+        
+        # Get the first superuser (most common case)
+        author = User.objects.filter(is_superuser=True).order_by('id').first()
+        if author:
+            return author
+        
+        # Get the first staff user
+        author = User.objects.filter(is_staff=True).order_by('id').first()
+        if author:
+            return author
+        
+        # Get any user
+        author = User.objects.order_by('id').first()
+        if author:
+            return author
+        
+        # Last resort: create a new user (should rarely happen)
+        self.stdout.write("⚠️ No users found! Creating default author...")
+        author = User.objects.create_user(
+            username='blog_author',
+            email='blog@example.com',
+            first_name='Blog',
+            last_name='Author',
+            is_staff=True,
+            is_superuser=False
+        )
         return author
 
     def create_post_from_ai_data(self, ai_data, author):

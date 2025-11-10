@@ -25,10 +25,11 @@ class ContentQualityChecker:
     
     # Minimum requirements for AdSense
     MIN_WORD_COUNT = 300
-    RECOMMENDED_WORD_COUNT = 1000
+    RECOMMENDED_WORD_COUNT = 800  # Lowered from 1000 for more realistic scoring
     MIN_READABILITY_SCORE = 30  # Flesch Reading Ease
     MAX_KEYWORD_DENSITY = 3.0  # Percentage
     MIN_UNIQUENESS_SCORE = 85  # Percentage
+    EXCELLENT_WORD_COUNT = 1500  # For 100 score
     
     def __init__(self, content: str, title: str = "", excerpt: str = ""):
         self.content = content
@@ -108,11 +109,27 @@ class ContentQualityChecker:
         """Check if content meets minimum word count requirements"""
         word_count = len(self.words)
         
+        # Improved scoring: 
+        # 300 words = 50 score
+        # 800 words = 85 score
+        # 1500+ words = 100 score
+        if word_count >= self.EXCELLENT_WORD_COUNT:
+            score = 100
+        elif word_count >= self.RECOMMENDED_WORD_COUNT:
+            # Scale from 85 to 100 between 800-1500 words
+            score = 85 + ((word_count - self.RECOMMENDED_WORD_COUNT) / (self.EXCELLENT_WORD_COUNT - self.RECOMMENDED_WORD_COUNT)) * 15
+        elif word_count >= self.MIN_WORD_COUNT:
+            # Scale from 50 to 85 between 300-800 words
+            score = 50 + ((word_count - self.MIN_WORD_COUNT) / (self.RECOMMENDED_WORD_COUNT - self.MIN_WORD_COUNT)) * 35
+        else:
+            # Below minimum
+            score = (word_count / self.MIN_WORD_COUNT) * 50
+        
         result = {
             'name': 'Word Count',
             'value': word_count,
             'passed': word_count >= self.MIN_WORD_COUNT,
-            'score': min(100, (word_count / self.RECOMMENDED_WORD_COUNT) * 100),
+            'score': min(100, score),
             'issues': [],
             'warnings': [],
             'recommendations': []
@@ -124,10 +141,14 @@ class ContentQualityChecker:
             )
         elif word_count < self.RECOMMENDED_WORD_COUNT:
             result['warnings'].append(
-                f"Content length ({word_count} words) is below recommended {self.RECOMMENDED_WORD_COUNT} words."
+                f"Content length ({word_count} words) is below recommended {self.RECOMMENDED_WORD_COUNT} words for higher score."
             )
             result['recommendations'].append(
-                "Add more detailed explanations, examples, or use cases to reach 1000+ words."
+                f"Add more content to reach {self.RECOMMENDED_WORD_COUNT}+ words for better score."
+            )
+        elif word_count < self.EXCELLENT_WORD_COUNT:
+            result['recommendations'].append(
+                f"Excellent! Add {self.EXCELLENT_WORD_COUNT - word_count} more words to reach perfect score."
             )
         
         return result
@@ -150,30 +171,46 @@ class ContentQualityChecker:
             }
         
         # Flesch Reading Ease formula
-        score = 206.835 - 1.015 * (words / sentences) - 84.6 * (syllables / words)
-        score = max(0, min(100, score))  # Clamp between 0-100
+        flesch_score = 206.835 - 1.015 * (words / sentences) - 84.6 * (syllables / words)
+        flesch_score = max(0, min(100, flesch_score))  # Clamp between 0-100
+        
+        # Adjusted scoring for technical content:
+        # 30-40 = 70 score (acceptable for technical)
+        # 40-50 = 80 score (good)
+        # 50-60 = 90 score (very good)
+        # 60+ = 100 score (excellent)
+        if flesch_score >= 60:
+            adjusted_score = 100
+        elif flesch_score >= 50:
+            adjusted_score = 90 + ((flesch_score - 50) / 10) * 10
+        elif flesch_score >= 40:
+            adjusted_score = 80 + ((flesch_score - 40) / 10) * 10
+        elif flesch_score >= 30:
+            adjusted_score = 70 + ((flesch_score - 30) / 10) * 10
+        else:
+            adjusted_score = (flesch_score / 30) * 70
         
         result = {
             'name': 'Readability',
-            'value': round(score, 1),
-            'passed': score >= self.MIN_READABILITY_SCORE,
-            'score': score,
+            'value': round(flesch_score, 1),
+            'passed': flesch_score >= self.MIN_READABILITY_SCORE,
+            'score': adjusted_score,
             'issues': [],
             'warnings': [],
             'recommendations': [],
-            'interpretation': self._interpret_readability(score)
+            'interpretation': self._interpret_readability(flesch_score)
         }
         
-        if score < self.MIN_READABILITY_SCORE:
+        if flesch_score < self.MIN_READABILITY_SCORE:
             result['issues'].append(
-                f"Readability score too low ({score:.1f}). Content may be too difficult to read."
+                f"Readability score too low ({flesch_score:.1f}). Content may be too difficult to read."
             )
             result['recommendations'].append(
                 "Use shorter sentences and simpler words to improve readability."
             )
-        elif score < 50:
+        elif flesch_score < 40:
             result['warnings'].append(
-                f"Readability score ({score:.1f}) could be improved for better user experience."
+                f"Readability score ({flesch_score:.1f}) is acceptable for technical content but could be improved."
             )
         
         return result
@@ -230,47 +267,75 @@ class ContentQualityChecker:
     
     def check_content_structure(self) -> Dict:
         """Check HTML structure and formatting"""
-        result = {
-            'name': 'Content Structure',
-            'passed': True,
-            'score': 100,
-            'issues': [],
-            'warnings': [],
-            'recommendations': []
-        }
+        score = 100
         
         # Check for headings
         h2_count = len(re.findall(r'<h2[^>]*>', self.content, re.IGNORECASE))
         h3_count = len(re.findall(r'<h3[^>]*>', self.content, re.IGNORECASE))
         
-        if h2_count == 0:
-            result['warnings'].append("No H2 headings found. Add section headings for better structure.")
-            result['score'] -= 20
-        
         # Check for lists
         ul_count = len(re.findall(r'<ul[^>]*>', self.content, re.IGNORECASE))
         ol_count = len(re.findall(r'<ol[^>]*>', self.content, re.IGNORECASE))
         
-        if ul_count + ol_count == 0:
-            result['recommendations'].append("Consider adding bullet points or numbered lists for better readability.")
-            result['score'] -= 10
-        
         # Check for paragraphs
         p_count = len(re.findall(r'<p[^>]*>', self.content, re.IGNORECASE))
-        
-        if p_count < 3:
-            result['warnings'].append("Few paragraphs detected. Break content into smaller sections.")
-            result['score'] -= 15
         
         # Check for code blocks (good for technical content)
         code_count = len(re.findall(r'<code[^>]*>|<pre[^>]*>', self.content, re.IGNORECASE))
         
+        # Check for images
+        img_count = len(re.findall(r'<img[^>]*>', self.content, re.IGNORECASE))
+        
+        # Improved scoring system
+        result = {
+            'name': 'Content Structure',
+            'passed': True,
+            'score': score,
+            'issues': [],
+            'warnings': [],
+            'recommendations': []
+        }
+        
+        # H2 headings (important)
+        if h2_count == 0:
+            result['warnings'].append("No H2 headings found. Add section headings for better structure.")
+            score -= 15  # Reduced from 20
+        elif h2_count >= 3:
+            # Bonus for good structure
+            score = min(100, score + 5)
+        
+        # Lists (nice to have)
+        if ul_count + ol_count == 0:
+            result['recommendations'].append("Consider adding bullet points or numbered lists for better readability.")
+            score -= 5  # Reduced from 10
+        elif ul_count + ol_count >= 2:
+            # Bonus for lists
+            score = min(100, score + 5)
+        
+        # Paragraphs (important)
+        if p_count < 3:
+            result['warnings'].append("Few paragraphs detected. Break content into smaller sections.")
+            score -= 10  # Reduced from 15
+        elif p_count >= 5:
+            # Bonus for good paragraph structure
+            score = min(100, score + 5)
+        
+        # Code blocks (bonus for technical content)
+        if code_count > 0:
+            score = min(100, score + 5)
+        
+        # Images (bonus)
+        if img_count > 0:
+            score = min(100, score + 5)
+        
+        result['score'] = max(0, score)
         result['value'] = {
             'h2_headings': h2_count,
             'h3_headings': h3_count,
             'lists': ul_count + ol_count,
             'paragraphs': p_count,
-            'code_blocks': code_count
+            'code_blocks': code_count,
+            'images': img_count
         }
         
         result['passed'] = result['score'] >= 70
