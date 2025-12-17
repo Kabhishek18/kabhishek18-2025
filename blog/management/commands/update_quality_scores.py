@@ -140,7 +140,19 @@ class Command(BaseCommand):
                 cache_key = f"quality_score_{post.id}"
                 last_check = cache.get(f"{cache_key}_timestamp")
                 
-                if not last_check or datetime.fromisoformat(last_check) < cache_cutoff:
+                if not last_check:
+                    posts_needing_update.append(post)
+                else:
+                    try:
+                        last_check_dt = datetime.fromisoformat(last_check)
+                        # Make timezone-aware if it's naive
+                        if last_check_dt.tzinfo is None:
+                            last_check_dt = timezone.make_aware(last_check_dt)
+                        if last_check_dt < cache_cutoff:
+                            posts_needing_update.append(post)
+                    except (ValueError, TypeError):
+                        # If parsing fails, treat as needing update
+                        posts_needing_update.append(post)
                     posts_needing_update.append(post)
                 
                 if len(posts_needing_update) >= self.posts_per_run:
