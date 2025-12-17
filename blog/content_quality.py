@@ -593,3 +593,19 @@ def generate_quality_report(content: str, title: str = "", excerpt: str = "") ->
         )
     
     return quality_results
+
+
+def generate_adsense_quality_report(content: str, title: str = "", excerpt: str = "") -> Dict:
+    """
+    Generate enhanced AdSense-compliant quality report using CRAG methodology
+    
+    This function provides comprehensive quality assessment specifically designed
+    for Google AdSense compliance and high-value content requirements.
+    """
+    try:
+        from .services.adsense_quality_checker import generate_adsense_quality_report as adsense_check
+        return adsense_check(content, title, excerpt)
+    except ImportError:
+        # Fallback to standard quality check if AdSense checker not available
+        logger.warning("AdSense quality checker not available, using standard quality check")
+        return generate_quality_report(content, title, excerpt)

@@ -1577,6 +1577,131 @@ def retry_failed_image_uploads(self):
         logger.error(f"Error during automatic retry of failed uploads: {str(e)}")
         raise self.retry(exc=e, countdown=1800)  # Retry after 30 minutes
 
+@shared_task(name="blog.tasks.daily_quality_update")
+def daily_quality_update():
+    """
+    Celery task to update quality scores for all blog posts daily.
+    
+    This task runs the quality score update command and can be scheduled
+    with Celery Beat to run automatically every day.
+    
+    Returns:
+        dict: Summary of the quality update results
+    """
+    from django.core.management import call_command
+    from io import StringIO
+    import sys
+    
+    logger.info("Starting daily quality score update task")
+    
+    try:
+        # Capture command output
+        old_stdout = sys.stdout
+        sys.stdout = captured_output = StringIO()
+        
+        # Run the quality update command
+        call_command(
+            'update_quality_scores',
+            posts_per_run=50,
+            generate_report=True,
+            alert_low_quality=True,
+            save_history=True,
+            verbosity=1
+        )
+        
+        # Restore stdout
+        sys.stdout = old_stdout
+        output = captured_output.getvalue()
+        
+        # Parse results from output (basic parsing)
+        lines = output.split('\n')
+        processed = 0
+        average_score = 0.0
+        
+        for line in lines:
+            if 'Posts Processed:' in line:
+                processed = int(line.split(':')[1].strip())
+            elif 'Average Quality Score:' in line:
+                score_text = line.split(':')[1].strip().replace('/100', '')
+                average_score = float(score_text)
+        
+        result = {
+            'success': True,
+            'processed_posts': processed,
+            'average_score': average_score,
+            'timestamp': timezone.now().isoformat(),
+            'output': output[:1000]  # First 1000 chars of output
+        }
+        
+        logger.info(f"Daily quality update completed: {processed} posts, avg score: {average_score}")
+        return result
+        
+    except Exception as e:
+        logger.error(f"Daily quality update failed: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e),
+            'timestamp': timezone.now().isoformat()
+        }
+
+
+@shared_task(name="blog.tasks.weekly_quality_report")
+def weekly_quality_report():
+    """
+    Celery task to generate comprehensive weekly quality reports.
+    
+    This task provides detailed analysis of content quality trends
+    and can be scheduled to run weekly.
+    
+    Returns:
+        dict: Weekly quality report summary
+    """
+    from django.core.management import call_command
+    from blog.management.commands.update_quality_scores import get_site_quality_summary
+    from io import StringIO
+    import sys
+    
+    logger.info("Starting weekly quality report generation")
+    
+    try:
+        # Get current quality summary
+        quality_summary = get_site_quality_summary()
+        
+        # Capture detailed report output
+        old_stdout = sys.stdout
+        sys.stdout = captured_output = StringIO()
+        
+        # Run comprehensive quality audit
+        call_command(
+            'upgrade_to_crag',
+            audit_only=True,
+            verbosity=1
+        )
+        
+        # Restore stdout
+        sys.stdout = old_stdout
+        audit_output = captured_output.getvalue()
+        
+        result = {
+            'success': True,
+            'quality_summary': quality_summary,
+            'audit_output': audit_output[:2000],  # First 2000 chars
+            'timestamp': timezone.now().isoformat(),
+            'report_type': 'weekly_comprehensive'
+        }
+        
+        logger.info("Weekly quality report generated successfully")
+        return result
+        
+    except Exception as e:
+        logger.error(f"Weekly quality report failed: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e),
+            'timestamp': timezone.now().isoformat()
+        }
+
+
 @shared_task(name="blog.tasks.auto_publish_premium_post")
 def auto_publish_premium_post():
     """
