@@ -284,6 +284,21 @@
                         class="fas fa-arrow-right"></i></a>
             </div>
         </article>
+
+        <!-- AdSense In-Feed Ad every 3 posts -->
+        {% if forloop.counter|divisibleby:3 and not forloop.last %}
+        <article class="blog-card ad-card">
+            <script async
+                src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6078293202282096"
+                crossorigin="anonymous"></script>
+            <ins class="adsbygoogle" style="display:block" data-ad-format="fluid" data-ad-layout-key="-5d+c9-1y-85+x4"
+                data-ad-client="ca-pub-6078293202282096" data-ad-slot="9266644485"></ins>
+            <script>
+                (adsbygoogle = window.adsbygoogle || []).push({});
+            </script>
+        </article>
+        {% endif %}
+
         {% empty %}
         <p style="grid-column: 1 / -1; text-align: center; padding: 4rem 0;">No posts found matching your criteria.</p>
         {% endfor %}

@@ -251,7 +251,9 @@ class SecurityHeaders:
             'Content-Security-Policy': (
                 "default-src 'self'; "
                 "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
-                "https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
+                "https://cdnjs.cloudflare.com https://cdn.jsdelivr.net "
+                "https://cdn.ampproject.org https://www.googletagmanager.com "
+                "https://pagead2.googlesyndication.com https://www.google-analytics.com; "
                 "style-src 'self' 'unsafe-inline' "
                 "https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
                 "font-src 'self' https://fonts.gstatic.com; "
