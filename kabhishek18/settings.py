@@ -519,27 +519,18 @@ else:
         'default': {
             'BACKEND': 'django.core.cache.backends.redis.RedisCache',
             'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1'),
-            'OPTIONS': {
-                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            },
             'KEY_PREFIX': 'kabhishek18',
             'TIMEOUT': 300,  # 5 minutes default timeout
         },
         'schema_cache': {
             'BACKEND': 'django.core.cache.backends.redis.RedisCache',
             'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/2'),
-            'OPTIONS': {
-                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            },
             'KEY_PREFIX': 'schema',
             'TIMEOUT': 3600,  # 1 hour for schema markup
         },
         'template_cache': {
             'BACKEND': 'django.core.cache.backends.redis.RedisCache',
             'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/3'),
-            'OPTIONS': {
-                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            },
             'KEY_PREFIX': 'template',
             'TIMEOUT': 1800,  # 30 minutes for template fragments
         }
