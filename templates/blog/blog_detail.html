@@ -43,7 +43,8 @@
         <a href="{% url 'blog:list_by_category' post.categories.first.slug %}" class="article-category">{{ post.categories.first.name|default:'General' }}</a>
         <h1 class="article-title">{{ post.title }}</h1>
         <div class="article-meta">
-            <div class="meta-item"><i class="fas fa-user"></i><a href="mailto:{{ post.author.email }}" style="text-transform:capitalize; text-decoration: none; color: inherit;">{{post.author.get_full_name|default:post.author.username }}</a></div>
+            <div class="meta-item"><i class="fas fa-user"></i><a href="mailto:{{ post.author.email }}"
+                    style="text-transform:capitalize; text-decoration: none; color: inherit;">{{post.author.get_full_name|default:post.author.username                     }}</a></div>
             <div class="meta-item"><i class="fas fa-calendar"></i><span>{{ post.updated_at|date:"F d, Y" }}</span></div>
             <div class="meta-item"><i class="fas fa-clock"></i><span>{{ post.read_time }} min read</span></div>
             <div class="meta-item"><i class="fas fa-eye"></i><span>{{ post.view_count }} views</span></div>
@@ -120,8 +121,7 @@
             {% endif %}
         </div>
     </div>
-    <amp-auto-ads type="adsense" data-ad-client="ca-pub-6078293202282096">
-    </amp-auto-ads>
+
     <section class="related-posts">
         <h2 class="related-title">Related Articles : {% for category in post.categories.all %} <a
                 href="{% url 'blog:list_by_category' category.slug %}" class="article-tag">{{ category.name }}</a>{% endfor %}</h2>

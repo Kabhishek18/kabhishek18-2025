@@ -62,6 +62,12 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'blog.tasks.cleanup_unconfirmed_subscriptions',
         'schedule': crontab(hour=1, minute=0, day_of_week=0),  # Sunday at 1 AM
     },
+
+    # Site files update (Sitemap, robots.txt) - daily at 1 AM
+    'update-site-files': {
+        'task': 'site_files.tasks.update_site_files',
+        'schedule': crontab(hour=1, minute=0),  # Daily at 1 AM
+    },
     
     # Performance monitoring - every 6 hours
     'performance-monitoring': {

@@ -2330,6 +2330,25 @@ html {
 }
 
 /* Code styling removed */
+.article-content pre {
+    background: #1e1e1e;
+    color: #e5e5e5;
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+    max-width: 100%;
+    margin: var(--space-md) 0;
+    border: 1px solid var(--border-subtle);
+}
+
+.article-content pre code {
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    color: inherit;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--text-sm);
+}
 
 /* Article Tags */
 .article-tags {

@@ -636,31 +636,8 @@ REDOC_SETTINGS = {
 }
 
 # Cache Configuration for API Rate Limiting
-# Use Redis if available, otherwise fall back to database cache
-REDIS_URL = os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1')
-
-try:
-    import redis
-    # Test Redis connection
-    r = redis.from_url(REDIS_URL)
-    r.ping()
-    # If Redis is available, use it
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-            'LOCATION': REDIS_URL,
-            'KEY_PREFIX': 'kabhishek18_api',
-            'TIMEOUT': 300,
-        }
-    }
-except (ImportError, redis.ConnectionError, redis.RedisError):
-    # Fall back to database cache if Redis is not available
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-            'LOCATION': 'cache_table',
-        }
-    }
+# Note: The main CACHES configuration is handled above (lines 494-546).
+# We rely on the 'default' cache defined there.
 
 # API Logging Configuration
 LOGGING['loggers'].update({
