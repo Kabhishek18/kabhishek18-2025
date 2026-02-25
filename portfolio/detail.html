@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Kabhishek18 Terminal Blog Detail</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#00FF41",
+                        "background-dark": "#000000",
+                        "terminal-gray": "#27272A",
+                    },
+                    fontFamily: {
+                        "mono": ["'Courier New'", "monospace"],
+                        "display": ["'Space Grotesk'", "monospace"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0px",
+                        "lg": "0px",
+                        "xl": "0px",
+                        "full": "0px"
+                    },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer base {
+            body {
+                @apply bg-background-dark text-white font-mono;
+            }
+        }
+        .scanlines {
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.05));
+            background-size: 100% 4px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 50;
+        }
+        .cursor-blink {
+            animation: blink 1s step-end infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #000;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #27272A;
+            border: 1px solid #00FF41;
+        }
+        .line-numbers {
+            user-select: none;
+            text-align: right;
+            padding-right: 1.5rem;
+            color: #4b5563;
+            border-right: 1px solid #27272A;
+        }
+    </style>
+</head>
+<body class="overflow-hidden h-screen flex flex-col">
+<div class="scanlines"></div>
+<header class="h-10 border-b border-terminal-gray flex items-center justify-between px-4 bg-background-dark z-20">
+<div class="flex items-center gap-4 text-xs">
+<div class="flex items-center gap-2">
+<span class="text-primary material-symbols-outlined text-sm">terminal</span>
+<span class="font-bold tracking-tighter">KABHISHEK18_OS</span>
+</div>
+<div class="hidden md:flex gap-2 text-gray-500">
+<span>FILE:</span>
+<span class="text-white">/blog/building-a-terminal-ui.md</span>
+</div>
+</div>
+<div class="flex gap-4 text-[10px] text-primary items-center">
+<span class="hidden sm:inline">UTF-8</span>
+<span class="hidden sm:inline">LF</span>
+<span class="bg-primary text-black px-1 font-bold">READ_ONLY</span>
+</div>
+</header>
+<div class="flex-1 flex overflow-hidden">
+<aside class="hidden lg:flex w-48 flex-shrink-0 border-r border-terminal-gray flex-col bg-background-dark">
+<div class="p-4 text-[10px] text-gray-500 uppercase tracking-widest border-b border-terminal-gray">Explorer</div>
+<nav class="p-2 text-xs">
+<div class="flex items-center gap-2 py-1 text-gray-400">
+<span class="material-symbols-outlined text-sm">folder_open</span>
+<span>blog/</span>
+</div>
+<div class="pl-4 space-y-1">
+<div class="flex items-center gap-2 py-1 text-primary bg-primary/10 border-l-2 border-primary pl-2">
+<span class="material-symbols-outlined text-sm">description</span>
+<span class="truncate">building-a-terminal-ui.md</span>
+</div>
+<div class="flex items-center gap-2 py-1 text-gray-500 hover:text-white cursor-pointer pl-2">
+<span class="material-symbols-outlined text-sm">description</span>
+<span class="truncate">react-vs-everything.md</span>
+</div>
+<div class="flex items-center gap-2 py-1 text-gray-500 hover:text-white cursor-pointer pl-2">
+<span class="material-symbols-outlined text-sm">description</span>
+<span class="truncate">setup-guide.sh</span>
+</div>
+</div>
+</nav>
+</aside>
+<main class="flex-1 flex flex-col relative bg-background-dark overflow-hidden">
+<div class="bg-terminal-gray/20 px-4 py-1 text-xs border-b border-terminal-gray flex items-center gap-2 text-gray-400">
+<span class="text-primary">$</span> cat /home/kabhishek18/blog/building-a-terminal-ui.md
+            </div>
+<div class="flex-1 overflow-y-auto flex">
+<div class="line-numbers py-6 px-4 text-xs font-mono min-w-[60px] bg-background-dark">
+                    1<br/>2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>10<br/>11<br/>12<br/>13<br/>14<br/>15<br/>16<br/>17<br/>18<br/>19<br/>20<br/>21<br/>22<br/>23<br/>24<br/>25<br/>26<br/>27<br/>28<br/>29<br/>30<br/>31<br/>32<br/>33<br/>34<br/>35<br/>36<br/>37<br/>38<br/>39<br/>40<br/>41<br/>42<br/>43<br/>44<br/>45<br/>46<br/>47<br/>48<br/>49<br/>50
+                </div>
+<div class="flex-1 p-6 md:p-10 max-w-4xl">
+<div class="mb-10 font-mono text-sm">
+<span class="text-blue-400">{</span><br/>
+<span class="pl-4">"<span class="text-primary">title</span>": "<span class="text-white">Building High-Contrast Terminal UIs</span>",</span><br/>
+<span class="pl-4">"<span class="text-primary">author</span>": "<span class="text-white">Kabhishek18</span>",</span><br/>
+<span class="pl-4">"<span class="text-primary">date</span>": "<span class="text-white">2023-11-24</span>",</span><br/>
+<span class="pl-4">"<span class="text-primary">tags</span>": <span class="text-blue-400">[</span>"<span class="text-white">UI/UX</span>", "<span class="text-white">Terminal</span>", "<span class="text-white">Retro</span>"<span class="text-blue-400">]</span></span><br/>
+<span class="text-blue-400">}</span>
+</div>
+<div class="prose prose-invert max-w-none space-y-6">
+<h1 class="text-3xl font-bold text-primary border-b border-dashed border-primary pb-2 uppercase"># Introduction</h1>
+<p class="leading-relaxed text-gray-300">
+                            The aesthetic of the command line is timeless. For developers, it represents the raw power of the machine. In this article, we explore how to translate that rigid, high-contrast efficiency into modern web interfaces.
+                        </p>
+<h2 class="text-xl font-bold text-white uppercase tracking-wider">&gt; The Philosophy of Rigid Layouts</h2>
+<p class="text-gray-400 italic border-l-4 border-primary pl-4">
+                            "Design is not just what it looks like and feels like. Design is how it works — especially when it looks like it was compiled in 1985."
+                        </p>
+<p class="leading-relaxed text-gray-300">
+                            Modern web design often leans towards soft shadows, rounded corners, and fluid transitions. Terminal-inspired UI rejects this. We use <span class="text-primary">0px border-radius</span>, <span class="text-primary">1px solid borders</span>, and <span class="text-primary">monospaced typography</span>.
+                        </p>
+<div class="bg-terminal-gray/30 p-4 border border-terminal-gray font-mono text-xs">
+<span class="text-gray-500">// Example configuration</span><br/>
+<span class="text-blue-400">const</span> <span class="text-white">THEME</span> = {<br/>
+<span class="pl-4 text-white">background: <span class="text-green-400">'#000000'</span>,</span><br/>
+<span class="pl-4 text-white">primary: <span class="text-green-400">'#00FF41'</span>,</span><br/>
+<span class="pl-4 text-white">radius: <span class="text-green-400">'0px'</span></span><br/>
+                            };
+                        </div>
+<h2 class="text-xl font-bold text-white uppercase tracking-wider">&gt; Implementing Scanlines</h2>
+<p class="leading-relaxed text-gray-300">
+                            To achieve the "CRT feel", a simple CSS linear gradient overlay is required. This adds a texture that softens the high-contrast green while maintaining legibility.
+                        </p>
+<ul class="list-none space-y-2 text-gray-300">
+<li class="flex items-start gap-2">
+<span class="text-primary">[*]</span>
+<span>Always use absolute black (#000000) for true contrast.</span>
+</li>
+<li class="flex items-start gap-2">
+<span class="text-primary">[*]</span>
+<span>Primary colors should be limited (Green/Amber/White).</span>
+</li>
+<li class="flex items-start gap-2">
+<span class="text-primary">[*]</span>
+<span>Interactive elements must mimic CLI commands.</span>
+</li>
+</ul>
+<div class="mt-12 pt-8 border-t border-terminal-gray">
+<div class="flex items-center gap-2">
+<span class="text-primary font-bold">kabhishek18@terminal:~/blog$</span>
+<span class="text-white">_</span>
+<span class="w-2 h-4 bg-primary cursor-blink ml-[-8px]"></span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="h-8 border-t border-terminal-gray bg-background-dark flex items-center px-4 justify-between text-[10px] uppercase text-gray-500 font-bold">
+<div class="flex gap-4">
+<span>Line: 24/50</span>
+<span>Col: 1</span>
+<span>MD_EXT</span>
+</div>
+<div class="flex gap-4">
+<span class="text-primary hover:underline cursor-pointer">[SAVE: ^O]</span>
+<span class="text-primary hover:underline cursor-pointer">[EXIT: ^X]</span>
+</div>
+</div>
+</main>
+<aside class="hidden xl:flex w-72 border-l border-terminal-gray flex-col bg-background-dark p-6 space-y-8">
+<div>
+<h3 class="text-xs font-bold text-white uppercase mb-4 border-b border-terminal-gray pb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">info</span>
+                    Document_Metadata
+                </h3>
+<div class="space-y-3 text-[11px] font-mono">
+<div class="flex justify-between">
+<span class="text-gray-500">FORMAT:</span>
+<span class="text-primary">Markdown</span>
+</div>
+<div class="flex justify-between">
+<span class="text-gray-500">SIZE:</span>
+<span class="text-primary">4.2 KB</span>
+</div>
+<div class="flex justify-between">
+<span class="text-gray-500">ENCODING:</span>
+<span class="text-primary">UTF-8</span>
+</div>
+<div class="flex justify-between">
+<span class="text-gray-500">OWNER:</span>
+<span class="text-primary">admin_k18</span>
+</div>
+</div>
+</div>
+<div>
+<h3 class="text-xs font-bold text-white uppercase mb-4 border-b border-terminal-gray pb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">monitoring</span>
+                    Reading_Progress
+                </h3>
+<div class="space-y-4">
+<div>
+<div class="flex justify-between text-[10px] text-gray-500 mb-1 font-mono">
+<span>SCROLL_DEPTH</span>
+<span>42%</span>
+</div>
+<div class="w-full bg-terminal-gray h-1">
+<div class="bg-primary h-1 w-[42%]"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-[10px] text-gray-500 mb-1 font-mono">
+<span>BITRATE_SIM</span>
+<span>128 kbps</span>
+</div>
+<div class="w-full bg-terminal-gray h-1 overflow-hidden relative">
+<div class="absolute inset-0 bg-primary/20 animate-pulse"></div>
+<div class="bg-primary h-1 w-[65%] relative z-10"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="flex-1 flex flex-col justify-end">
+<div class="bg-terminal-gray/20 border border-terminal-gray p-3 text-[10px] text-primary font-mono leading-tight">
+<p>&gt; System monitoring active</p>
+<p>&gt; Rendering buffer... [OK]</p>
+<p>&gt; All modules nominal</p>
+<p class="text-white animate-pulse">_</p>
+</div>
+</div>
+</aside>
+</div>
+<div class="h-12 border-t border-terminal-gray bg-background-dark flex items-center px-6 gap-3 z-30">
+<span class="text-primary font-bold">CMD:</span>
+<input class="flex-1 bg-transparent border-none outline-none focus:ring-0 text-white font-mono text-sm uppercase placeholder:text-gray-700" placeholder="Type command (e.g., :q, :w, /search)..." type="text"/>
+<div class="text-[10px] text-gray-500 font-mono hidden md:block">
+            HELP: type ':help' for list of commands
+        </div>
+</div>
+
+</body></html>

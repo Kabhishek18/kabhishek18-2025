@@ -30,82 +30,338 @@
     {% endif %}
 {% endblock meta_data %}
 {% block navbar %}
-    {% if home_navbar %}
-        <!-- Home Page Navigation -->
-        <div class="scroll-indicator" id="scrollIndicator"></div>
-        <nav class="main-nav" id="mainNav">
-            <div class="nav-container">
-                <a href="#home" class="nav-logo">DIGITAL ARCHITECT</a>
-                <ul class="nav-menu">
-                    <li class="nav-item"><a href="#home" class="nav-link active">Home</a></li>
-                    <li class="nav-item"><a href="#about" class="nav-link">About</a></li>
-                    <li class="nav-item"><a href="#projects" class="nav-link">Projects</a></li>
-                    <li class="nav-item"><a href="/blog" class="nav-link">Blog</a></li>
-                    <li class="nav-item"><a href="#contact" class="nav-link">Contact</a></li>
-                    <li class="nav-item">
-                        <a href="mailto:developer@kabhishek18.com" class="nav-cta">
-                            <i class="fas fa-rocket"></i> Let's Connect
-                        </a>
-                    </li>
-                </ul>
-                <button class="mobile-menu-toggle" id="mobileMenuToggle">
-                    <i class="fas fa-bars"></i>
-                </button>
-            </div>
-            <!-- Mobile Menu -->
-            <div class="mobile-menu" id="mobileMenu">
-                <div class="mobile-nav-links">
-                    <a href="#home" class="nav-link">Home</a>
-                    <a href="#about" class="nav-link">About</a>
-                    <a href="#projects" class="nav-link">Projects</a>
-                    <a href="/blog" class="nav-link">Blog</a>
-                    <a href="#contact" class="nav-link">Contact</a>
-                    <a href="mailto:developer@kabhishek18.com" class="nav-cta">
-                        <i class="fas fa-rocket"></i> Let's Connect
-                    </a>
-                </div>
-            </div>
-        </nav>
-
-    {% elif blog_navbar %}
-        <!-- Blog Detail Page Navigation -->
-        <nav class="detail-nav">
-            <div class="nav-container">
-                <a href="/blog" class="nav-back">
-                    <i class="fas fa-arrow-left"></i> <span>Back to Blog</span>
-                </a>
-                <div class="nav-actions">
-                    <button class="share-btn" id="shareBtn">
-                        <i class="fas fa-share-alt"></i> <span>Share</span>
-                    </button>
-                    <button class="bookmark-btn" id="bookmarkBtn">
-                        <i class="fas fa-bookmark"></i> <span>Save</span>
-                    </button>
-                </div>
-            </div>
-        </nav>
-
-    {% else %}
-        <!-- Generic Page Navigation -->
-        <nav class="blog-nav">
-            <div class="nav-container">
-                <a href="/" class="nav-back">
-                    <i class="fas fa-arrow-left"></i> <span>Back to Home</span>
-                </a>
-                <div class="nav-logo">  KABHISHEK18 - THE DIGITAL ARCHITECT</div>
-            </div>
-        </nav>
-    {% endif %}
 {% endblock navbar %}
 
 {% block content %}
-   {% if template_includes %}
-    {# Loop through the list of component HTML provided by the view #}
-    {% for component_html in template_includes %}
-        {{ component_html|safe }}
-    {% endfor %}
-    {% elif page_content %}
-        {# Display manual page content if no template is used #}
-        {{ page_content|safe }}
-    {% endif %}
-{% endblock %}
+<!-- Scanline Overlay -->
+      <div class="scanlines"></div>
+
+      <!-- Main Layout Container -->
+      <div class="flex-1 flex flex-col md:flex-row h-full w-full border-b border-terminal-gray">
+
+        <!-- Sidebar Navigation (Directory Tree) -->
+        <aside class="hidden md:block w-64 flex-shrink-0 border-r border-terminal-gray bg-background-dark z-10">
+          <div class="p-4 border-b border-terminal-gray">
+            <div class="flex items-center gap-2 text-primary">
+              <span class="material-symbols-outlined">terminal</span>
+              <span class="font-bold tracking-widest text-sm">TERM_V.1.0</span>
+            </div>
+          </div>
+          <nav class="p-4 flex flex-col gap-6">
+            <!-- User Profile -->
+            <div class="flex gap-3 items-center pb-4 border-b border-terminal-gray border-dashed">
+              <div class="relative w-10 h-10 overflow-hidden bg-terminal-gray grayscale hover:grayscale-0 transition-all">
+                <img alt="User Avatar" class="w-full h-full object-cover" data-alt="Pixelated avatar of a developer" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKzDsLccCHRTYPF4BpHHNlLnGCW6jb5RxESs_evg8PXLQkFFX_ta2Y5IiM5AEBwZTMe9EP9w-gPWer_ajSfeqROs2TXUD4j1kMpI8cifWZFjoBHwTXsmo_oQkQWLyo-bIUJZ9dD5ts38jx5KXRFIkSJbjUmgJ1wcWBavZXfuHhbU2iT8MfEJqr2mjAkOBCKlVkgpicsRBb_rk5TyCU8bbLouB_f5we-g8RMB5FXpw7iSU5KWO_9F76ZU0DlxSjlny9Co839pCLakCo" />
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-white uppercase">Guest_User</h3>
+                <p class="text-xs text-primary">Access: Read-Only</p>
+              </div>
+            </div>
+
+            <!-- Directory Tree -->
+            <div class="flex flex-col gap-1 text-sm font-mono">
+              <div class="text-gray-500 uppercase text-xs tracking-wider mb-2">./ROOT_DIRECTORY</div>
+              <a class="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1" href="#">
+                <span class="text-gray-600">├──</span>
+                <span class="material-symbols-outlined text-[18px] group-hover:text-primary">folder_open</span>
+                <span>projects/</span>
+              </a>
+              <a class="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1 pl-4 border-l border-gray-800 ml-[7px]" href="#">
+                <span class="text-gray-600">├──</span>
+                <span class="material-symbols-outlined text-[18px]">html</span>
+                <span>web_apps</span>
+              </a>
+              <a class="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1 pl-4 border-l border-gray-800 ml-[7px]" href="/blog">
+                <span class="text-gray-600">└──</span>
+                <span class="material-symbols-outlined text-[18px]">article</span>
+                <span>blog_dir</span>
+              </a>
+              <a class="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1 mt-2" href="/resume.pdf" target="_blank" rel="noopener noreferrer">
+                <span class="text-gray-600">├──</span>
+                <span class="material-symbols-outlined text-[18px] group-hover:text-primary">description</span>
+                <span>resume.pdf</span>
+              </a>
+              <a class="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1" href="#">
+                <span class="text-gray-600">├──</span>
+                <span class="material-symbols-outlined text-[18px] group-hover:text-primary">history</span>
+                <span>logs/</span>
+              </a>
+              <a class="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1" href="#">
+                <span class="text-gray-600">└──</span>
+                <span class="material-symbols-outlined text-[18px] group-hover:text-primary">settings</span>
+                <span>config</span>
+              </a>
+            </div>
+          </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 flex flex-col w-full bg-background-dark relative">
+          <!-- Top Bar -->
+          <header class="h-14 border-b border-terminal-gray flex items-center justify-between px-6 bg-background-dark/95 backdrop-blur sticky top-0 z-20">
+            <div class="flex items-center gap-2 text-sm text-gray-400">
+              <span class="md:hidden material-symbols-outlined text-primary hover:text-white mr-2 text-xl cursor-not-allowed hidden">menu</span>
+              <span class="hidden sm:inline">root</span>
+              <span class="hidden sm:inline">@</span>
+              <span class="text-white hidden sm:inline">kabhishek18</span>
+              <span class="hidden sm:inline">:</span>
+              <span class="text-primary">~/portfolio</span>
+            </div>
+            <div class="flex gap-4 text-xs font-mono text-primary">
+              <span class="hidden sm:inline-block">CPU: 12%</span>
+              <span class="hidden sm:inline-block">RAM: 4.2GB</span>
+              <span class="animate-pulse">● LIVE</span>
+            </div>
+          </header>
+
+          <!-- Content Scrollable -->
+          <div class="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10 space-y-16">
+
+            <!-- Hero Section -->
+            <section class="border-l-2 border-primary pl-6 py-2">
+              <p class="text-primary text-sm mb-2 font-mono">&gt; initialize_sequence_alpha_01...</p>
+              <h1 class="text-4xl md:text-6xl lg:text-7xl font-bold uppercase tracking-tighter text-white mb-4 leading-none">
+                KABHISHEK18<br />
+                <span class="text-gray-600">// SYSTEM_ARCHITECT</span>
+              </h1>
+              <p class="text-gray-400 max-w-2xl text-lg font-light leading-relaxed">
+                Full Stack Developer specializing in scalable infrastructure and high-performance web applications. Currently executing commands in React, Node.js, and Python environments.
+              </p>
+              <div class="mt-8 flex flex-col sm:flex-row gap-4 max-w-lg">
+                <div class="flex items-center bg-terminal-gray/30 border border-primary/50 w-full p-2">
+                  <span class="text-primary mr-2 font-bold">&gt;</span>
+                  <input class="bg-transparent border-none text-white w-full focus:ring-0 placeholder-gray-600 font-mono text-sm outline-none" placeholder="run contact_protocol.exe" type="text" />
+                  <div class="w-3 h-5 bg-primary cursor-blink"></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Stats Grid -->
+            <section class="grid grid-cols-2 md:grid-cols-4 border-t border-terminal-gray">
+              <div class="p-4 border-r border-b border-terminal-gray hover:bg-white/5 transition-colors group">
+                <span class="text-xs text-gray-500 uppercase tracking-widest block mb-1 group-hover:text-primary">Uptime</span>
+                <span class="text-2xl font-bold text-white">4Y 2M</span>
+              </div>
+              <div class="p-4 border-r border-b border-terminal-gray hover:bg-white/5 transition-colors group">
+                <span class="text-xs text-gray-500 uppercase tracking-widest block mb-1 group-hover:text-primary">Commits</span>
+                <span class="text-2xl font-bold text-white">8,492</span>
+              </div>
+              <div class="p-4 border-r border-b border-terminal-gray hover:bg-white/5 transition-colors group">
+                <span class="text-xs text-gray-500 uppercase tracking-widest block mb-1 group-hover:text-primary">Projects</span>
+                <span class="text-2xl font-bold text-white">42</span>
+              </div>
+              <div class="p-4 border-b border-terminal-gray hover:bg-white/5 transition-colors group">
+                <span class="text-xs text-gray-500 uppercase tracking-widest block mb-1 group-hover:text-primary">Status</span>
+                <span class="text-2xl font-bold text-primary">ONLINE</span>
+              </div>
+            </section>
+
+            <!-- System Logs (Experience) -->
+            <section>
+              <div class="flex items-center justify-between mb-6 border-b border-terminal-gray pb-2">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                  <span class="material-symbols-outlined text-primary">history</span>
+                  SYSTEM_LOGS
+                </h2>
+                <span class="text-xs text-gray-500 font-mono">[MODE: CHRONOLOGICAL]</span>
+              </div>
+              <div class="font-mono text-sm space-y-1">
+                <!-- Log Entry 1 -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 hover:bg-terminal-gray/20 p-2 border-l border-transparent hover:border-primary transition-all">
+                  <div class="md:col-span-2 text-gray-500">2023-10-12 <span class="text-gray-700">14:02:55</span></div>
+                  <div class="md:col-span-2 text-primary">USER_PROMOTION</div>
+                  <div class="md:col-span-8 text-gray-300">
+                    <span class="text-white font-bold">Senior Developer @ TechCorp_Inc</span>
+                    <br /><span class="text-gray-500">&gt; Initiated microservices migration protocol. Optimized database queries reducing latency by 40%.</span>
+                  </div>
+                </div>
+                <!-- Log Entry 2 -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 hover:bg-terminal-gray/20 p-2 border-l border-transparent hover:border-primary transition-all">
+                  <div class="md:col-span-2 text-gray-500">2021-06-30 <span class="text-gray-700">09:15:22</span></div>
+                  <div class="md:col-span-2 text-blue-400">SYS_UPDATE</div>
+                  <div class="md:col-span-8 text-gray-300">
+                    <span class="text-white font-bold">Full Stack Engineer @ StartUp_Venture</span>
+                    <br /><span class="text-gray-500">&gt; Deployed MVP using React/Next.js stack. Integrated Stripe payment gateway API.</span>
+                  </div>
+                </div>
+                <!-- Log Entry 3 -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 hover:bg-terminal-gray/20 p-2 border-l border-transparent hover:border-primary transition-all">
+                  <div class="md:col-span-2 text-gray-500">2019-01-15 <span class="text-gray-700">11:00:00</span></div>
+                  <div class="md:col-span-2 text-yellow-500">INIT_BOOT</div>
+                  <div class="md:col-span-8 text-gray-300">
+                    <span class="text-white font-bold">Junior Developer @ Agency_XYZ</span>
+                    <br /><span class="text-gray-500">&gt; Assisted in frontend component development. Bug fixing and QA testing.</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Project Directory (Cards) -->
+            <section>
+              <div class="flex items-center justify-between mb-6 border-b border-terminal-gray pb-2">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                  <span class="material-symbols-outlined text-primary">folder_special</span>
+                  PROJECT_DIRECTORY
+                </h2>
+                <span class="text-xs text-gray-500 font-mono">ls -la ./projects</span>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-0 border border-terminal-gray">
+                <!-- Project 1 -->
+                <article class="border-r border-b border-terminal-gray p-6 flex flex-col justify-between hover:bg-white/5 group transition-colors min-h-[300px]">
+                  <div>
+                    <div class="flex justify-between items-start mb-4">
+                      <span class="text-primary material-symbols-outlined text-4xl">terminal</span>
+                      <span class="text-xs border border-gray-700 px-2 py-1 text-gray-400">PUBLIC</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2 group-hover:text-primary transition-colors">CLI_Dashboard_v2</h3>
+                    <p class="text-gray-400 text-sm font-mono mb-4">A React-based terminal emulator component library for developers building dev-tool interfaces.</p>
+                    <div class="flex flex-wrap gap-2 mb-6">
+                      <span class="text-xs bg-terminal-gray text-gray-300 px-2 py-1 font-mono">#react</span>
+                      <span class="text-xs bg-terminal-gray text-gray-300 px-2 py-1 font-mono">#typescript</span>
+                    </div>
+                  </div>
+                  <button class="w-full border border-primary/50 text-primary hover:bg-primary hover:text-black font-mono text-sm py-2 px-4 transition-all uppercase flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-sm">rocket_launch</span>
+                    Deploy
+                  </button>
+                </article>
+                <!-- Project 2 -->
+                <article class="border-r border-b border-terminal-gray p-6 flex flex-col justify-between hover:bg-white/5 group transition-colors min-h-[300px]">
+                  <div>
+                    <div class="flex justify-between items-start mb-4">
+                      <span class="text-primary material-symbols-outlined text-4xl">dataset</span>
+                      <span class="text-xs border border-gray-700 px-2 py-1 text-gray-400">PRIVATE</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2 group-hover:text-primary transition-colors">Data_Stream_API</h3>
+                    <p class="text-gray-400 text-sm font-mono mb-4">High-throughput WebSocket server for real-time financial data streaming.</p>
+                    <div class="flex flex-wrap gap-2 mb-6">
+                      <span class="text-xs bg-terminal-gray text-gray-300 px-2 py-1 font-mono">#nodejs</span>
+                      <span class="text-xs bg-terminal-gray text-gray-300 px-2 py-1 font-mono">#redis</span>
+                    </div>
+                  </div>
+                  <button class="w-full border border-gray-600 text-gray-400 hover:border-primary hover:text-primary font-mono text-sm py-2 px-4 transition-all uppercase flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-sm">lock</span>
+                    Request Access
+                  </button>
+                </article>
+                <!-- Project 3 -->
+                <article class="border-b md:border-r lg:border-r-0 border-terminal-gray p-6 flex flex-col justify-between hover:bg-white/5 group transition-colors min-h-[300px]">
+                  <div>
+                    <div class="flex justify-between items-start mb-4">
+                      <span class="text-primary material-symbols-outlined text-4xl">smart_toy</span>
+                      <span class="text-xs border border-gray-700 px-2 py-1 text-gray-400">BETA</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2 group-hover:text-primary transition-colors">Neural_Net_Visualizer</h3>
+                    <p class="text-gray-400 text-sm font-mono mb-4">Interactive 3D visualization of neural network layers training in real-time.</p>
+                    <div class="flex flex-wrap gap-2 mb-6">
+                      <span class="text-xs bg-terminal-gray text-gray-300 px-2 py-1 font-mono">#python</span>
+                      <span class="text-xs bg-terminal-gray text-gray-300 px-2 py-1 font-mono">#threejs</span>
+                    </div>
+                  </div>
+                  <button class="w-full border border-primary/50 text-primary hover:bg-primary hover:text-black font-mono text-sm py-2 px-4 transition-all uppercase flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-sm">visibility</span>
+                    View Demo
+                  </button>
+                </article>
+              </div>
+            </section>
+
+            <footer class="border-t border-terminal-gray pt-8 pb-4 text-xs font-mono text-gray-500 flex justify-between items-center">
+              <div>
+                <p>© 2026 KABHISHEK18. ALL SYSTEMS NOMINAL.</p>
+              </div>
+              <div class="flex gap-4">
+                <a class="hover:text-primary" href="#">[GITHUB]</a>
+                <a class="hover:text-primary" href="#">[LINKEDIN]</a>
+                <a class="hover:text-primary" href="#">[TWITTER]</a>
+              </div>
+            </footer>
+          </div>
+        </main>
+
+        <!-- Right Sidebar (Agent Status) -->
+        <aside class="flex w-full xl:w-72 border-t md:border-t-0 border-l-0 md:border-l border-terminal-gray bg-background-dark flex-col z-10">
+          <div class="p-4 border-b border-terminal-gray">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <span class="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
+              Agent_Status
+            </h3>
+          </div>
+          <div class="p-4 flex flex-col xl:flex flex-1 gap-6">
+            <!-- Data Visualizer Placeholder -->
+            <div class="h-32 border border-terminal-gray bg-black relative overflow-hidden p-2">
+              <div class="absolute top-0 left-0 w-full h-full opacity-20 bg-[url('https://placeholder.pics/svg/300')] bg-cover" data-alt="Abstract data noise pattern"></div>
+              <div class="relative z-10 flex flex-col h-full justify-between">
+                <div class="flex justify-between text-xs text-primary font-mono">
+                  <span>NET_IO</span>
+                  <span>842 KB/s</span>
+                </div>
+                <div class="flex items-end gap-[2px] h-16">
+                  <div class="w-1 bg-primary h-[40%]"></div>
+                  <div class="w-1 bg-primary h-[60%]"></div>
+                  <div class="w-1 bg-primary h-[30%]"></div>
+                  <div class="w-1 bg-primary h-[80%]"></div>
+                  <div class="w-1 bg-primary h-[50%]"></div>
+                  <div class="w-1 bg-primary h-[90%]"></div>
+                  <div class="w-1 bg-primary h-[20%]"></div>
+                  <div class="w-1 bg-primary h-[70%]"></div>
+                  <div class="w-1 bg-primary h-[45%]"></div>
+                  <div class="w-1 bg-primary h-[65%]"></div>
+                  <div class="w-1 bg-primary h-[35%]"></div>
+                  <div class="w-1 bg-primary h-[85%]"></div>
+                  <div class="w-1 bg-primary h-[55%]"></div>
+                  <div class="w-1 bg-primary h-[75%]"></div>
+                  <div class="w-1 bg-primary h-[25%]"></div>
+                  <div class="w-1 bg-primary h-[95%]"></div>
+                  <div class="w-1 bg-primary h-[40%]"></div>
+                  <div class="w-1 bg-primary h-[60%]"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Metrics -->
+            <div class="space-y-4 font-mono text-xs">
+              <div>
+                <div class="flex justify-between text-gray-400 mb-1">
+                  <span>SYS_LOAD</span>
+                  <span>42%</span>
+                </div>
+                <div class="w-full bg-terminal-gray h-1">
+                  <div class="bg-primary h-1 w-[42%]"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-gray-400 mb-1">
+                  <span>MEM_USAGE</span>
+                  <span>64%</span>
+                </div>
+                <div class="w-full bg-terminal-gray h-1">
+                  <div class="bg-yellow-500 h-1 w-[64%]"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-gray-400 mb-1">
+                  <span>DISK_SWAP</span>
+                  <span>12%</span>
+                </div>
+                <div class="w-full bg-terminal-gray h-1">
+                  <div class="bg-blue-500 h-1 w-[12%]"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Console Output -->
+            <div class="flex-1 bg-black border border-terminal-gray p-2 font-mono text-[10px] text-gray-500 overflow-hidden flex flex-col justify-end">
+              <p>&gt; scanning ports...</p>
+              <p>&gt; port 80 [OPEN]</p>
+              <p>&gt; port 443 [OPEN]</p>
+              <p>&gt; fetching assets...</p>
+              <p>&gt; rendering 3d_mesh.obj</p>
+              <p class="text-primary">&gt; connection established</p>
+              <p class="text-white animate-pulse">_</p>
+            </div>
+          </div>
+        </aside>
+      </div>
+{% endblock content %}
