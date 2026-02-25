@@ -1,0 +1,229 @@
+{% load static %}
+
+<div class="hashtag-preview-widget">
+    <div class="hashtag-preview-controls">
+        <h4>Hashtag Generation Preview</h4>
+        <p>Test hashtag generation with current configuration settings.</p>
+        
+        <div class="form-row">
+            <label for="preview-post-select">Select a blog post:</label>
+            <select id="preview-post-select" class="vSelectField">
+                <option value="">Choose a post to preview...</option>
+            </select>
+        </div>
+        
+        <div class="form-row">
+            <button type="button" class="button" onclick="generateHashtagPreview()">
+                Generate Hashtags
+            </button>
+            <button type="button" class="button" onclick="clearHashtagPreview()">
+                Clear
+            </button>
+        </div>
+    </div>
+    
+    <div id="hashtag-preview-results" class="hashtag-preview-results" style="display: none;">
+        <h4>Generated Hashtags:</h4>
+        <div id="hashtag-preview-content" class="hashtag-preview-content"></div>
+        <div id="hashtag-preview-details" class="hashtag-preview-details"></div>
+    </div>
+    
+    <div id="hashtag-preview-error" class="hashtag-preview-error" style="display: none; color: red;">
+    </div>
+</div>
+
+<style>
+.hashtag-preview-widget {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin: 10px 0;
+    background: #f9f9f9;
+    border-radius: 4px;
+}
+
+.hashtag-preview-controls .form-row {
+    margin-bottom: 10px;
+}
+
+.hashtag-preview-controls label {
+    display: inline-block;
+    width: 150px;
+    font-weight: bold;
+}
+
+.hashtag-preview-results {
+    margin-top: 15px;
+    padding: 10px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.hashtag-preview-content {
+    margin: 10px 0;
+}
+
+.hashtag-tag {
+    display: inline-block;
+    background: #e1f5fe;
+    color: #0277bd;
+    padding: 4px 8px;
+    margin: 2px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.hashtag-preview-details {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #666;
+}
+
+.hashtag-preview-error {
+    margin-top: 10px;
+    padding: 10px;
+    background: #ffebee;
+    border: 1px solid #f44336;
+    border-radius: 4px;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadPostsForPreview();
+});
+
+function loadPostsForPreview() {
+    // Load published posts for preview
+    fetch('/admin/blog/linkedinconfig/preview-posts/')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('preview-post-select');
+            select.innerHTML = '<option value="">Choose a post to preview...</option>';
+            
+            data.posts.forEach(post => {
+                const option = document.createElement('option');
+                option.value = post.id;
+                option.textContent = `${post.title} (${post.date})`;
+                select.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Error loading posts:', error);
+            showPreviewError('Failed to load posts for preview');
+        });
+}
+
+function generateHashtagPreview() {
+    const select = document.getElementById('preview-post-select');
+    const postId = select.value;
+    
+    if (!postId) {
+        alert('Please select a post first');
+        return;
+    }
+    
+    // Get current form configuration
+    const configData = getCurrentConfigData();
+    
+    // Show loading state
+    const resultsDiv = document.getElementById('hashtag-preview-results');
+    const contentDiv = document.getElementById('hashtag-preview-content');
+    const detailsDiv = document.getElementById('hashtag-preview-details');
+    
+    contentDiv.innerHTML = 'Generating hashtags...';
+    resultsDiv.style.display = 'block';
+    hidePreviewError();
+    
+    // Make request to generate hashtags
+    fetch('/admin/blog/linkedinconfig/preview-hashtags/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            post_id: postId,
+            config: configData
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            displayHashtagResults(data.hashtags, data.details);
+        } else {
+            showPreviewError(data.error || 'Failed to generate hashtags');
+        }
+    })
+    .catch(error => {
+        console.error('Error generating hashtags:', error);
+        showPreviewError('Network error while generating hashtags');
+    });
+}
+
+function getCurrentConfigData() {
+    // Extract current form values for hashtag configuration
+    return {
+        enable_hashtags: document.getElementById('id_enable_hashtags')?.checked || false,
+        max_hashtags: parseInt(document.getElementById('id_max_hashtags')?.value) || 5,
+        custom_hashtag_rules: getJsonFieldValue('id_custom_hashtag_rules'),
+        hashtag_blacklist: getJsonFieldValue('id_hashtag_blacklist')
+    };
+}
+
+function getJsonFieldValue(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (!field || !field.value) return null;
+    
+    try {
+        return JSON.parse(field.value);
+    } catch (e) {
+        return null;
+    }
+}
+
+function displayHashtagResults(hashtags, details) {
+    const contentDiv = document.getElementById('hashtag-preview-content');
+    const detailsDiv = document.getElementById('hashtag-preview-details');
+    
+    if (hashtags && hashtags.length > 0) {
+        const hashtagHtml = hashtags.map(tag => 
+            `<span class="hashtag-tag">${tag}</span>`
+        ).join('');
+        contentDiv.innerHTML = hashtagHtml;
+        
+        if (details) {
+            let detailsHtml = `<strong>Generation Details:</strong><br>`;
+            if (details.source) detailsHtml += `Source: ${details.source}<br>`;
+            if (details.total_generated) detailsHtml += `Total generated: ${details.total_generated}<br>`;
+            if (details.filtered_count) detailsHtml += `Filtered out: ${details.filtered_count}<br>`;
+            detailsDiv.innerHTML = detailsHtml;
+        }
+    } else {
+        contentDiv.innerHTML = '<em>No hashtags generated</em>';
+        detailsDiv.innerHTML = details ? `<strong>Reason:</strong> ${details.reason || 'Unknown'}` : '';
+    }
+}
+
+function clearHashtagPreview() {
+    document.getElementById('hashtag-preview-results').style.display = 'none';
+    document.getElementById('preview-post-select').value = '';
+    hidePreviewError();
+}
+
+function showPreviewError(message) {
+    const errorDiv = document.getElementById('hashtag-preview-error');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+    document.getElementById('hashtag-preview-results').style.display = 'none';
+}
+
+function hidePreviewError() {
+    document.getElementById('hashtag-preview-error').style.display = 'none';
+}
+
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+}
+</script>

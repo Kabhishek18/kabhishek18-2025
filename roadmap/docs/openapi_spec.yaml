@@ -1,0 +1,512 @@
+openapi: 3.0.3
+info:
+  title: Resume Parser API
+  description: |
+    The Resume Parser API allows you to upload PDF resumes and extract structured information 
+    using AI-powered natural language processing. The system supports multiple AI backends 
+    (Gemini AI, spaCy, rule-based) with automatic fallback for reliability.
+    
+    ## Features
+    - PDF resume parsing and text extraction
+    - AI-powered information extraction
+    - Multiple backend support with fallback
+    - Real-time processing without data persistence
+    - Comprehensive error handling
+    
+    ## Privacy
+    Uploaded files are processed in memory and immediately deleted after processing. 
+    No resume data is stored permanently.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: developer@kabhishek18.com
+  license:
+    name: MIT License
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://your-domain.com/api/roadmap
+    description: Production server
+  - url: http://localhost:8000/api/roadmap
+    description: Development server
+
+paths:
+  /parse-resume/:
+    post:
+      summary: Parse PDF Resume
+      description: |
+        Upload a PDF resume and extract structured information including personal details, 
+        skills, experience, and education using AI-powered natural language processing.
+      operationId: parseResume
+      tags:
+        - Resume Parser
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - resume_file
+              properties:
+                resume_file:
+                  type: string
+                  format: binary
+                  description: PDF file containing the resume to parse
+                processing_backend:
+                  type: string
+                  enum: [auto, gemini, spacy, rule_based]
+                  default: auto
+                  description: |
+                    AI backend to use for processing:
+                    - `auto`: Automatic selection with fallback (Gemini → spaCy → Rule-based)
+                    - `gemini`: Google Gemini AI (requires API key)
+                    - `spacy`: spaCy NLP (local processing)
+                    - `rule_based`: Rule-based extraction (basic but reliable)
+                include_raw_text:
+                  type: boolean
+                  default: false
+                  description: Include extracted raw text in response (for debugging)
+            encoding:
+              resume_file:
+                contentType: application/pdf
+      responses:
+        '200':
+          description: Resume parsed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResumeData'
+              examples:
+                successful_parse:
+                  summary: Successful resume parsing
+                  value:
+                    name: "John Doe"
+                    email: "john.doe@email.com"
+                    phone: "+1-555-123-4567"
+                    location: "San Francisco, CA"
+                    linkedin_url: "https://linkedin.com/in/johndoe"
+                    skills: ["Python", "JavaScript", "React", "Django"]
+                    experience:
+                      - job_title: "Senior Software Engineer"
+                        company: "Tech Corp"
+                        start_date: "2021-01"
+                        end_date: "2024-01"
+                        is_current: false
+                    processing_backend_used: "gemini"
+                    confidence_score: 0.92
+                    processing_time_seconds: 2.34
+                    warnings: []
+        '400':
+          description: Invalid file format or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_file_format:
+                  summary: Invalid file format
+                  value:
+                    error:
+                      code: "INVALID_FILE_FORMAT"
+                      message: "Only PDF files are supported"
+                      details:
+                        file_name: "resume.docx"
+                        error: "File type not supported"
+        '413':
+          description: File size too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                file_too_large:
+                  summary: File exceeds size limit
+                  value:
+                    error:
+                      code: "FILE_TOO_LARGE"
+                      message: "File size exceeds maximum limit"
+                      details:
+                        file_size_mb: 15.2
+                        max_size_mb: 10
+        '422':
+          description: Processing error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                processing_error:
+                  summary: AI processing failed
+                  value:
+                    error:
+                      code: "AI_PROCESSING_ERROR"
+                      message: "Failed to process resume text"
+                      details:
+                        backend_requested: "gemini"
+                        error: "API rate limit exceeded"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /health/:
+    get:
+      summary: Health Check
+      description: |
+        Check the health and availability of AI backends and system resources.
+        Returns the status of each processing backend and system configuration.
+      operationId: healthCheck
+      tags:
+        - Resume Parser
+      responses:
+        '200':
+          description: Health check completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheck'
+              examples:
+                healthy_system:
+                  summary: All systems healthy
+                  value:
+                    status: "healthy"
+                    backends:
+                      gemini:
+                        status: "available"
+                        response_time_ms: 245
+                        last_check: "2024-01-15T10:30:00Z"
+                      spacy:
+                        status: "available"
+                        model_loaded: "en_core_web_sm"
+                        last_check: "2024-01-15T10:30:00Z"
+                      rule_based:
+                        status: "available"
+                        last_check: "2024-01-15T10:30:00Z"
+                    configuration:
+                      available_backends: ["gemini", "spacy", "rule_based"]
+                      total_backends: 3
+                      temp_files_count: 0
+        '503':
+          description: Service unavailable - critical backends down
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheck'
+              examples:
+                degraded_system:
+                  summary: Some backends unavailable
+                  value:
+                    status: "degraded"
+                    backends:
+                      gemini:
+                        status: "unavailable"
+                        error: "API key not configured"
+                      spacy:
+                        status: "available"
+                        model_loaded: "en_core_web_sm"
+                    configuration:
+                      available_backends: ["spacy", "rule_based"]
+                      total_backends: 3
+
+components:
+  schemas:
+    ResumeData:
+      type: object
+      description: Structured resume data extracted from PDF
+      properties:
+        name:
+          type: string
+          nullable: true
+          description: Full name of the candidate
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          nullable: true
+          description: Primary email address
+          example: "john.doe@email.com"
+        phone:
+          type: string
+          nullable: true
+          description: Phone number
+          example: "+1-555-123-4567"
+        location:
+          type: string
+          nullable: true
+          description: Current location or address
+          example: "San Francisco, CA"
+        linkedin_url:
+          type: string
+          format: uri
+          nullable: true
+          description: LinkedIn profile URL
+          example: "https://linkedin.com/in/johndoe"
+        website_url:
+          type: string
+          format: uri
+          nullable: true
+          description: Personal website or portfolio URL
+          example: "https://johndoe.dev"
+        summary:
+          type: string
+          nullable: true
+          description: Professional summary or objective
+          example: "Experienced software engineer with 5+ years in full-stack development..."
+        skills:
+          type: array
+          items:
+            type: string
+          description: Flat list of all identified skills
+          example: ["Python", "JavaScript", "React", "Django", "PostgreSQL"]
+        categorized_skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/SkillCategory'
+          description: Skills organized by category
+        experience:
+          type: array
+          items:
+            $ref: '#/components/schemas/Experience'
+          description: Work experience entries
+        education:
+          type: array
+          items:
+            $ref: '#/components/schemas/Education'
+          description: Education entries
+        languages:
+          type: array
+          items:
+            type: string
+          description: Known languages
+          example: ["English", "Spanish"]
+        certifications:
+          type: array
+          items:
+            type: string
+          description: Professional certifications
+          example: ["AWS Certified Solutions Architect"]
+        processing_backend_used:
+          type: string
+          description: Backend that was actually used for processing
+          example: "gemini"
+        confidence_score:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          nullable: true
+          description: Overall confidence score for extracted data
+          example: 0.92
+        processing_time_seconds:
+          type: number
+          format: float
+          minimum: 0.0
+          description: Time taken to process the resume
+          example: 2.34
+        raw_text:
+          type: string
+          nullable: true
+          description: Raw extracted text from PDF (only if requested)
+        warnings:
+          type: array
+          items:
+            type: string
+          description: Non-fatal warnings during processing
+          example: []
+
+    Experience:
+      type: object
+      description: Work experience entry
+      properties:
+        job_title:
+          type: string
+          nullable: true
+          description: Job title or position
+          example: "Senior Software Engineer"
+        company:
+          type: string
+          nullable: true
+          description: Company name
+          example: "Tech Corp"
+        start_date:
+          type: string
+          nullable: true
+          description: Start date (various formats)
+          example: "2021-01"
+        end_date:
+          type: string
+          nullable: true
+          description: End date or "Present"
+          example: "2024-01"
+        description:
+          type: string
+          nullable: true
+          description: Job description or responsibilities
+          example: "Led development of microservices architecture..."
+        location:
+          type: string
+          nullable: true
+          description: Job location
+          example: "San Francisco, CA"
+        is_current:
+          type: boolean
+          default: false
+          description: Whether this is the current job
+
+    Education:
+      type: object
+      description: Education entry
+      properties:
+        degree:
+          type: string
+          nullable: true
+          description: Degree type
+          example: "Bachelor of Science"
+        institution:
+          type: string
+          nullable: true
+          description: School or university name
+          example: "University of California"
+        field_of_study:
+          type: string
+          nullable: true
+          description: Major or field of study
+          example: "Computer Science"
+        start_date:
+          type: string
+          nullable: true
+          description: Start date
+          example: "2015"
+        end_date:
+          type: string
+          nullable: true
+          description: Graduation date
+          example: "2019"
+        gpa:
+          type: string
+          nullable: true
+          description: Grade point average
+          example: "3.8"
+        location:
+          type: string
+          nullable: true
+          description: Institution location
+          example: "Berkeley, CA"
+
+    SkillCategory:
+      type: object
+      description: Categorized skills
+      properties:
+        category:
+          type: string
+          description: Skill category name
+          example: "Programming Languages"
+        skills:
+          type: array
+          items:
+            type: string
+          description: Skills in this category
+          example: ["Python", "JavaScript", "TypeScript"]
+
+    HealthCheck:
+      type: object
+      description: System health status
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unavailable]
+          description: Overall system status
+          example: "healthy"
+        backends:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [available, unavailable]
+              response_time_ms:
+                type: integer
+                description: Response time in milliseconds
+              model_loaded:
+                type: string
+                description: Loaded model name (for spaCy)
+              error:
+                type: string
+                description: Error message if unavailable
+              last_check:
+                type: string
+                format: date-time
+                description: Last health check timestamp
+          description: Status of each AI backend
+        configuration:
+          type: object
+          properties:
+            available_backends:
+              type: array
+              items:
+                type: string
+              description: List of available backends
+            total_backends:
+              type: integer
+              description: Total number of configured backends
+            temp_directory:
+              type: string
+              description: Temporary files directory
+            temp_files_count:
+              type: integer
+              description: Number of temporary files
+            temp_files_size_mb:
+              type: number
+              description: Total size of temporary files in MB
+            oldest_temp_file_age_minutes:
+              type: integer
+              description: Age of oldest temporary file in minutes
+          description: Current system configuration
+
+    ErrorResponse:
+      type: object
+      description: Error response format
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: Error code identifier
+              example: "INVALID_FILE_FORMAT"
+            message:
+              type: string
+              description: Human-readable error message
+              example: "Only PDF files are supported"
+            details:
+              type: object
+              additionalProperties: true
+              description: Additional error details
+              example:
+                file_name: "resume.docx"
+                error: "File type not supported"
+
+  securitySchemes:
+    # Future authentication schemes can be added here
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication (future implementation)
+
+# Future security requirements
+# security:
+#   - ApiKeyAuth: []
+
+tags:
+  - name: Resume Parser
+    description: Resume parsing and information extraction operations

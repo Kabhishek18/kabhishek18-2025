@@ -26,31 +26,74 @@ const portfolioData = {
 class EnhancedLoader {
     constructor() {
         this.messages = [
-            'Initializing neural pathways...',
-            'Loading AI consciousness modules...',
-            'Establishing quantum entanglement...',
-            'Calibrating creativity engines...',
-            'Synchronizing digital architecture...',
-            'Compiling innovative solutions...',
-            'Optimizing user experience...',
-            'Finalizing system protocols...',
-            'System ready. Welcome to the future.'
+            'Initializing system...',
+            'Loading components...',
+            'Optimizing experience...',
+            'Ready!'
         ];
         this.currentMessageIndex = 0;
         this.progress = 0;
         this.isFirstLoad = !sessionStorage.getItem('visitedBefore');
+        this.isSlowConnection = navigator.connection && navigator.connection.effectiveType && 
+                               (navigator.connection.effectiveType === 'slow-2g' || navigator.connection.effectiveType === '2g');
     }
 
     show() {
-        if (!this.isFirstLoad) return Promise.resolve();
+        if (!this.isFirstLoad || this.isSlowConnection) return Promise.resolve();
 
         return new Promise((resolve) => {
             this.createLoader();
+            this.addSkipButton(resolve);
             this.animateMessages(() => {
                 this.hideLoader(resolve);
                 sessionStorage.setItem('visitedBefore', 'true');
             });
         });
+    }
+
+    addSkipButton(resolve) {
+        const skipBtn = document.createElement('button');
+        skipBtn.innerHTML = 'Skip Intro';
+        skipBtn.style.cssText = `
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: rgba(0, 217, 255, 0.2);
+            border: 1px solid rgba(0, 217, 255, 0.5);
+            color: #00d9ff;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            cursor: pointer;
+            z-index: 30001;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        `;
+        
+        skipBtn.addEventListener('mouseenter', () => {
+            skipBtn.style.background = 'rgba(0, 217, 255, 0.3)';
+            skipBtn.style.transform = 'translateY(-2px)';
+        });
+        
+        skipBtn.addEventListener('mouseleave', () => {
+            skipBtn.style.background = 'rgba(0, 217, 255, 0.2)';
+            skipBtn.style.transform = 'translateY(0)';
+        });
+        
+        skipBtn.addEventListener('click', () => {
+            this.hideLoader(resolve);
+            sessionStorage.setItem('visitedBefore', 'true');
+        });
+        
+        document.body.appendChild(skipBtn);
+        
+        // Remove skip button when loader is done
+        setTimeout(() => {
+            if (skipBtn && skipBtn.parentNode) {
+                skipBtn.parentNode.removeChild(skipBtn);
+            }
+        }, 5000);
     }
 
     createLoader() {
@@ -134,14 +177,14 @@ class EnhancedLoader {
                 width: 120px;
                 height: 120px;
                 border-top-color: #00d9ff;
-                animation-duration: 3s;
+                animation-duration: 1.5s;
             }
 
             .logo-ring:nth-child(2) {
                 width: 90px;
                 height: 90px;
                 border-right-color: #a855f7;
-                animation-duration: 2s;
+                animation-duration: 1s;
                 animation-direction: reverse;
             }
 
@@ -149,7 +192,7 @@ class EnhancedLoader {
                 width: 60px;
                 height: 60px;
                 border-bottom-color: #00ff88;
-                animation-duration: 1.5s;
+                animation-duration: 0.8s;
             }
 
             .logo-text {
@@ -332,7 +375,7 @@ class EnhancedLoader {
                 }
                 100% {
                     opacity: 0;
-                    transform: scale(1.1);
+                    transform: scale(1.05);
                 }
             }
 
@@ -376,15 +419,15 @@ class EnhancedLoader {
 
     createParticles() {
         const container = document.getElementById('loaderParticles');
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 12; i++) {
             setTimeout(() => {
                 const particle = document.createElement('div');
                 particle.className = 'loader-particle';
                 particle.style.left = Math.random() * 100 + '%';
-                particle.style.animationDelay = Math.random() * 3 + 's';
-                particle.style.animationDuration = (4 + Math.random() * 4) + 's';
+                particle.style.animationDelay = Math.random() * 1 + 's';
+                particle.style.animationDuration = (2 + Math.random() * 2) + 's';
                 container.appendChild(particle);
-            }, i * 200);
+            }, i * 50);
         }
     }
 
@@ -398,7 +441,7 @@ class EnhancedLoader {
                 messageEl.textContent = this.messages[this.currentMessageIndex];
                 messageEl.style.animation = 'none';
                 messageEl.offsetHeight; // Trigger reflow
-                messageEl.style.animation = 'messageSlideIn 0.5s ease forwards';
+                messageEl.style.animation = 'messageSlideIn 0.3s ease forwards';
                 
                 // Update progress
                 this.progress = ((this.currentMessageIndex + 1) / this.messages.length) * 100;
@@ -407,7 +450,7 @@ class EnhancedLoader {
                 
                 this.currentMessageIndex++;
                 
-                const delay = this.currentMessageIndex === this.messages.length ? 1500 : 1800;
+                const delay = this.currentMessageIndex === this.messages.length ? 500 : 600;
                 setTimeout(showMessage, delay);
             } else {
                 callback();
@@ -426,7 +469,7 @@ class EnhancedLoader {
                 loader.parentNode.removeChild(loader);
             }
             callback();
-        }, 1000);
+        }, 500);
     }
 }
 
@@ -931,11 +974,13 @@ class App {
 
     optimizeForMobile() {
         const isMobile = window.innerWidth <= 768;
-        if (isMobile) {
+        const isSlowDevice = navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4;
+        
+        if (isMobile || isSlowDevice) {
             // Reduce matrix rain opacity
             const matrixCanvas = document.getElementById('matrix');
             if (matrixCanvas) {
-                matrixCanvas.style.opacity = '0.03';
+                matrixCanvas.style.opacity = '0.02';
             }
             
             // Reduce neural network nodes
@@ -945,6 +990,11 @@ class App {
                     node.remove();
                 }
             });
+            
+            // Disable heavy animations
+            document.documentElement.style.setProperty('--animation-fast', '0.1s');
+            document.documentElement.style.setProperty('--animation-normal', '0.2s');
+            document.documentElement.style.setProperty('--animation-slow', '0.3s');
         }
     }
 

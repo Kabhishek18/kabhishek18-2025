@@ -9,6 +9,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
+from django import forms
 from datetime import timedelta
 import csv
 import json
@@ -17,11 +18,12 @@ from unfold.contrib.forms.widgets import WysiwygWidget
 from .models import Post, Category, NewsletterSubscriber, Tag, Comment, SocialShare, AuthorProfile, MediaItem
 from .linkedin_models import LinkedInConfig, LinkedInPost
 from ckeditor.widgets import CKEditorWidget
+from .admin_quality import QualityScoreMixin, ContentQualityAdmin
 
 
 @admin.register(Post)
-class PostAdmin(ModelAdmin):
-    list_display = ('title', 'author', 'status', 'is_featured', 'view_count', 'engagement_score', 'linkedin_status', 'created_at')
+class PostAdmin(QualityScoreMixin, ModelAdmin):
+    list_display = ('title', 'author', 'status', 'quality_score_display', 'is_featured', 'view_count', 'engagement_score', 'linkedin_status', 'created_at')
     list_filter = ('status', 'is_featured', 'categories', 'tags', 'author', 'created_at', 'linkedin_posts__status')
     search_fields = ('title', 'excerpt', 'content')
     prepopulated_fields = {'slug': ('title',)}
@@ -62,7 +64,14 @@ class PostAdmin(ModelAdmin):
     )
     
     readonly_fields = ('view_count', 'linkedin_posting_info')
-    actions = ['mark_as_featured', 'unmark_as_featured', 'clear_content_cache', 'post_to_linkedin', 'retry_linkedin_posting']
+    actions = [
+        'mark_as_featured', 
+        'unmark_as_featured', 
+        'clear_content_cache', 
+        'post_to_linkedin', 
+        'retry_linkedin_posting',
+        'regenerate_low_quality_content'
+    ]
     
     def engagement_score(self, obj):
         """Calculate and display engagement score based on views, comments, and shares"""
@@ -98,6 +107,178 @@ class PostAdmin(ModelAdmin):
         ContentDiscoveryService.clear_content_caches()
         self.message_user(request, 'Content discovery caches cleared.')
     clear_content_cache.short_description = "Clear content discovery caches"
+    
+    def regenerate_low_quality_content(self, request, queryset):
+        """Regenerate content for posts with low quality scores (async via Celery)"""
+        import os
+        
+        # Check for API key
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            self.message_user(
+                request,
+                '❌ GEMINI_API_KEY not found. Cannot regenerate content.',
+                messages.ERROR
+            )
+            return
+        
+        # Limit to prevent timeout
+        post_count = queryset.count()
+        if post_count > 10:
+            self.message_user(
+                request,
+                f'⚠️ Too many posts selected ({post_count}). Please select 10 or fewer posts at a time.',
+                messages.WARNING
+            )
+            return
+        
+        # Check if Celery is available
+        try:
+            from blog.tasks import regenerate_post_content_task
+            use_celery = True
+        except ImportError:
+            use_celery = False
+        
+        if use_celery:
+            # Queue posts for async regeneration
+            queued_count = 0
+            for post in queryset:
+                try:
+                    regenerate_post_content_task.delay(post.id)
+                    queued_count += 1
+                except Exception as e:
+                    self.message_user(
+                        request,
+                        f'❌ Error queuing "{post.title}": {str(e)}',
+                        messages.ERROR
+                    )
+            
+            if queued_count > 0:
+                self.message_user(
+                    request,
+                    f'✅ Queued {queued_count} post(s) for regeneration. Check back in a few minutes.',
+                    messages.SUCCESS
+                )
+        else:
+            # Fallback to synchronous processing (with limits)
+            self._regenerate_sync(request, queryset)
+    
+    def _regenerate_sync(self, request, queryset):
+        """Synchronous regeneration fallback (with safety limits)"""
+        from blog.content_quality import generate_quality_report
+        import os
+        import google.generativeai as genai
+        from django.utils.text import slugify
+        import json
+        import time
+        
+        api_key = os.getenv("GEMINI_API_KEY")
+        regenerated_count = 0
+        skipped_count = 0
+        error_count = 0
+        
+        # Limit to 3 posts max for sync processing
+        posts_to_process = list(queryset[:3])
+        
+        for post in posts_to_process:
+            try:
+                # Check current quality (with timeout protection)
+                try:
+                    report = generate_quality_report(post.content, post.title, post.excerpt)
+                except Exception as e:
+                    self.message_user(
+                        request,
+                        f'⚠️ Could not check quality for "{post.title}": {str(e)}',
+                        messages.WARNING
+                    )
+                    continue
+                
+                # Only regenerate if quality is low (< 75)
+                if report['score'] >= 75:
+                    skipped_count += 1
+                    continue
+                
+                # Configure Gemini with timeout
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel('gemini-2.5-flash')
+                
+                # Prompt - KEEP ORIGINAL TITLE
+                prompt = f"""Improve the CONTENT of this blog post. Keep the SAME title and topic.
+
+Title: {post.title} (DO NOT CHANGE)
+Current content: {post.content[:500]}...
+
+Issues: {', '.join(report['issues'][:2])}
+
+Rewrite the content about "{post.title}" to be 1200+ words with clear H2 headings, examples, and good structure.
+
+Return JSON: {{"title": "{post.title}", "excerpt": "improved meta description", "content": "improved HTML content about {post.title}"}}"""
+                
+                # Generate with timeout protection
+                response = model.generate_content(
+                    prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        temperature=0.8,
+                        max_output_tokens=15000,  # Reduced for speed
+                    ),
+                    request_options={'timeout': 30}  # 30 second timeout
+                )
+                
+                # Parse response
+                cleaned_text = response.text.strip()
+                if cleaned_text.startswith("```json"):
+                    cleaned_text = cleaned_text[7:]
+                if cleaned_text.endswith("```"):
+                    cleaned_text = cleaned_text[:-3]
+                cleaned_text = cleaned_text.strip()
+                
+                ai_data = json.loads(cleaned_text)
+                
+                # Update post - KEEP ORIGINAL TITLE AND SLUG
+                # DO NOT change title or slug
+                post.excerpt = ai_data.get('excerpt', post.excerpt)[:500]
+                post.content = ai_data.get('content', post.content)
+                
+                # Save as draft
+                post.status = 'draft'
+                post.save()
+                
+                regenerated_count += 1
+                
+                # Rate limiting
+                time.sleep(2)
+                
+            except Exception as e:
+                error_count += 1
+                self.message_user(
+                    request,
+                    f'❌ Error regenerating "{post.title}": {str(e)[:100]}',
+                    messages.ERROR
+                )
+        
+        # Show results
+        if regenerated_count > 0:
+            self.message_user(
+                request,
+                f'✅ Regenerated {regenerated_count} post(s). Posts saved as drafts for review.',
+                messages.SUCCESS
+            )
+        
+        if skipped_count > 0:
+            self.message_user(
+                request,
+                f'ℹ️ Skipped {skipped_count} post(s) - already high quality (score ≥ 75)',
+                messages.INFO
+            )
+        
+        if error_count > 0:
+            self.message_user(
+                request,
+                f'⚠️ {error_count} post(s) failed. Try regenerating them individually.',
+                messages.WARNING
+            )
+    
+    regenerate_low_quality_content.short_description = "🔄 Regenerate low-quality content (AI)"
     
     def linkedin_status(self, obj):
         """Display LinkedIn posting status"""
@@ -1142,12 +1323,12 @@ blog_engagement_admin.register(MediaItem, MediaItemAdmin)
 @admin.register(LinkedInConfig)
 class LinkedInConfigAdmin(ModelAdmin):
     """
-    Admin configuration for LinkedIn API credentials with secure field handling.
+    Admin configuration for LinkedIn API credentials with secure field handling and hashtag configuration.
     """
-    list_display = ('client_id_display', 'is_active', 'credential_status', 'token_status', 'created_at')
-    list_filter = ('is_active', 'created_at')
+    list_display = ('client_id_display', 'is_active', 'credential_status', 'token_status', 'hashtag_status', 'image_posting_status', 'created_at')
+    list_filter = ('is_active', 'enable_hashtags', 'enable_image_posting', 'image_posting_strategy', 'created_at')
     search_fields = ('client_id',)
-    readonly_fields = ('created_at', 'updated_at', 'credential_validation_display', 'token_info_display')
+    readonly_fields = ('created_at', 'updated_at', 'credential_validation_display', 'token_info_display', 'hashtag_config_display')
     
     fieldsets = (
         ("Basic Configuration", {
@@ -1162,6 +1343,29 @@ class LinkedInConfigAdmin(ModelAdmin):
             'fields': ('token_expires_at', 'token_info_display'),
             'description': 'Access token expiration and status information.'
         }),
+        ("Hashtag Configuration", {
+            'fields': ('enable_hashtags', 'max_hashtags', 'custom_hashtag_rules', 'hashtag_blacklist'),
+            'description': 'Configure automatic hashtag generation for LinkedIn posts.'
+        }),
+        ("Image Posting Configuration", {
+            'fields': ('enable_image_posting', 'image_posting_strategy', 'category_image_overrides'),
+            'description': 'Configure how images are handled in LinkedIn posts.'
+        }),
+        ("Image Posting Preview", {
+            'classes': ('collapse',),
+            'fields': ('image_posting_preview',),
+            'description': 'Preview image posting decisions for existing posts.'
+        }),
+        ("Hashtag Preview", {
+            'classes': ('collapse',),
+            'fields': ('hashtag_preview',),
+            'description': 'Preview hashtag generation for existing posts.'
+        }),
+        ("Configuration Summary", {
+            'classes': ('collapse',),
+            'fields': ('hashtag_config_display',),
+            'description': 'Summary of current hashtag and image posting configuration.'
+        }),
         ("Validation", {
             'classes': ('collapse',),
             'fields': ('credential_validation_display',),
@@ -1173,7 +1377,7 @@ class LinkedInConfigAdmin(ModelAdmin):
         }),
     )
     
-    actions = ['validate_credentials', 'clear_tokens', 'test_connection']
+    actions = ['validate_credentials', 'clear_tokens', 'test_connection', 'preview_hashtag_generation', 'validate_hashtag_config', 'preview_image_posting_decisions', 'validate_image_posting_config', 'export_image_posting_summary']
     
     def client_id_display(self, obj):
         """Display truncated client ID for security"""
@@ -1203,6 +1407,65 @@ class LinkedInConfigAdmin(ModelAdmin):
         else:
             return format_html('<span style="color: green; font-weight: bold;">Valid</span>')
     token_status.short_description = 'Token Status'
+    
+    def hashtag_status(self, obj):
+        """Display hashtag configuration status"""
+        if not obj.enable_hashtags:
+            return format_html('<span style="color: gray;">Disabled</span>')
+        
+        status_parts = []
+        if obj.max_hashtags:
+            status_parts.append(f"Max: {obj.max_hashtags}")
+        
+        if obj.custom_hashtag_rules:
+            rule_count = len(obj.custom_hashtag_rules)
+            status_parts.append(f"Rules: {rule_count}")
+        
+        if obj.hashtag_blacklist:
+            blacklist_count = len(obj.hashtag_blacklist)
+            status_parts.append(f"Blacklist: {blacklist_count}")
+        
+        if status_parts:
+            status_text = " | ".join(status_parts)
+            return format_html('<span style="color: green; font-weight: bold;">✓ {}</span>', status_text)
+        else:
+            return format_html('<span style="color: orange;">Basic</span>')
+    hashtag_status.short_description = 'Hashtag Config'
+    
+    def image_posting_status(self, obj):
+        """Display image posting configuration status"""
+        if not obj.enable_image_posting:
+            return format_html('<span style="color: gray;">Disabled</span>')
+        
+        strategy_colors = {
+            'always': 'green',
+            'never': 'red',
+            'category_based': 'orange'
+        }
+        
+        strategy_icons = {
+            'always': '🖼️',
+            'never': '📝',
+            'category_based': '📂'
+        }
+        
+        color = strategy_colors.get(obj.image_posting_strategy, 'gray')
+        icon = strategy_icons.get(obj.image_posting_strategy, '❓')
+        
+        status_text = obj.image_posting_strategy.replace('_', ' ').title()
+        
+        # Add override count for category-based strategy
+        if obj.image_posting_strategy == 'category_based' and obj.category_image_overrides:
+            override_count = len(obj.category_image_overrides)
+            status_text += f" ({override_count} overrides)"
+        
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{} {}</span>',
+            color,
+            icon,
+            status_text
+        )
+    image_posting_status.short_description = 'Image Posting'
     
     def client_secret_display(self, obj):
         """Display client secret field with security handling"""
@@ -1277,6 +1540,52 @@ class LinkedInConfigAdmin(ModelAdmin):
     credential_validation_display.allow_tags = True
     credential_validation_display.short_description = 'Credential Validation'
     
+    def hashtag_config_display(self, obj):
+        """Display hashtag configuration summary"""
+        config_parts = []
+        
+        # Hashtag settings
+        if obj.enable_hashtags:
+            config_parts.append(f"<strong>Hashtags:</strong> Enabled (Max: {obj.max_hashtags})")
+            
+            if obj.custom_hashtag_rules:
+                rule_count = len(obj.custom_hashtag_rules)
+                categories = list(obj.custom_hashtag_rules.keys())[:3]  # Show first 3
+                category_text = ", ".join(categories)
+                if len(obj.custom_hashtag_rules) > 3:
+                    category_text += f" (+{len(obj.custom_hashtag_rules) - 3} more)"
+                config_parts.append(f"<strong>Custom Rules:</strong> {rule_count} categories ({category_text})")
+            
+            if obj.hashtag_blacklist:
+                blacklist_count = len(obj.hashtag_blacklist)
+                sample_terms = obj.hashtag_blacklist[:3]
+                terms_text = ", ".join(sample_terms)
+                if len(obj.hashtag_blacklist) > 3:
+                    terms_text += f" (+{len(obj.hashtag_blacklist) - 3} more)"
+                config_parts.append(f"<strong>Blacklist:</strong> {blacklist_count} terms ({terms_text})")
+        else:
+            config_parts.append("<strong>Hashtags:</strong> Disabled")
+        
+        # Image posting settings
+        if obj.enable_image_posting:
+            strategy_display = obj.get_image_posting_strategy_display()
+            config_parts.append(f"<strong>Images:</strong> {strategy_display}")
+            
+            # Show category overrides if they exist
+            if obj.category_image_overrides and obj.image_posting_strategy == 'category_based':
+                override_count = len(obj.category_image_overrides)
+                categories = list(obj.category_image_overrides.keys())[:3]  # Show first 3
+                category_text = ", ".join(categories)
+                if len(obj.category_image_overrides) > 3:
+                    category_text += f" (+{len(obj.category_image_overrides) - 3} more)"
+                config_parts.append(f"<strong>Category Overrides:</strong> {override_count} categories ({category_text})")
+        else:
+            config_parts.append("<strong>Images:</strong> Disabled")
+        
+        return "<br>".join(config_parts) if config_parts else "No configuration"
+    hashtag_config_display.allow_tags = True
+    hashtag_config_display.short_description = 'Configuration Summary'
+    
     def validate_credentials(self, request, queryset):
         """Validate credentials for selected configurations"""
         for config in queryset:
@@ -1323,58 +1632,263 @@ class LinkedInConfigAdmin(ModelAdmin):
                 )
     test_connection.short_description = "Test API connection readiness"
     
+    def preview_hashtag_generation(self, request, queryset):
+        """Preview hashtag generation for selected configurations"""
+        from .services.linkedin_content_formatter import LinkedInContentFormatter
+        from .models import Post
+        
+        for config in queryset:
+            if not config.enable_hashtags:
+                self.message_user(
+                    request,
+                    f"Config {config.id}: Hashtags are disabled",
+                    level=messages.WARNING
+                )
+                continue
+            
+            # Get a sample published post for preview
+            sample_post = Post.objects.filter(status='published').first()
+            if not sample_post:
+                self.message_user(
+                    request,
+                    f"Config {config.id}: No published posts available for preview",
+                    level=messages.WARNING
+                )
+                continue
+            
+            try:
+                formatter = LinkedInContentFormatter()
+                # This would use the actual hashtag generation logic
+                hashtags = formatter._generate_hashtags(sample_post)
+                
+                if hashtags:
+                    hashtag_text = " ".join(hashtags)
+                    self.message_user(
+                        request,
+                        f"Config {config.id}: Sample hashtags for '{sample_post.title}': {hashtag_text}",
+                        level=messages.SUCCESS
+                    )
+                else:
+                    self.message_user(
+                        request,
+                        f"Config {config.id}: No hashtags generated for '{sample_post.title}'",
+                        level=messages.WARNING
+                    )
+            except Exception as e:
+                self.message_user(
+                    request,
+                    f"Config {config.id}: Error generating hashtags: {e}",
+                    level=messages.ERROR
+                )
+    preview_hashtag_generation.short_description = "Preview hashtag generation"
+    
+    def validate_hashtag_config(self, request, queryset):
+        """Validate hashtag configuration for selected configs"""
+        for config in queryset:
+            errors = []
+            warnings = []
+            
+            # Validate hashtag settings
+            if config.enable_hashtags:
+                if config.max_hashtags == 0:
+                    errors.append("Max hashtags is 0 but hashtags are enabled")
+                elif config.max_hashtags > 10:
+                    warnings.append(f"Max hashtags ({config.max_hashtags}) is high - LinkedIn recommends 3-5")
+                
+                # Validate custom rules
+                if config.custom_hashtag_rules:
+                    for category, rules in config.custom_hashtag_rules.items():
+                        if not isinstance(rules, dict):
+                            errors.append(f"Invalid rules format for category '{category}'")
+                            continue
+                        
+                        if 'required_hashtags' in rules:
+                            required = rules['required_hashtags']
+                            if not isinstance(required, list):
+                                errors.append(f"required_hashtags for '{category}' must be a list")
+                            else:
+                                for hashtag in required:
+                                    if not hashtag.startswith('#'):
+                                        warnings.append(f"Hashtag '{hashtag}' in '{category}' should start with #")
+                
+                # Validate blacklist
+                if config.hashtag_blacklist:
+                    if not isinstance(config.hashtag_blacklist, list):
+                        errors.append("Hashtag blacklist must be a list")
+            
+            # Report results
+            if errors:
+                self.message_user(
+                    request,
+                    f"Config {config.id}: Validation errors: {'; '.join(errors)}",
+                    level=messages.ERROR
+                )
+            elif warnings:
+                self.message_user(
+                    request,
+                    f"Config {config.id}: Validation warnings: {'; '.join(warnings)}",
+                    level=messages.WARNING
+                )
+            else:
+                self.message_user(
+                    request,
+                    f"Config {config.id}: Hashtag configuration is valid",
+                    level=messages.SUCCESS
+                )
+    validate_hashtag_config.short_description = "Validate hashtag configuration"
+    
+    def preview_image_posting_decisions(self, request, queryset):
+        """Preview image posting decisions for selected configurations"""
+        from .models import Post
+        
+        for config in queryset:
+            # Get a sample published post for preview
+            sample_posts = Post.objects.filter(status='published')[:3]
+            if not sample_posts:
+                self.message_user(
+                    request,
+                    f"Config {config.id}: No published posts available for preview",
+                    level=messages.WARNING
+                )
+                continue
+            
+            preview_results = []
+            for post in sample_posts:
+                decision = config.should_include_images(post)
+                decision_text = "Include images" if decision else "Text-only"
+                
+                # Get the reason for the decision
+                if not config.enable_image_posting:
+                    reason = "Image posting disabled globally"
+                elif config.image_posting_strategy == 'never':
+                    reason = "Strategy set to 'never'"
+                elif config.image_posting_strategy == 'always':
+                    reason = "Strategy set to 'always'"
+                elif config.image_posting_strategy == 'category_based':
+                    if hasattr(post, 'categories') and post.categories.exists():
+                        category_names = [cat.name for cat in post.categories.all()[:2]]
+                        reason = f"Category-based (categories: {', '.join(category_names)})"
+                    else:
+                        reason = "Category-based (no categories)"
+                else:
+                    reason = "Default behavior"
+                
+                preview_results.append(f"'{post.title[:30]}...': {decision_text} ({reason})")
+            
+            if preview_results:
+                results_text = "; ".join(preview_results)
+                self.message_user(
+                    request,
+                    f"Config {config.id} image posting preview: {results_text}",
+                    level=messages.SUCCESS
+                )
+    preview_image_posting_decisions.short_description = "Preview image posting decisions"
+    
+    def validate_image_posting_config(self, request, queryset):
+        """Validate image posting configuration for selected configs"""
+        for config in queryset:
+            errors = []
+            warnings = []
+            
+            # Validate image posting settings
+            if config.enable_image_posting:
+                if not config.image_posting_strategy:
+                    errors.append("Image posting strategy is not set")
+                elif config.image_posting_strategy not in ['always', 'never', 'category_based']:
+                    errors.append(f"Invalid image posting strategy: {config.image_posting_strategy}")
+                
+                # Validate category overrides
+                if config.category_image_overrides:
+                    if not isinstance(config.category_image_overrides, dict):
+                        errors.append("Category image overrides must be a dictionary")
+                    else:
+                        for category_key, override_config in config.category_image_overrides.items():
+                            if isinstance(override_config, dict):
+                                if 'enable_images' in override_config:
+                                    if not isinstance(override_config['enable_images'], bool):
+                                        errors.append(f"enable_images for category '{category_key}' must be boolean")
+                                if 'description' in override_config:
+                                    if not isinstance(override_config['description'], str):
+                                        errors.append(f"description for category '{category_key}' must be string")
+                            elif not isinstance(override_config, bool):
+                                errors.append(f"Override for category '{category_key}' must be boolean or object")
+                
+                # Check for category-based strategy without overrides
+                if config.image_posting_strategy == 'category_based' and not config.category_image_overrides:
+                    warnings.append("Category-based strategy selected but no category overrides defined")
+            
+            # Report results
+            if errors:
+                self.message_user(
+                    request,
+                    f"Config {config.id}: Image posting validation errors: {'; '.join(errors)}",
+                    level=messages.ERROR
+                )
+            elif warnings:
+                self.message_user(
+                    request,
+                    f"Config {config.id}: Image posting validation warnings: {'; '.join(warnings)}",
+                    level=messages.WARNING
+                )
+            else:
+                self.message_user(
+                    request,
+                    f"Config {config.id}: Image posting configuration is valid",
+                    level=messages.SUCCESS
+                )
+    validate_image_posting_config.short_description = "Validate image posting configuration"
+    
+    def export_image_posting_summary(self, request, queryset):
+        """Export image posting configuration summary for selected configs"""
+        import csv
+        from django.http import HttpResponse
+        from django.utils import timezone
+        
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="image_posting_config_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow([
+            'Config ID', 'Client ID', 'Is Active', 'Enable Image Posting', 
+            'Image Posting Strategy', 'Category Overrides Count', 'Created At'
+        ])
+        
+        for config in queryset:
+            override_count = len(config.category_image_overrides) if config.category_image_overrides else 0
+            writer.writerow([
+                config.id,
+                config.client_id[:10] + '...' if config.client_id else 'Not set',
+                'Yes' if config.is_active else 'No',
+                'Yes' if config.enable_image_posting else 'No',
+                config.get_image_posting_strategy_display(),
+                override_count,
+                config.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            ])
+        
+        return response
+    export_image_posting_summary.short_description = "Export image posting configuration summary"
+    
     def get_form(self, request, obj=None, **kwargs):
-        """Customize form to handle sensitive fields"""
-        from django import forms
+        """Use custom form with hashtag configuration support"""
+        from .admin_forms import LinkedInConfigAdminForm
+        kwargs['form'] = LinkedInConfigAdminForm
+        form = super().get_form(request, obj, **kwargs)
         
-        class LinkedInConfigForm(forms.ModelForm):
-            client_secret = forms.CharField(
-                widget=forms.PasswordInput(attrs={'placeholder': 'Enter client secret'}),
+        # Add preview fields dynamically (not model fields)
+        if obj and obj.pk:
+            from .admin_widgets import HashtagPreviewWidget, ImagePostingPreviewWidget
+            form.base_fields['hashtag_preview'] = forms.CharField(
+                widget=HashtagPreviewWidget(),
                 required=False,
-                help_text="Leave blank to keep existing value"
+                help_text="Preview hashtag generation for existing posts"
             )
-            access_token = forms.CharField(
-                widget=forms.Textarea(attrs={'rows': 3, 'placeholder': 'Enter access token'}),
+            form.base_fields['image_posting_preview'] = forms.CharField(
+                widget=ImagePostingPreviewWidget(),
                 required=False,
-                help_text="Leave blank to keep existing value"
+                help_text="Preview image posting decisions for existing posts"
             )
-            refresh_token = forms.CharField(
-                widget=forms.Textarea(attrs={'rows': 3, 'placeholder': 'Enter refresh token'}),
-                required=False,
-                help_text="Leave blank to keep existing value"
-            )
-            
-            class Meta:
-                model = LinkedInConfig
-                fields = '__all__'
-            
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs)
-                # Don't show actual encrypted values in form
-                if self.instance and self.instance.pk:
-                    self.fields['client_secret'].initial = ''
-                    self.fields['access_token'].initial = ''
-                    self.fields['refresh_token'].initial = ''
-            
-            def save(self, commit=True):
-                instance = super().save(commit=False)
-                
-                # Only update encrypted fields if new values are provided
-                if self.cleaned_data.get('client_secret'):
-                    instance.set_client_secret(self.cleaned_data['client_secret'])
-                
-                if self.cleaned_data.get('access_token'):
-                    instance.set_access_token(self.cleaned_data['access_token'])
-                
-                if self.cleaned_data.get('refresh_token'):
-                    instance.set_refresh_token(self.cleaned_data['refresh_token'])
-                
-                if commit:
-                    instance.save()
-                return instance
         
-        kwargs['form'] = LinkedInConfigForm
-        return super().get_form(request, obj, **kwargs)
+        return form
     
     def has_add_permission(self, request):
         """Limit to one active configuration"""
@@ -1383,12 +1897,21 @@ class LinkedInConfigAdmin(ModelAdmin):
         return super().has_add_permission(request)
     
     def get_urls(self):
-        """Add custom URLs for credential management"""
+        """Add custom URLs for credential management and hashtag preview"""
         urls = super().get_urls()
         custom_urls = [
             path('set-credentials/<int:config_id>/', 
                  self.admin_site.admin_view(self.set_credentials_view), 
                  name='blog_linkedinconfig_set_credentials'),
+            path('preview-posts/',
+                 self.admin_site.admin_view(self.preview_posts_view),
+                 name='blog_linkedinconfig_preview_posts'),
+            path('preview-hashtags/',
+                 self.admin_site.admin_view(self.preview_hashtags_view),
+                 name='blog_linkedinconfig_preview_hashtags'),
+            path('preview-image-posting/',
+                 self.admin_site.admin_view(self.preview_image_posting_view),
+                 name='blog_linkedinconfig_preview_image_posting'),
         ]
         return custom_urls + urls
     
@@ -1438,6 +1961,240 @@ class LinkedInConfigAdmin(ModelAdmin):
         }
         
         return render(request, 'admin/blog/linkedinconfig/set_credentials.html', context)
+    
+    def preview_posts_view(self, request):
+        """API endpoint to get posts for hashtag preview"""
+        from django.http import JsonResponse
+        from .models import Post
+        
+        posts = Post.objects.filter(status='published').order_by('-created_at')[:50]
+        posts_data = [
+            {
+                'id': post.id,
+                'title': post.title,
+                'date': post.created_at.strftime('%Y-%m-%d')
+            }
+            for post in posts
+        ]
+        
+        return JsonResponse({'posts': posts_data})
+    
+    def preview_hashtags_view(self, request):
+        """API endpoint to generate hashtag preview"""
+        from django.http import JsonResponse
+        from django.views.decorators.csrf import csrf_exempt
+        from django.utils.decorators import method_decorator
+        import json
+        
+        if request.method != 'POST':
+            return JsonResponse({'success': False, 'error': 'POST required'})
+        
+        try:
+            data = json.loads(request.body)
+            post_id = data.get('post_id')
+            config_data = data.get('config', {})
+            
+            if not post_id:
+                return JsonResponse({'success': False, 'error': 'Post ID required'})
+            
+            # Get the post
+            from .models import Post
+            try:
+                post = Post.objects.get(id=post_id, status='published')
+            except Post.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Post not found'})
+            
+            # Generate hashtags using the configuration
+            hashtags, details = self._generate_preview_hashtags(post, config_data)
+            
+            return JsonResponse({
+                'success': True,
+                'hashtags': hashtags,
+                'details': details
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    def _generate_preview_hashtags(self, post, config_data):
+        """Generate hashtags for preview using provided configuration"""
+        try:
+            from .services.linkedin_content_formatter import LinkedInContentFormatter
+            
+            # Create a temporary config-like object
+            class PreviewConfig:
+                def __init__(self, data):
+                    self.enable_hashtags = data.get('enable_hashtags', True)
+                    self.max_hashtags = data.get('max_hashtags', 5)
+                    self.custom_hashtag_rules = data.get('custom_hashtag_rules', {})
+                    self.hashtag_blacklist = data.get('hashtag_blacklist', [])
+            
+            config = PreviewConfig(config_data)
+            
+            if not config.enable_hashtags:
+                return [], {'reason': 'Hashtags are disabled in configuration'}
+            
+            # Use the content formatter to generate hashtags
+            formatter = LinkedInContentFormatter()
+            hashtags = formatter._generate_hashtags(post)
+            
+            # Apply configuration limits
+            if config.max_hashtags and len(hashtags) > config.max_hashtags:
+                original_count = len(hashtags)
+                hashtags = hashtags[:config.max_hashtags]
+                filtered_count = original_count - len(hashtags)
+            else:
+                filtered_count = 0
+            
+            details = {
+                'source': 'Generated from post tags, categories, and content',
+                'total_generated': len(hashtags) + filtered_count,
+                'filtered_count': filtered_count
+            }
+            
+            return hashtags, details
+            
+        except Exception as e:
+            return [], {'reason': f'Error generating hashtags: {str(e)}'}
+    
+    def preview_image_posting_view(self, request):
+        """API endpoint to generate image posting decision preview"""
+        from django.http import JsonResponse
+        import json
+        
+        if request.method != 'POST':
+            return JsonResponse({'success': False, 'error': 'POST required'})
+        
+        try:
+            data = json.loads(request.body)
+            post_id = data.get('post_id')
+            config_data = data.get('config', {})
+            
+            if not post_id:
+                return JsonResponse({'success': False, 'error': 'Post ID required'})
+            
+            # Get the post
+            from .models import Post
+            try:
+                post = Post.objects.get(id=post_id, status='published')
+            except Post.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Post not found'})
+            
+            # Generate image posting decision using the configuration
+            decision, details = self._generate_image_posting_preview(post, config_data)
+            
+            return JsonResponse({
+                'success': True,
+                'decision': decision,
+                'details': details
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    def _generate_image_posting_preview(self, post, config_data):
+        """Generate image posting decision for preview using provided configuration"""
+        try:
+            # Create a temporary config-like object
+            class PreviewConfig:
+                def __init__(self, data):
+                    self.enable_image_posting = data.get('enable_image_posting', True)
+                    self.image_posting_strategy = data.get('image_posting_strategy', 'always')
+                    self.category_image_overrides = data.get('category_image_overrides', {})
+                
+                def should_include_images(self, blog_post):
+                    if not self.enable_image_posting:
+                        return False
+                    
+                    if self.image_posting_strategy == 'never':
+                        return False
+                    elif self.image_posting_strategy == 'always':
+                        return True
+                    elif self.image_posting_strategy == 'category_based' and blog_post:
+                        # Check category-specific overrides
+                        if hasattr(blog_post, 'categories') and blog_post.categories.exists():
+                            category_overrides = self.category_image_overrides or {}
+                            
+                            # Check each category for overrides
+                            for category in blog_post.categories.all():
+                                category_key = category.slug if hasattr(category, 'slug') else str(category.id)
+                                
+                                # Check for explicit override
+                                if category_key in category_overrides:
+                                    override_value = category_overrides[category_key]
+                                    if isinstance(override_value, bool):
+                                        return override_value
+                                    elif isinstance(override_value, dict):
+                                        return override_value.get('enable_images', True)
+                            
+                            # No specific override found, use default
+                            return True
+                        return True
+                    
+                    # Default fallback
+                    return self.enable_image_posting
+            
+            config = PreviewConfig(config_data)
+            decision = config.should_include_images(post)
+            
+            # Generate detailed explanation
+            details = {
+                'decision': 'Include images' if decision else 'Text-only',
+                'global_setting': 'Enabled' if config.enable_image_posting else 'Disabled',
+                'strategy': config.image_posting_strategy,
+                'post_title': post.title,
+                'categories': []
+            }
+            
+            # Add category information
+            if hasattr(post, 'categories') and post.categories.exists():
+                for category in post.categories.all():
+                    category_info = {
+                        'name': category.name,
+                        'slug': category.slug if hasattr(category, 'slug') else str(category.id)
+                    }
+                    
+                    # Check for overrides
+                    category_key = category_info['slug']
+                    if category_key in config.category_image_overrides:
+                        override = config.category_image_overrides[category_key]
+                        if isinstance(override, bool):
+                            category_info['override'] = 'Include images' if override else 'Text-only'
+                        elif isinstance(override, dict):
+                            enable_images = override.get('enable_images', True)
+                            category_info['override'] = 'Include images' if enable_images else 'Text-only'
+                            if 'description' in override:
+                                category_info['description'] = override['description']
+                    
+                    details['categories'].append(category_info)
+            
+            # Generate reason
+            if not config.enable_image_posting:
+                details['reason'] = 'Image posting is disabled globally'
+            elif config.image_posting_strategy == 'never':
+                details['reason'] = 'Strategy is set to "never include images"'
+            elif config.image_posting_strategy == 'always':
+                details['reason'] = 'Strategy is set to "always include images"'
+            elif config.image_posting_strategy == 'category_based':
+                if details['categories']:
+                    override_found = any('override' in cat for cat in details['categories'])
+                    if override_found:
+                        details['reason'] = 'Category-based strategy with specific overrides applied'
+                    else:
+                        details['reason'] = 'Category-based strategy with default behavior (include images)'
+                else:
+                    details['reason'] = 'Category-based strategy but post has no categories (default: include images)'
+            else:
+                details['reason'] = 'Using default configuration'
+            
+            return decision, details
+            
+        except Exception as e:
+            return False, {'reason': f'Error generating image posting decision: {str(e)}'}
 
 
 @admin.register(LinkedInPost)
