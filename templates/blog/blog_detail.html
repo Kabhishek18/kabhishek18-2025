@@ -4,6 +4,9 @@
 {% load schema_tags %}
 {% load cache %}
 
+{% block extra_css %}
+{% endblock %}
+
 {% block meta_data %}
 {% if meta_data %}
 {{ meta_data }}
@@ -37,11 +40,12 @@
 
 <div class="article-container">
     <header class="article-header">
-        <span class="article-category">{{ post.categories.first.name|default:'General' }}</span>
+        <a href="{% url 'blog:list_by_category' post.categories.first.slug %}" class="article-category">{{ post.categories.first.name|default:'General' }}</a>
         <h1 class="article-title">{{ post.title }}</h1>
         <div class="article-meta">
-            <div class="meta-item"><i class="fas fa-user"></i><span style="text-transform:capitalize">{{post.author.get_full_name|default:post.author.username }}</span></div>
-            <div class="meta-item"><i class="fas fa-calendar"></i><span>{{ post.created_at|date:"F d, Y" }}</span></div>
+            <div class="meta-item"><i class="fas fa-user"></i><a href="mailto:{{ post.author.email }}"
+                    style="text-transform:capitalize; text-decoration: none; color: inherit;">{{post.author.get_full_name|default:post.author.username                     }}</a></div>
+            <div class="meta-item"><i class="fas fa-calendar"></i><span>{{ post.updated_at|date:"F d, Y" }}</span></div>
             <div class="meta-item"><i class="fas fa-clock"></i><span>{{ post.read_time }} min read</span></div>
             <div class="meta-item"><i class="fas fa-eye"></i><span>{{ post.view_count }} views</span></div>
         </div>
@@ -86,7 +90,7 @@
             {% endif %}
         </div>
         <div class="author-info">
-            <h3>{{ post.author.get_full_name|default:post.author.username }}</h3>
+            <h3><a href="mailto:{{ post.author.email }}" style="text-decoration: none; color: inherit;">{{ post.author.get_full_name|default:post.author.username }}</a></h3>
 
             {% if post.author.profile.about %}
             <p class="author-bio">{{ post.author.profile.about }}</p>
@@ -117,8 +121,7 @@
             {% endif %}
         </div>
     </div>
-    <amp-auto-ads type="adsense" data-ad-client="ca-pub-6078293202282096">
-    </amp-auto-ads>
+
     <section class="related-posts">
         <h2 class="related-title">Related Articles : {% for category in post.categories.all %} <a
                 href="{% url 'blog:list_by_category' category.slug %}" class="article-tag">{{ category.name }}</a>{% endfor %}</h2>
@@ -356,143 +359,6 @@
         }
     });
 
-    // Copy Button Functionality for Code Blocks
-    function initializeCopyButtons() {
-        // Find all pre elements (code blocks)
-        const codeBlocks = document.querySelectorAll('pre');
-
-        codeBlocks.forEach((pre, index) => {
-            // Create copy button
-            const copyBtn = document.createElement('button');
-            copyBtn.className = 'copy-btn';
-            copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
-            copyBtn.setAttribute('data-index', index);
-
-            // Style the button
-            copyBtn.style.cssText = `
-            position: absolute;
-            top: 0.8rem;
-            right: 1rem;
-            background: rgba(0, 255, 255, 0.1);
-            color: #00ffff;
-            padding: 0.3rem 0.8rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-family: 'Orbitron', sans-serif;
-            border: 1px solid rgba(0, 255, 255, 0.3);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            z-index: 10;
-            backdrop-filter: blur(10px);
-        `;
-
-            // Add hover effect
-            copyBtn.addEventListener('mouseenter', () => {
-                copyBtn.style.background = 'rgba(0, 255, 255, 0.2)';
-                copyBtn.style.transform = 'scale(1.05)';
-            });
-
-            copyBtn.addEventListener('mouseleave', () => {
-                copyBtn.style.background = 'rgba(0, 255, 255, 0.1)';
-                copyBtn.style.transform = 'scale(1)';
-            });
-
-            // Add click event
-            copyBtn.addEventListener('click', async (e) => {
-                e.preventDefault();
-
-                // Get the code text
-                const codeText = pre.textContent || pre.innerText;
-
-                try {
-                    // Try modern clipboard API first
-                    if (navigator.clipboard && window.isSecureContext) {
-                        await navigator.clipboard.writeText(codeText);
-                    } else {
-                        // Fallback for older browsers
-                        const textArea = document.createElement('textarea');
-                        textArea.value = codeText;
-                        textArea.style.position = 'fixed';
-                        textArea.style.left = '-999999px';
-                        textArea.style.top = '-999999px';
-                        document.body.appendChild(textArea);
-                        textArea.focus();
-                        textArea.select();
-                        document.execCommand('copy');
-                        textArea.remove();
-                    }
-
-                    // Show success feedback
-                    copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-                    copyBtn.style.background = 'rgba(0, 255, 0, 0.2)';
-                    copyBtn.style.color = '#00ff00';
-
-                    // Show notification if your notification system exists
-                    if (typeof showNotification === 'function') {
-                        showNotification('Code copied to clipboard!', 'success');
-                    }
-
-                    // Reset button after 2 seconds
-                    setTimeout(() => {
-                        copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
-                        copyBtn.style.background = 'rgba(0, 255, 255, 0.1)';
-                        copyBtn.style.color = '#00ffff';
-                    }, 2000);
-
-                } catch (err) {
-                    console.error('Copy failed:', err);
-                    copyBtn.innerHTML = '<i class="fas fa-times"></i> Failed';
-                    copyBtn.style.background = 'rgba(255, 0, 0, 0.2)';
-                    copyBtn.style.color = '#ff0000';
-
-                    setTimeout(() => {
-                        copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
-                        copyBtn.style.background = 'rgba(0, 255, 255, 0.1)';
-                        copyBtn.style.color = '#00ffff';
-                    }, 2000);
-                }
-            });
-
-            // Make sure the pre element has relative positioning
-            pre.style.position = 'relative';
-
-            // Append button to the pre element
-            pre.appendChild(copyBtn);
-        });
-    }
-
-    // Initialize copy buttons when DOM is loaded
-    document.addEventListener('DOMContentLoaded', function () {
-        // Your existing DOMContentLoaded code here...
-
-        // Initialize copy buttons
-        initializeCopyButtons();
-
-        // Re-initialize if content is dynamically loaded
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                    // Check if any new pre elements were added
-                    const hasNewCodeBlocks = Array.from(mutation.addedNodes).some(node =>
-                        node.nodeType === 1 && (node.tagName === 'PRE' || node.querySelector('pre'))
-                    );
-
-                    if (hasNewCodeBlocks) {
-                        // Small delay to ensure content is fully rendered
-                        setTimeout(initializeCopyButtons, 100);
-                    }
-                }
-            });
-        });
-
-        // Start observing the article content for changes
-        const articleContent = document.querySelector('.article-content');
-        if (articleContent) {
-            observer.observe(articleContent, {
-                childList: true,
-                subtree: true
-            });
-        }
-    });
+    // Copy button functionality removed - using basic code blocks
 </script>
 {% endblock %}

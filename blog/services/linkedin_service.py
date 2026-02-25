@@ -347,12 +347,36 @@ class LinkedInAPIService:
             )
     
     def _update_quota_usage(self) -> None:
-        """Update quota usage after successful request."""
+        """Update quota usage after successful request with comprehensive logging."""
         self._daily_quota_used += 1
         if not self._last_quota_reset:
             self._last_quota_reset = timezone.now()
         
-        logger.debug(f"LinkedIn quota usage updated: {self._daily_quota_used}/{self._daily_quota_limit}")
+        # Calculate quota metrics
+        remaining_quota = self._daily_quota_limit - self._daily_quota_used
+        usage_percentage = (self._daily_quota_used / self._daily_quota_limit) * 100
+        
+        logger.info(f"LinkedIn quota updated: {self._daily_quota_used}/{self._daily_quota_limit} used ({usage_percentage:.1f}%), {remaining_quota} remaining")
+        
+        # Log warning if quota is getting low
+        if usage_percentage >= 80:
+            logger.warning(f"LinkedIn daily quota usage high: {usage_percentage:.1f}% used ({self._daily_quota_used}/{self._daily_quota_limit})")
+        elif usage_percentage >= 90:
+            logger.critical(f"LinkedIn daily quota usage critical: {usage_percentage:.1f}% used ({self._daily_quota_used}/{self._daily_quota_limit})")
+        
+        # Cache quota metrics for monitoring
+        try:
+            from django.core.cache import cache
+            quota_metrics = {
+                'daily_quota_used': self._daily_quota_used,
+                'daily_quota_limit': self._daily_quota_limit,
+                'usage_percentage': usage_percentage,
+                'remaining_quota': remaining_quota,
+                'last_updated': timezone.now().isoformat()
+            }
+            cache.set('linkedin_quota_metrics', quota_metrics, timeout=3600)  # 1 hour
+        except Exception as e:
+            logger.error(f"Error caching LinkedIn quota metrics: {e}")
     
     def _implement_fallback_mechanism(self, error: LinkedInAPIError, blog_post, attempt_count: int = 1) -> dict:
         """
@@ -380,10 +404,21 @@ class LinkedInAPIService:
             try:
                 logger.info(f"Attempting text-only fallback for image-related error on post: {blog_post.title}")
                 
+                # Log the fallback attempt with detailed context
+                fallback_context = {
+                    'post_title': blog_post.title,
+                    'post_id': getattr(blog_post, 'id', 'unknown'),
+                    'original_had_image': True,
+                    'original_error_type': 'image_related',
+                    'attempt_count': attempt_count
+                }
+                
                 # Get simplified content without image optimization
                 from .linkedin_content_formatter import LinkedInContentFormatter
                 formatter = LinkedInContentFormatter()
                 text_only_content = formatter.format_post_content(blog_post, include_excerpt=True, optimize_for_images=False)
+                
+                logger.debug(f"Generated text-only content for fallback: {len(text_only_content)} characters")
                 
                 # Build URL
                 try:
@@ -392,8 +427,10 @@ class LinkedInAPIService:
                     blog_url = f"https://{current_site.domain}{blog_post.get_absolute_url()}"
                 except:
                     blog_url = f"https://localhost{blog_post.get_absolute_url()}"
+                    logger.warning("Could not determine site domain, using localhost for fallback URL")
                 
                 # Attempt posting without image
+                logger.debug(f"Attempting text-only post creation for fallback")
                 response_data = self.create_post(
                     title=blog_post.title,
                     content=blog_post.excerpt or blog_post.content[:300],
@@ -408,20 +445,32 @@ class LinkedInAPIService:
                     'linkedin_post_id': response_data.get('id')
                 })
                 
-                # Log successful fallback
+                # Log successful fallback with comprehensive details
                 self.error_logger.log_fallback_attempt(
                     original_error={'message': str(error), 'error_code': getattr(error, 'error_code', None)},
                     fallback_type='text_only_posting',
                     fallback_result=fallback_result,
-                    context={'post_title': blog_post.title, 'original_had_image': True}
+                    context=fallback_context
                 )
                 
-                logger.info(f"Text-only fallback successful for post: {blog_post.title}")
+                logger.info(f"Text-only fallback successful for post: {blog_post.title} (LinkedIn ID: {response_data.get('id')})")
+                
+                # Update quota usage for successful fallback post
+                self._update_quota_usage()
+                
                 return fallback_result
                 
             except Exception as fallback_error:
                 fallback_result['fallback_message'] = f"Text-only fallback failed: {fallback_error}"
-                logger.error(f"Text-only fallback failed: {fallback_error}")
+                logger.error(f"Text-only fallback failed for post {blog_post.title}: {fallback_error}")
+                
+                # Log failed fallback attempt
+                self.error_logger.log_fallback_attempt(
+                    original_error={'message': str(error), 'error_code': getattr(error, 'error_code', None)},
+                    fallback_type='text_only_posting',
+                    fallback_result={'fallback_success': False, 'error': str(fallback_error)},
+                    context={'post_title': blog_post.title, 'post_id': getattr(blog_post, 'id', 'unknown')}
+                )
         
         # Fallback 2: Content modification for content errors
         elif isinstance(error, LinkedInContentError):
@@ -870,7 +919,7 @@ class LinkedInAPIService:
     
     def create_post(self, title: str, content: str, url: str, image_url: str = None) -> Dict:
         """
-        Create a LinkedIn post with optional image support.
+        Create a LinkedIn post with optional image support and comprehensive error handling.
         
         This method automatically handles image upload if image_url is provided,
         falling back to text-only posting if image upload fails.
@@ -885,74 +934,198 @@ class LinkedInAPIService:
             LinkedIn post response data
             
         Raises:
-            LinkedInAPIError: If post creation fails
+            LinkedInAPIError: If post creation fails completely (after all fallbacks)
         """
-        if not title and not content:
-            raise LinkedInAPIError("Either title or content must be provided")
-        
-        # Try to create post with image if image_url is provided
-        if image_url:
+        try:
+            # Validate inputs with error handling
+            if not title and not content:
+                raise LinkedInContentError("Either title or content must be provided")
+            
+            # Sanitize inputs
             try:
-                logger.info(f"Attempting to create LinkedIn post with image: {image_url}")
-                
-                # Upload the image first
-                media_urn = self.upload_media(image_url)
-                
-                # Create post with media
-                response_data = self.create_post_with_media(title, content, url, media_urn)
+                title = str(title) if title else ""
+                content = str(content) if content else ""
+                url = str(url) if url else ""
+                image_url = str(image_url) if image_url else None
+            except Exception as e:
+                logger.error(f"Error sanitizing post inputs: {e}")
+                raise LinkedInContentError(f"Invalid input data: {e}")
+            
+            logger.info(f"Creating LinkedIn post: title_len={len(title)}, content_len={len(content)}, "
+                       f"has_url={bool(url)}, has_image={bool(image_url)}")
+            
+            # Check if image posting is enabled in configuration
+            if image_url and not self.config.should_include_images():
+                logger.info("Image posting is disabled in configuration, creating text-only post")
+                image_url = None  # Clear image_url to force text-only posting
+            
+            # Try to create post with image if image_url is provided and enabled
+            if image_url:
+                try:
+                    logger.info(f"Attempting to create LinkedIn post with image: {image_url}")
+                    
+                    # Upload the image first with error handling
+                    try:
+                        media_urn = self.upload_media(image_url)
+                        logger.debug(f"Successfully uploaded media, URN: {media_urn}")
+                    except LinkedInAPIError as upload_error:
+                        logger.warning(f"Media upload failed: {upload_error.message}")
+                        
+                        # Log the image failure for monitoring
+                        self.error_logger.log_media_upload_error(
+                            error_details={
+                                'message': upload_error.message,
+                                'error_code': upload_error.error_code,
+                                'status_code': upload_error.status_code,
+                                'image_url': image_url
+                            },
+                            context={'fallback_to_text': True}
+                        )
+                        
+                        # Raise to trigger fallback
+                        raise upload_error
+                    
+                    # Create post with media
+                    try:
+                        response_data = self.create_post_with_media(title, content, url, media_urn)
+                        logger.info("Successfully created LinkedIn post with image")
+                        
+                        # Add media information to response for tracking
+                        response_data['_media_info'] = {
+                            'media_urn': media_urn,
+                            'image_url': image_url,
+                            'has_media': True,
+                            'fallback_used': False
+                        }
+                        
+                        return response_data
+                        
+                    except LinkedInAPIError as post_error:
+                        logger.warning(f"Failed to create post with media: {post_error.message}")
+                        
+                        # Log the posting failure
+                        self.error_logger.log_content_error(
+                            error_details={
+                                'message': post_error.message,
+                                'error_code': post_error.error_code,
+                                'status_code': post_error.status_code
+                            },
+                            context={'has_media': True, 'fallback_to_text': True}
+                        )
+                        
+                        # Raise to trigger fallback
+                        raise post_error
+                    
+                except LinkedInAPIError as e:
+                    logger.warning(f"Failed to create post with image, falling back to text-only: {e.message}")
+                    
+                    # Continue with text-only post (fallback)
+                    # Don't re-raise the exception, just log it and continue
+                    
+                except Exception as e:
+                    logger.warning(f"Unexpected error creating post with image, falling back to text-only: {e}")
+                    
+                    # Log the unexpected error
+                    self.error_logger.log_media_upload_error(
+                        error_details={
+                            'message': f"Unexpected error: {str(e)}",
+                            'image_url': image_url
+                        },
+                        context={'fallback_to_text': True}
+                    )
+                    
+                    # Continue with text-only fallback
+            
+            # Create text-only post (either as fallback or when no image provided)
+            logger.info("Creating text-only LinkedIn post")
+            
+            try:
+                response_data = self._create_text_only_post(title, content, url)
+                logger.info("Successfully created text-only LinkedIn post")
                 
                 # Add media information to response for tracking
                 response_data['_media_info'] = {
-                    'media_urn': media_urn,
-                    'image_url': image_url,
-                    'has_media': True
+                    'has_media': False,
+                    'fallback_used': bool(image_url),  # True if we fell back from image to text-only
+                    'original_image_url': image_url if image_url else None
                 }
                 
                 return response_data
                 
-            except LinkedInAPIError as e:
-                logger.warning(f"Failed to create post with image, falling back to text-only: {e.message}")
+            except LinkedInAPIError as text_post_error:
+                logger.error(f"Text-only post creation also failed: {text_post_error.message}")
                 
-                # Log the image failure for monitoring
-                self.error_logger.log_media_upload_error(
+                # Log the text post failure
+                self.error_logger.log_content_error(
                     error_details={
-                        'message': e.message,
-                        'error_code': e.error_code,
-                        'status_code': e.status_code,
-                        'image_url': image_url
+                        'message': text_post_error.message,
+                        'error_code': text_post_error.error_code,
+                        'status_code': text_post_error.status_code
                     },
-                    context={'fallback_to_text': True}
+                    context={'has_media': False, 'is_fallback': bool(image_url)}
                 )
                 
-                # Continue with text-only post (fallback)
-                # Don't re-raise the exception, just log it and continue
-            except Exception as e:
-                logger.warning(f"Unexpected error creating post with image, falling back to text-only: {e}")
-                
-                # Log the unexpected error
-                self.error_logger.log_media_upload_error(
-                    error_details={
-                        'message': f"Unexpected error: {str(e)}",
-                        'image_url': image_url
-                    },
-                    context={'fallback_to_text': True}
-                )
+                # Try one more fallback with simplified content
+                logger.info("Attempting simplified content fallback")
+                try:
+                    simplified_response = self._create_simplified_fallback_post(title, url)
+                    logger.info("Successfully created simplified fallback post")
+                    
+                    simplified_response['_media_info'] = {
+                        'has_media': False,
+                        'fallback_used': True,
+                        'simplified_fallback': True,
+                        'original_image_url': image_url if image_url else None
+                    }
+                    
+                    return simplified_response
+                    
+                except Exception as simplified_error:
+                    logger.critical(f"All fallback mechanisms failed: {simplified_error}")
+                    # Re-raise the original text post error
+                    raise text_post_error
+            
+        except LinkedInContentError:
+            # Re-raise content errors without modification
+            raise
+        except LinkedInAPIError:
+            # Re-raise API errors without modification
+            raise
+        except Exception as e:
+            logger.critical(f"Unexpected critical error in create_post: {e}")
+            raise LinkedInAPIError(f"Unexpected error creating LinkedIn post: {e}")
+    
+    def _create_simplified_fallback_post(self, title: str, url: str) -> Dict:
+        """
+        Create a very simple LinkedIn post as ultimate fallback.
         
-        # Create text-only post (either as fallback or when no image provided)
-        logger.info("Creating text-only LinkedIn post")
-        response_data = self._create_text_only_post(title, content, url)
-        
-        # Add media information to response for tracking
-        response_data['_media_info'] = {
-            'has_media': False,
-            'fallback_used': bool(image_url)  # True if we fell back from image to text-only
-        }
-        
-        return response_data
+        Args:
+            title: Post title
+            url: URL to share
+            
+        Returns:
+            LinkedIn post response data
+            
+        Raises:
+            LinkedInAPIError: If even simplified post creation fails
+        """
+        try:
+            # Create minimal content
+            simplified_title = title[:100] + '...' if len(title) > 100 else title
+            simplified_content = f"New post: {simplified_title}"
+            
+            logger.info(f"Creating simplified fallback post with title: {simplified_title}")
+            
+            # Use the basic text-only post creation with minimal content
+            return self._create_text_only_post(simplified_title, "", url)
+            
+        except Exception as e:
+            logger.critical(f"Simplified fallback post creation failed: {e}")
+            raise LinkedInAPIError(f"All posting mechanisms failed: {e}")
     
     def _create_text_only_post(self, title: str, content: str, url: str) -> Dict:
         """
-        Create a text-only LinkedIn post (original functionality).
+        Create a text-only LinkedIn post with comprehensive error handling.
         
         Args:
             title: Post title
@@ -965,82 +1138,151 @@ class LinkedInAPIService:
         Raises:
             LinkedInAPIError: If post creation fails
         """
-        # Get user profile to get person URN
         try:
-            profile = self.get_user_profile()
-            person_id = profile['id']
-            author_urn = f"urn:li:person:{person_id}"
-        except LinkedInAPIError as e:
-            logger.error(f"Failed to get user profile for posting: {e.message}")
-            raise LinkedInAPIError(f"Failed to get user profile: {e.message}")
-        
-        # Format the post content
-        post_text = self._format_post_content(title, content, url)
-        
-        # Build the post data
-        post_data = {
-            "author": author_urn,
-            "lifecycleState": "PUBLISHED",
-            "specificContent": {
-                "com.linkedin.ugc.ShareContent": {
-                    "shareCommentary": {
-                        "text": post_text
+            # Get user profile to get person URN with error handling
+            try:
+                profile = self.get_user_profile()
+                person_id = profile.get('id')
+                if not person_id:
+                    raise LinkedInAPIError("User profile missing ID field")
+                author_urn = f"urn:li:person:{person_id}"
+                logger.debug(f"Using author URN: {author_urn}")
+            except LinkedInAPIError as e:
+                logger.error(f"Failed to get user profile for posting: {e.message}")
+                raise LinkedInAPIError(f"Failed to get user profile: {e.message}")
+            except Exception as e:
+                logger.error(f"Unexpected error getting user profile: {e}")
+                raise LinkedInAPIError(f"Unexpected error getting user profile: {e}")
+            
+            # Format the post content with error handling
+            try:
+                post_text = self._format_post_content(title, content, url)
+                if not post_text or not post_text.strip():
+                    raise LinkedInContentError("Formatted post content is empty")
+                logger.debug(f"Formatted post text length: {len(post_text)}")
+            except Exception as e:
+                logger.error(f"Error formatting post content: {e}")
+                # Create minimal fallback content
+                post_text = title[:200] if title else "New blog post"
+                if url:
+                    post_text += f"\n\n{url}"
+            
+            # Build the post data with error handling
+            try:
+                post_data = {
+                    "author": author_urn,
+                    "lifecycleState": "PUBLISHED",
+                    "specificContent": {
+                        "com.linkedin.ugc.ShareContent": {
+                            "shareCommentary": {
+                                "text": post_text
+                            },
+                            "shareMediaCategory": "ARTICLE"
+                        }
                     },
-                    "shareMediaCategory": "ARTICLE"
+                    "visibility": {
+                        "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+                    }
                 }
-            },
-            "visibility": {
-                "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
-            }
-        }
-        
-        # Add media if URL is provided
-        if url:
-            media_data = {
-                "status": "READY",
-                "originalUrl": url
-            }
-            
-            if title:
-                media_data["title"] = {"text": title}
-            
-            if content:
-                media_data["description"] = {"text": content[:300]}  # LinkedIn limit
-            
-            post_data["specificContent"]["com.linkedin.ugc.ShareContent"]["media"] = [media_data]
-        
-        # Make the API request
-        try:
-            response = self._make_authenticated_request(
-                'POST',
-                self.UGC_POSTS_URL,
-                json=post_data
-            )
-            
-            if response.status_code not in [200, 201]:
-                error_data = response.json() if response.headers.get('content-type', '').startswith('application/json') else {}
-                error_msg = error_data.get('message', f'HTTP {response.status_code}')
                 
-                # Extract more specific error information
-                if 'serviceErrorCode' in error_data:
-                    error_msg = f"{error_msg} (Code: {error_data['serviceErrorCode']})"
+                logger.debug("Built basic post data structure")
                 
-                raise LinkedInAPIError(
-                    f"Failed to create LinkedIn post: {error_msg}",
-                    error_code=error_data.get('serviceErrorCode'),
-                    status_code=response.status_code
+            except Exception as e:
+                logger.error(f"Error building post data structure: {e}")
+                raise LinkedInContentError(f"Failed to build post data: {e}")
+            
+            # Add media if URL is provided with error handling
+            if url:
+                try:
+                    media_data = {
+                        "status": "READY",
+                        "originalUrl": url
+                    }
+                    
+                    if title:
+                        media_data["title"] = {"text": title[:200]}  # Ensure title length limit
+                    
+                    if content:
+                        media_data["description"] = {"text": content[:300]}  # LinkedIn limit
+                    
+                    post_data["specificContent"]["com.linkedin.ugc.ShareContent"]["media"] = [media_data]
+                    logger.debug(f"Added media data for URL: {url}")
+                    
+                except Exception as e:
+                    logger.warning(f"Error adding media data for URL {url}: {e}")
+                    # Continue without media data - post will still work
+            
+            # Make the API request with comprehensive error handling
+            try:
+                logger.debug("Making authenticated request to create LinkedIn post")
+                response = self._make_authenticated_request(
+                    'POST',
+                    self.UGC_POSTS_URL,
+                    json=post_data
                 )
-            
-            response_data = response.json()
-            logger.info(f"Successfully created LinkedIn post: {response_data.get('id', 'Unknown ID')}")
-            
-            return response_data
-            
+                
+                if response.status_code not in [200, 201]:
+                    try:
+                        error_data = response.json() if response.headers.get('content-type', '').startswith('application/json') else {}
+                    except Exception:
+                        error_data = {}
+                    
+                    error_msg = error_data.get('message', f'HTTP {response.status_code}')
+                    
+                    # Extract more specific error information
+                    if 'serviceErrorCode' in error_data:
+                        error_msg = f"{error_msg} (Code: {error_data['serviceErrorCode']})"
+                    
+                    # Determine error type for better handling
+                    if response.status_code == 400:
+                        raise LinkedInContentError(
+                            f"Content validation failed: {error_msg}",
+                            error_code=error_data.get('serviceErrorCode')
+                        )
+                    elif response.status_code == 401:
+                        raise LinkedInAuthenticationError(
+                            f"Authentication failed: {error_msg}",
+                            error_code=error_data.get('serviceErrorCode')
+                        )
+                    elif response.status_code == 429:
+                        retry_after = response.headers.get('Retry-After', '3600')
+                        raise LinkedInRateLimitError(
+                            f"Rate limit exceeded: {error_msg}",
+                            retry_after=int(retry_after) if retry_after.isdigit() else 3600
+                        )
+                    else:
+                        raise LinkedInAPIError(
+                            f"Failed to create LinkedIn post: {error_msg}",
+                            error_code=error_data.get('serviceErrorCode'),
+                            status_code=response.status_code
+                        )
+                
+                try:
+                    response_data = response.json()
+                    post_id = response_data.get('id', 'Unknown ID')
+                    logger.info(f"Successfully created LinkedIn post: {post_id}")
+                    return response_data
+                except Exception as e:
+                    logger.error(f"Error parsing response data: {e}")
+                    # Return minimal response data
+                    return {'id': 'unknown', 'status': 'created'}
+                
+            except LinkedInAPIError:
+                # Re-raise LinkedIn API errors
+                raise
+            except Exception as e:
+                logger.error(f"Unexpected error making LinkedIn API request: {e}")
+                raise LinkedInAPIError(f"Unexpected error creating LinkedIn post: {e}")
+                
+        except LinkedInContentError:
+            # Re-raise content errors
+            raise
         except LinkedInAPIError:
+            # Re-raise API errors
             raise
         except Exception as e:
-            logger.error(f"Unexpected error creating LinkedIn post: {e}")
-            raise LinkedInAPIError(f"Unexpected error creating LinkedIn post: {e}")
+            logger.critical(f"Critical error in _create_text_only_post: {e}")
+            raise LinkedInAPIError(f"Critical error creating text-only post: {e}")
     
     def upload_media(self, image_url: str) -> str:
         """
@@ -1526,25 +1768,32 @@ class LinkedInAPIService:
             
             formatter = LinkedInContentFormatter()
             
-            # Get comprehensive image information for LinkedIn posting
-            image_info = LinkedInImageService.get_image_for_linkedin_post(blog_post, validate=True)
+            # Check if images should be included based on LinkedIn configuration
+            should_include_images = self.config.should_include_images(blog_post) if self.config else True
+            
+            # Get comprehensive image information for LinkedIn posting only if images are enabled
+            image_info = None
+            image_url = None
+            
+            if should_include_images:
+                image_info = LinkedInImageService.get_image_for_linkedin_post(blog_post, validate=True)
+                image_url = image_info.get('url') if image_info else None
+                
+                if image_info:
+                    logger.info(f"Found LinkedIn-compatible image for post '{blog_post.title}': {image_url}")
+                    logger.debug(f"Image metadata: {image_info.get('metadata', {}).get('format')} "
+                               f"{image_info.get('metadata', {}).get('width')}x{image_info.get('metadata', {}).get('height')}")
+                else:
+                    logger.info(f"No LinkedIn-compatible image found for post '{blog_post.title}'")
+            else:
+                logger.info(f"Image posting disabled by configuration for post '{blog_post.title}'")
             
             # Format content with image optimization
             formatted_content = formatter.format_post_content(
                 blog_post, 
                 include_excerpt=True, 
-                optimize_for_images=bool(image_info)
+                optimize_for_images=bool(image_info and should_include_images)
             )
-            
-            # Extract image URL if available
-            image_url = image_info.get('url') if image_info else None
-            
-            if image_info:
-                logger.info(f"Found LinkedIn-compatible image for post '{blog_post.title}': {image_url}")
-                logger.debug(f"Image metadata: {image_info.get('metadata', {}).get('format')} "
-                           f"{image_info.get('metadata', {}).get('width')}x{image_info.get('metadata', {}).get('height')}")
-            else:
-                logger.info(f"No LinkedIn-compatible image found for post '{blog_post.title}'")
                 
         except Exception as e:
             logger.error(f"Failed to format content or get image for '{blog_post.title}': {e}")
@@ -1561,7 +1810,7 @@ class LinkedInAPIService:
         )
         
         # Track comprehensive image information if available
-        if image_info and image_url:
+        if image_info and image_url and should_include_images:
             # Store detailed image information
             linkedin_post.image_urls = [image_url]
             linkedin_post.image_upload_status = 'pending'
@@ -1575,7 +1824,9 @@ class LinkedInAPIService:
             logger.debug(f"Image tracking info for post '{blog_post.title}': {compatibility_info}")
         else:
             # Determine why no image was selected
-            if image_info is None:
+            if not should_include_images:
+                linkedin_post.mark_image_upload_skipped("Image posting disabled by configuration")
+            elif image_info is None:
                 linkedin_post.mark_image_upload_skipped("No suitable image found for post")
             else:
                 linkedin_post.mark_image_upload_skipped("Image found but not LinkedIn-compatible")
@@ -1584,7 +1835,7 @@ class LinkedInAPIService:
             logger.info(f"Attempting to post blog article '{blog_post.title}' to LinkedIn (attempt {attempt_count})")
             
             # Enhanced posting workflow with integrated image processing
-            if image_url:
+            if image_url and should_include_images:
                 logger.info(f"Posting with image integration for '{blog_post.title}'")
                 
                 # Validate image one more time before upload (safety check)
@@ -1600,6 +1851,10 @@ class LinkedInAPIService:
                     # Continue with text-only posting
                     image_url = None
                     linkedin_post.mark_image_upload_failed(f"Validation error: {str(validation_error)}")
+            elif image_url and not should_include_images:
+                # Image is available but disabled by configuration
+                logger.info(f"Image available but disabled by configuration for '{blog_post.title}' - posting text-only")
+                image_url = None
             
             # Create the LinkedIn post using the formatted content and validated image
             response_data = self.create_post(

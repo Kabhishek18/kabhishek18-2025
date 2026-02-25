@@ -251,14 +251,19 @@ class SecurityHeaders:
             'Content-Security-Policy': (
                 "default-src 'self'; "
                 "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
-                "https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
+                "https://cdnjs.cloudflare.com https://cdn.jsdelivr.net "
+                "https://cdn.ampproject.org https://www.googletagmanager.com "
+                "https://pagead2.googlesyndication.com https://www.google-analytics.com; "
                 "style-src 'self' 'unsafe-inline' "
                 "https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
                 "font-src 'self' https://fonts.gstatic.com; "
                 "img-src 'self' data: https:; "
                 "media-src 'self' https:; "
-                "frame-src https://www.youtube.com https://player.vimeo.com; "
-                "connect-src 'self';"
+                "frame-src https://www.youtube.com https://player.vimeo.com "
+                "https://googleads.g.doubleclick.net https://tpc.googlesyndication.com; "
+                "connect-src 'self' https://www.google-analytics.com "
+                "https://ep1.adtrafficquality.google https://pagead2.googlesyndication.com "
+                "https://cdn.ampproject.org;"
             )
         }
 

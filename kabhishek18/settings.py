@@ -56,7 +56,8 @@ INSTALLED_APPS = [
     'core',
     'blog',
     'api',
-    'site_files'
+    'site_files',
+    'roadmap'
 ]
 
 MIDDLEWARE = [
@@ -394,6 +395,18 @@ UNFOLD = {
                 ],
             },
             {
+                "title": _("Resume Parser"),
+                "separator": True,
+                "items": [
+                    {
+                        "title": _("Parser Configuration"),
+                        "icon": "settings",
+                        "link": reverse_lazy("admin:roadmap_resumeparserconfig_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                ],
+            },
+            {
                 "title": _("System Monitoring"),
                 "separator": True,
                 "items": [
@@ -506,27 +519,18 @@ else:
         'default': {
             'BACKEND': 'django.core.cache.backends.redis.RedisCache',
             'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1'),
-            'OPTIONS': {
-                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            },
             'KEY_PREFIX': 'kabhishek18',
             'TIMEOUT': 300,  # 5 minutes default timeout
         },
         'schema_cache': {
             'BACKEND': 'django.core.cache.backends.redis.RedisCache',
             'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/2'),
-            'OPTIONS': {
-                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            },
             'KEY_PREFIX': 'schema',
             'TIMEOUT': 3600,  # 1 hour for schema markup
         },
         'template_cache': {
             'BACKEND': 'django.core.cache.backends.redis.RedisCache',
             'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/3'),
-            'OPTIONS': {
-                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            },
             'KEY_PREFIX': 'template',
             'TIMEOUT': 1800,  # 30 minutes for template fragments
         }
@@ -623,31 +627,8 @@ REDOC_SETTINGS = {
 }
 
 # Cache Configuration for API Rate Limiting
-# Use Redis if available, otherwise fall back to database cache
-REDIS_URL = os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1')
-
-try:
-    import redis
-    # Test Redis connection
-    r = redis.from_url(REDIS_URL)
-    r.ping()
-    # If Redis is available, use it
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-            'LOCATION': REDIS_URL,
-            'KEY_PREFIX': 'kabhishek18_api',
-            'TIMEOUT': 300,
-        }
-    }
-except (ImportError, redis.ConnectionError, redis.RedisError):
-    # Fall back to database cache if Redis is not available
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-            'LOCATION': 'cache_table',
-        }
-    }
+# Note: The main CACHES configuration is handled above (lines 494-546).
+# We rely on the 'default' cache defined there.
 
 # API Logging Configuration
 LOGGING['loggers'].update({
@@ -687,6 +668,21 @@ LOGGING['loggers'].update({
         'propagate': False,
     },
     'blog.utils.image_processor': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+        'propagate': False,
+    },
+    'roadmap.services': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+        'propagate': False,
+    },
+    'roadmap.views': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+        'propagate': False,
+    },
+    'roadmap.utils': {
         'handlers': ['console', 'file'],
         'level': 'INFO',
         'propagate': False,
@@ -812,4 +808,27 @@ LINKEDIN_IMAGE_SETTINGS = {
     'IMAGE_PROCESSING_TIMEOUT': int(os.getenv('LINKEDIN_IMAGE_PROCESSING_TIMEOUT', '30')),
     'UPLOAD_TIMEOUT': int(os.getenv('LINKEDIN_UPLOAD_TIMEOUT', '60')),
     'CONCURRENT_UPLOADS': int(os.getenv('LINKEDIN_CONCURRENT_UPLOADS', '2')),
+}
+
+# Resume Parser Settings
+RESUME_PARSER_SETTINGS = {
+    # File upload settings
+    'MAX_FILE_SIZE_MB': int(os.getenv('RESUME_PARSER_MAX_FILE_SIZE', '10')),
+    'ALLOWED_FILE_TYPES': ['application/pdf'],
+    'TEMP_FILE_CLEANUP_TIMEOUT': int(os.getenv('RESUME_PARSER_CLEANUP_TIMEOUT', '300')),  # seconds
+    
+    # AI Backend settings
+    'DEFAULT_BACKEND': os.getenv('RESUME_PARSER_DEFAULT_BACKEND', 'auto'),
+    'GEMINI_API_KEY': os.getenv('GEMINI_API_KEY', ''),
+    'SPACY_MODEL': os.getenv('SPACY_MODEL', 'en_core_web_sm'),
+    
+    # Processing settings
+    'PROCESSING_TIMEOUT': int(os.getenv('RESUME_PARSER_PROCESSING_TIMEOUT', '60')),  # seconds
+    'ENABLE_FALLBACK': os.getenv('RESUME_PARSER_ENABLE_FALLBACK', 'True').lower() == 'true',
+    'CONFIDENCE_THRESHOLD': float(os.getenv('RESUME_PARSER_CONFIDENCE_THRESHOLD', '0.5')),
+    
+    # Security settings
+    'ENABLE_FILE_VALIDATION': os.getenv('RESUME_PARSER_ENABLE_FILE_VALIDATION', 'True').lower() == 'true',
+    'ENABLE_CONTENT_SANITIZATION': os.getenv('RESUME_PARSER_ENABLE_CONTENT_SANITIZATION', 'True').lower() == 'true',
+    'LOG_SENSITIVE_DATA': os.getenv('RESUME_PARSER_LOG_SENSITIVE_DATA', 'False').lower() == 'true',
 }

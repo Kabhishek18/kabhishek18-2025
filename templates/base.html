@@ -40,15 +40,32 @@
     <meta name="google-adsense-account" content="ca-pub-6078293202282096">
     <meta name="theme-color" content="#00ffff">
     <link rel="stylesheet" href="{% static 'style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/pricing.css' %}">
+
     <!-- Font Awesome - Local files -->
     <link rel="stylesheet" href="{% static 'fontawesome-css/all.min.css' %}">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+    <!-- Prism CSS theme disabled for simplified code blocks -->
+    <!-- <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"> -->
+    {% block extra_css %}{% endblock %}
     <script async custom-element="amp-auto-ads"
         src="https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js">
     </script>
+    <!-- Google tag Manager -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-00J38LKV5W"></script>
+        <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-00J38LKV5W');
+        </script>
+    <!-- Google tag Manager -->
 </head>
 
 <body>
+    <amp-auto-ads type="adsense"
+        data-ad-client="ca-pub-6078293202282096">
+    </amp-auto-ads>
     {% block navbar %}
     {% endblock navbar %}
 
@@ -65,9 +82,11 @@
 
     <script src="{% static 'script.js' %}"></script>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <!-- Prism JavaScript disabled for simplified code blocks -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script> -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script> -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6078293202282096"
      crossorigin="anonymous"></script>
+     
 </body>
 </html>

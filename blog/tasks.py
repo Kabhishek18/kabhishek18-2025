@@ -42,7 +42,7 @@ def send_confirmation_email(subscriber_id):
         send_mail(
             subject='Confirm your newsletter subscription',
             message=plain_message,
-            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com'),
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'developer@kabhishek18.com'),
             recipient_list=[subscriber.email],
             html_message=html_message,
             fail_silently=False,
@@ -104,7 +104,7 @@ def send_new_post_notification(post_id):
                 send_mail(
                     subject=f'New post: {post.title}',
                     message=plain_message,
-                    from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com'),
+                    from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'Developer@kabhishek18.com'),
                     recipient_list=[subscriber.email],
                     html_message=html_message,
                     fail_silently=False,
@@ -336,6 +336,355 @@ def cleanup_spam_attempts():
     except Exception as e:
         logger.error(f"Spam attempt cleanup failed: {str(e)}")
         raise
+
+
+@shared_task
+def adsense_audit_task(auto_fix=False):
+    """
+    Celery task to audit content for AdSense compliance.
+    
+    This task can be run periodically to ensure content quality.
+    
+    Args:
+        auto_fix (bool): If True, automatically unpublish low-quality posts
+        
+    Returns:
+        dict: Audit results
+    """
+    from .models import Post
+    from .content_quality import generate_quality_report
+    from django.utils.html import strip_tags
+    
+    logger.info(f"Starting AdSense audit (auto_fix={auto_fix})")
+    
+    MIN_WORDS = 300
+    MIN_SCORE = 70
+    
+    try:
+        # Get all published posts
+        posts = Post.objects.filter(status='published')
+        
+        if not posts.exists():
+            return {
+                'success': True,
+                'message': 'No published posts to audit',
+                'total': 0
+            }
+        
+        # Analyze posts
+        thin_content = []
+        low_quality = []
+        good_quality = []
+        excellent_quality = []
+        
+        for post in posts:
+            # Get word count
+            plain_text = strip_tags(post.content)
+            words = len(plain_text.split())
+            
+            # Get quality score
+            try:
+                report = generate_quality_report(post.content, post.title, post.excerpt)
+                score = report['score']
+            except Exception as e:
+                logger.error(f"Quality check failed for post {post.id}: {str(e)}")
+                score = 0
+            
+            post_info = {
+                'id': post.id,
+                'title': post.title,
+                'words': words,
+                'score': score
+            }
+            
+            # Categorize
+            if words < MIN_WORDS:
+                thin_content.append(post_info)
+            elif score < MIN_SCORE:
+                low_quality.append(post_info)
+            elif score >= 90:
+                excellent_quality.append(post_info)
+            else:
+                good_quality.append(post_info)
+        
+        # Auto-fix if enabled
+        unpublished_count = 0
+        if auto_fix:
+            # Unpublish thin content
+            for post_info in thin_content:
+                Post.objects.filter(id=post_info['id']).update(status='draft')
+                unpublished_count += 1
+                logger.info(f"Unpublished thin content: {post_info['title']} ({post_info['words']} words)")
+            
+            # Unpublish low quality
+            for post_info in low_quality:
+                Post.objects.filter(id=post_info['id']).update(status='draft')
+                unpublished_count += 1
+                logger.info(f"Unpublished low quality: {post_info['title']} (score: {post_info['score']:.0f})")
+        
+        result = {
+            'success': True,
+            'total_posts': posts.count(),
+            'excellent': len(excellent_quality),
+            'good': len(good_quality),
+            'low_quality': len(low_quality),
+            'thin_content': len(thin_content),
+            'issues_found': len(thin_content) + len(low_quality),
+            'unpublished': unpublished_count if auto_fix else 0,
+            'auto_fix_enabled': auto_fix
+        }
+        
+        logger.info(f"AdSense audit completed: {result}")
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"AdSense audit failed: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@shared_task
+def adsense_audit_report_task():
+    """
+    Run AdSense audit and send report (without auto-fix).
+    
+    This is safe to run periodically as it only reports issues.
+    """
+    return adsense_audit_task(auto_fix=False)
+
+
+@shared_task
+def adsense_audit_autofix_task():
+    """
+    Run AdSense audit with auto-fix enabled.
+    
+    This will automatically unpublish low-quality posts.
+    Use with caution - only enable if you want automatic unpublishing.
+    """
+    return adsense_audit_task(auto_fix=True)
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+def regenerate_post_content_task(self, post_id):
+    """
+    Celery task to regenerate low-quality post content asynchronously.
+    
+    This prevents admin interface timeouts by processing in the background.
+    
+    Args:
+        post_id (int): ID of the post to regenerate
+        
+    Returns:
+        dict: Result information
+    """
+    from .models import Post
+    from .content_quality import generate_quality_report
+    from django.utils.text import slugify
+    import os
+    import google.generativeai as genai
+    import json
+    import time
+    
+    logger.info(f"Starting content regeneration for post ID {post_id}")
+    
+    try:
+        # Get the post
+        try:
+            post = Post.objects.get(id=post_id)
+        except Post.DoesNotExist:
+            error_msg = f"Post with ID {post_id} not found"
+            logger.error(error_msg)
+            return {'success': False, 'error': error_msg}
+        
+        # Check API key
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            error_msg = "GEMINI_API_KEY not found"
+            logger.error(error_msg)
+            return {'success': False, 'error': error_msg}
+        
+        # Check current quality
+        try:
+            report = generate_quality_report(post.content, post.title, post.excerpt)
+        except Exception as e:
+            logger.error(f"Quality check failed for post {post_id}: {str(e)}")
+            return {'success': False, 'error': f'Quality check failed: {str(e)}'}
+        
+        # Skip if already high quality
+        if report['score'] >= 75:
+            logger.info(f"Post {post_id} already high quality (score: {report['score']})")
+            return {
+                'success': True,
+                'skipped': True,
+                'score': report['score'],
+                'message': 'Post already high quality'
+            }
+        
+        # Configure Gemini
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        
+        # Create improvement prompt - KEEP ORIGINAL TITLE AND TOPIC
+        prompt = f"""Improve the CONTENT of this blog post to score 95-100 on quality metrics.
+
+**IMPORTANT: Keep the SAME title and topic. Only improve the content quality.**
+
+**Current Post:**
+Title: {post.title}
+Topic: {post.title}
+Current Content: {post.content[:1000]}...
+
+**Quality Issues to Fix:**
+{chr(10).join(f"- {issue}" for issue in report['issues'][:3])}
+
+**YOUR TASK:**
+Rewrite the CONTENT ONLY about the SAME topic ("{post.title}") to achieve 95-100 quality score.
+DO NOT change the title or topic. Only improve the content.
+
+**CRITICAL Requirements for 95-100 Score:**
+
+1. **Word Count (Target: 1200-1500 words)**
+   - Write comprehensive content about "{post.title}"
+   - Include multiple examples and use cases
+   - Add practical implementation details
+
+2. **Structure (Must Have):**
+   - At least 4-5 H2 section headings
+   - 2-3 H3 sub-headings under each H2
+   - 6+ well-organized paragraphs
+   - 2-3 bullet point lists (ul/ol)
+   - Code examples in <code> or <pre> tags (if technical)
+
+3. **Readability (Target: 50-60 Flesch score):**
+   - Use clear, concise sentences (15-20 words average)
+   - Mix short and medium sentences
+   - Use simple, direct language
+   - Break up long paragraphs
+
+4. **Content Quality:**
+   - Original insights about "{post.title}"
+   - Practical, actionable advice
+   - Real-world examples
+   - Step-by-step explanations
+   - Best practices and tips
+
+**STRUCTURE TEMPLATE:**
+<h2>Introduction to {post.title}</h2>
+<p>Hook and overview (2-3 paragraphs)</p>
+
+<h2>Understanding [Main Concept]</h2>
+<p>Detailed explanation</p>
+<h3>Key Points</h3>
+<ul>
+<li>Point 1 with details</li>
+<li>Point 2 with details</li>
+<li>Point 3 with details</li>
+</ul>
+
+<h2>Implementation Guide</h2>
+<p>Step-by-step guide</p>
+<h3>Example</h3>
+<p>Practical example with code if applicable</p>
+
+<h2>Best Practices</h2>
+<ul>
+<li>Practice 1</li>
+<li>Practice 2</li>
+<li>Practice 3</li>
+</ul>
+
+<h2>Common Pitfalls</h2>
+<p>What to avoid</p>
+
+<h2>Conclusion</h2>
+<p>Summary and next steps</p>
+
+**OUTPUT AS JSON:**
+{{
+    "title": "{post.title}",
+    "excerpt": "Engaging meta description with keywords (140-155 chars)",
+    "content": "Complete HTML content following the structure above (1200-1500 words)"
+}}
+
+Write EXCELLENT content that will score 95-100. Be comprehensive, well-structured, and highly readable."""
+        
+        # Generate improved content with retry logic
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            try:
+                response = model.generate_content(
+                    prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        temperature=0.8,
+                        max_output_tokens=20000,
+                    )
+                )
+                break
+            except Exception as e:
+                if attempt < max_attempts - 1:
+                    logger.warning(f"Attempt {attempt + 1} failed, retrying: {str(e)}")
+                    time.sleep(5 * (attempt + 1))
+                else:
+                    raise
+        
+        # Parse response
+        cleaned_text = response.text.strip()
+        if cleaned_text.startswith("```json"):
+            cleaned_text = cleaned_text[7:]
+        if cleaned_text.endswith("```"):
+            cleaned_text = cleaned_text[:-3]
+        cleaned_text = cleaned_text.strip()
+        
+        ai_data = json.loads(cleaned_text)
+        
+        # Update post - KEEP ORIGINAL TITLE AND SLUG
+        old_title = post.title
+        old_slug = post.slug
+        
+        # DO NOT change title or slug - only update content and excerpt
+        # post.title stays the same
+        # post.slug stays the same
+        post.excerpt = ai_data.get('excerpt', post.excerpt)[:500]
+        post.content = ai_data.get('content', post.content)
+        
+        # Save as draft for review
+        post.status = 'draft'
+        post.save()
+        
+        # Check new quality
+        new_report = generate_quality_report(post.content, post.title, post.excerpt)
+        
+        result = {
+            'success': True,
+            'post_id': post_id,
+            'post_title': post.title,  # Same as before
+            'old_score': report['score'],
+            'new_score': new_report['score'],
+            'improvement': new_report['score'] - report['score'],
+            'title_unchanged': True,
+            'slug_unchanged': True
+        }
+        
+        logger.info(f"Successfully regenerated post {post_id}: {old_title} (score: {report['score']:.0f} -> {new_report['score']:.0f})")
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error regenerating post {post_id}: {str(e)}")
+        
+        # Retry on certain errors
+        if self.request.retries < self.max_retries:
+            logger.info(f"Retrying post {post_id} (attempt {self.request.retries + 2})")
+            raise self.retry(countdown=60, exc=e)
+        
+        return {
+            'success': False,
+            'error': str(e),
+            'post_id': post_id
+        }
 
 
 
@@ -1227,3 +1576,309 @@ def retry_failed_image_uploads(self):
     except Exception as e:
         logger.error(f"Error during automatic retry of failed uploads: {str(e)}")
         raise self.retry(exc=e, countdown=1800)  # Retry after 30 minutes
+
+@shared_task(name="blog.tasks.daily_quality_update")
+def daily_quality_update():
+    """
+    Celery task to update quality scores for all blog posts daily.
+    
+    This task runs the quality score update command and can be scheduled
+    with Celery Beat to run automatically every day.
+    
+    Returns:
+        dict: Summary of the quality update results
+    """
+    from django.core.management import call_command
+    from io import StringIO
+    import sys
+    
+    logger.info("Starting daily quality score update task")
+    
+    try:
+        # Capture command output
+        old_stdout = sys.stdout
+        sys.stdout = captured_output = StringIO()
+        
+        # Run the quality update command
+        call_command(
+            'update_quality_scores',
+            posts_per_run=50,
+            generate_report=True,
+            alert_low_quality=True,
+            save_history=True,
+            verbosity=1
+        )
+        
+        # Restore stdout
+        sys.stdout = old_stdout
+        output = captured_output.getvalue()
+        
+        # Parse results from output (basic parsing)
+        lines = output.split('\n')
+        processed = 0
+        average_score = 0.0
+        
+        for line in lines:
+            if 'Posts Processed:' in line:
+                processed = int(line.split(':')[1].strip())
+            elif 'Average Quality Score:' in line:
+                score_text = line.split(':')[1].strip().replace('/100', '')
+                average_score = float(score_text)
+        
+        result = {
+            'success': True,
+            'processed_posts': processed,
+            'average_score': average_score,
+            'timestamp': timezone.now().isoformat(),
+            'output': output[:1000]  # First 1000 chars of output
+        }
+        
+        logger.info(f"Daily quality update completed: {processed} posts, avg score: {average_score}")
+        return result
+        
+    except Exception as e:
+        logger.error(f"Daily quality update failed: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e),
+            'timestamp': timezone.now().isoformat()
+        }
+
+
+@shared_task(name="blog.tasks.weekly_quality_report")
+def weekly_quality_report():
+    """
+    Celery task to generate comprehensive weekly quality reports.
+    
+    This task provides detailed analysis of content quality trends
+    and can be scheduled to run weekly.
+    
+    Returns:
+        dict: Weekly quality report summary
+    """
+    from django.core.management import call_command
+    from blog.management.commands.update_quality_scores import get_site_quality_summary
+    from io import StringIO
+    import sys
+    
+    logger.info("Starting weekly quality report generation")
+    
+    try:
+        # Get current quality summary
+        quality_summary = get_site_quality_summary()
+        
+        # Capture detailed report output
+        old_stdout = sys.stdout
+        sys.stdout = captured_output = StringIO()
+        
+        # Run comprehensive quality audit
+        call_command(
+            'upgrade_to_crag',
+            audit_only=True,
+            verbosity=1
+        )
+        
+        # Restore stdout
+        sys.stdout = old_stdout
+        audit_output = captured_output.getvalue()
+        
+        result = {
+            'success': True,
+            'quality_summary': quality_summary,
+            'audit_output': audit_output[:2000],  # First 2000 chars
+            'timestamp': timezone.now().isoformat(),
+            'report_type': 'weekly_comprehensive'
+        }
+        
+        logger.info("Weekly quality report generated successfully")
+        return result
+        
+    except Exception as e:
+        logger.error(f"Weekly quality report failed: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e),
+            'timestamp': timezone.now().isoformat()
+        }
+
+
+@shared_task(name="blog.tasks.auto_publish_premium_post")
+def auto_publish_premium_post():
+    """
+    Celery task to generate and publish one premium quality blog post.
+    
+    This task uses the enhanced auto_publish_content command with:
+    - Premium quality level (12,000-18,000 characters)
+    - Professional image generation
+    - SEO optimization
+    - Built-in safety limits
+    
+    Schedule 3 times per week in Django Admin:
+    - Task name: blog.tasks.auto_publish_premium_post
+    - Interval: Every 2-3 days
+    - No arguments needed
+    
+    Returns:
+        dict: Task result with success status and details
+    """
+    try:
+        logger.info("Starting automated premium blog post generation via Celery")
+        
+        # Call the enhanced auto_publish_content command
+        call_command('auto_publish_content', count=1, quality='premium')
+        
+        result = {
+            'success': True,
+            'message': f"Successfully generated 1 premium blog post",
+            'timestamp': timezone.now().isoformat(),
+            'quality': 'premium',
+            'count': 1
+        }
+        
+        logger.info(f"Celery task completed: {result['message']}")
+        return result
+        
+    except Exception as e:
+        error_result = {
+            'success': False,
+            'error': str(e),
+            'timestamp': timezone.now().isoformat(),
+            'quality': 'premium',
+            'count': 1
+        }
+        
+        logger.error(f"Celery task failed: {str(e)}")
+        return error_result
+
+
+@shared_task(name="blog.tasks.auto_publish_standard_post")  
+def auto_publish_standard_post():
+    """
+    Celery task to generate and publish one standard quality blog post.
+    
+    Alternative task for lighter content generation with:
+    - Standard quality level (8,000-12,000 characters)
+    - Professional image generation
+    - SEO optimization
+    
+    Returns:
+        dict: Task result with success status and details
+    """
+    try:
+        logger.info("Starting automated standard blog post generation via Celery")
+        
+        # Call the enhanced auto_publish_content command
+        call_command('auto_publish_content', count=1, quality='standard')
+        
+        result = {
+            'success': True,
+            'message': f"Successfully generated 1 standard blog post",
+            'timestamp': timezone.now().isoformat(),
+            'quality': 'standard',
+            'count': 1
+        }
+        
+        logger.info(f"Celery task completed: {result['message']}")
+        return result
+        
+    except Exception as e:
+        error_result = {
+            'success': False,
+            'error': str(e),
+            'timestamp': timezone.now().isoformat(),
+            'quality': 'standard',
+            'count': 1
+        }
+        
+        logger.error(f"Celery task failed: {str(e)}")
+        return error_result
+
+
+@shared_task(name="blog.tasks.auto_publish_expert_post")
+def auto_publish_expert_post():
+    """
+    Celery task to generate and publish one expert quality blog post.
+    
+    High-quality content generation with:
+    - Expert quality level (18,000-25,000 characters)
+    - Cutting-edge technical content
+    - Professional image generation
+    - Advanced SEO optimization
+    
+    Returns:
+        dict: Task result with success status and details
+    """
+    try:
+        logger.info("Starting automated expert blog post generation via Celery")
+        
+        # Call the enhanced auto_publish_content command
+        call_command('auto_publish_content', count=1, quality='expert')
+        
+        result = {
+            'success': True,
+            'message': f"Successfully generated 1 expert blog post",
+            'timestamp': timezone.now().isoformat(),
+            'quality': 'expert',
+            'count': 1
+        }
+        
+        logger.info(f"Celery task completed: {result['message']}")
+        return result
+        
+    except Exception as e:
+        error_result = {
+            'success': False,
+            'error': str(e),
+            'timestamp': timezone.now().isoformat(),
+            'quality': 'expert',
+            'count': 1
+        }
+        
+        logger.error(f"Celery task failed: {str(e)}")
+        return error_result
+
+
+@shared_task(name="blog.tasks.weekly_content_batch")
+def weekly_content_batch():
+    """
+    Generate 3 blog posts in one batch for weekly scheduling.
+    
+    This task generates 3 premium posts at once using the enhanced system:
+    - 3 premium quality posts
+    - Professional images for all posts
+    - SEO optimization
+    - Built-in safety features
+    
+    Returns:
+        dict: Task result with success status and details
+    """
+    try:
+        logger.info("Starting weekly content batch generation (3 premium posts)")
+        
+        # Generate 3 premium posts in one batch
+        call_command('auto_publish_content', count=3, quality='premium')
+        
+        result = {
+            'success': True,
+            'message': f"Successfully generated 3 premium blog posts in weekly batch",
+            'timestamp': timezone.now().isoformat(),
+            'quality': 'premium',
+            'count': 3,
+            'batch_type': 'weekly'
+        }
+        
+        logger.info(f"Weekly batch completed: {result['message']}")
+        return result
+        
+    except Exception as e:
+        error_result = {
+            'success': False,
+            'error': str(e),
+            'timestamp': timezone.now().isoformat(),
+            'quality': 'premium',
+            'count': 3,
+            'batch_type': 'weekly'
+        }
+        
+        logger.error(f"Weekly batch failed: {str(e)}")
+        return error_result

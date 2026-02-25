@@ -1,0 +1,347 @@
+{% load static %}
+
+<div class="image-posting-preview-widget">
+    <div class="image-posting-preview-header">
+        <h4>🖼️ Image Posting Decision Preview</h4>
+        <p>Test image posting decisions with current configuration settings.</p>
+    </div>
+    
+    <div class="image-posting-preview-controls">
+        <div class="form-row">
+            <label for="preview-post-select-image">Select a blog post:</label>
+            <select id="preview-post-select-image" class="vSelectField image-posting-preview-select">
+                <option value="">Choose a post to preview...</option>
+            </select>
+        </div>
+        
+        <div class="form-row">
+            <button type="button" class="button admin-action-preview" onclick="generateImagePostingPreview()">
+                🔍 Analyze Decision
+            </button>
+            <button type="button" class="button" onclick="clearImagePostingPreview()">
+                🗑️ Clear
+            </button>
+            <button type="button" class="button" onclick="refreshImagePostingPosts()">
+                🔄 Refresh Posts
+            </button>
+        </div>
+    </div>
+    
+    <div id="image-posting-preview-results" class="image-posting-preview-results" style="display: none;">
+        <h4>📊 Analysis Results:</h4>
+        <div id="image-posting-preview-content" class="image-posting-preview-content"></div>
+    </div>
+    
+    <div id="image-posting-preview-error" class="image-posting-preview-error" style="display: none;">
+    </div>
+    
+    <div class="image-posting-preview-help">
+        <details>
+            <summary>ℹ️ How Image Posting Decisions Work</summary>
+            <div class="help-content">
+                <p><strong>Strategy Options:</strong></p>
+                <ul>
+                    <li><strong>Always:</strong> Include images in all posts when available</li>
+                    <li><strong>Never:</strong> Create text-only posts (no images)</li>
+                    <li><strong>Category-based:</strong> Use category-specific overrides</li>
+                </ul>
+                <p><strong>Category Overrides:</strong> When using category-based strategy, you can define specific rules for each category in the Category Image Overrides field.</p>
+            </div>
+        </details>
+    </div>
+</div>
+
+<style>
+.image-posting-preview-widget {
+    border: 1px solid #2196f3;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #e3f2fd 0%, #f0f8ff 100%);
+    padding: 20px;
+    margin: 15px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.image-posting-preview-header {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.image-posting-preview-header h4 {
+    color: #1976d2;
+    margin: 0 0 8px 0;
+    font-size: 16px;
+}
+
+.image-posting-preview-header p {
+    color: #666;
+    margin: 0;
+    font-size: 13px;
+}
+
+.image-posting-preview-controls .form-row {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.image-posting-preview-controls label {
+    font-weight: 600;
+    color: #1976d2;
+    min-width: 150px;
+}
+
+.image-posting-preview-select {
+    flex: 1;
+    max-width: 350px;
+    padding: 6px;
+    border: 2px solid #2196f3;
+    border-radius: 4px;
+    background: white;
+}
+
+.image-posting-preview-results {
+    margin-top: 20px;
+    padding: 20px;
+    background: white;
+    border: 2px solid #2196f3;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.image-posting-preview-results h4 {
+    color: #1976d2;
+    margin: 0 0 15px 0;
+}
+
+.image-posting-preview-content {
+    min-height: 60px;
+}
+
+.loading {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    padding: 20px;
+}
+
+.image-posting-preview-error {
+    margin-top: 15px;
+    padding: 15px;
+    background: #ffebee;
+    border: 2px solid #f44336;
+    border-radius: 6px;
+    color: #c62828;
+    font-weight: 500;
+}
+
+.image-posting-preview-help {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+}
+
+.image-posting-preview-help summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: #495057;
+    padding: 5px 0;
+}
+
+.image-posting-preview-help .help-content {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #666;
+}
+
+.image-posting-preview-help ul {
+    margin: 8px 0;
+    padding-left: 20px;
+}
+
+.image-posting-preview-help li {
+    margin: 4px 0;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .image-posting-preview-controls .form-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .image-posting-preview-controls label {
+        min-width: auto;
+        margin-bottom: 5px;
+    }
+    
+    .image-posting-preview-select {
+        width: 100%;
+        max-width: none;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadPostsForImagePreview();
+});
+
+function loadPostsForImagePreview() {
+    fetch('/admin/blog/linkedinconfig/preview-posts/')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('preview-post-select-image');
+            select.innerHTML = '<option value="">Choose a post to preview...</option>';
+            
+            data.posts.forEach(post => {
+                const option = document.createElement('option');
+                option.value = post.id;
+                option.textContent = `${post.title} (${post.date})`;
+                select.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Error loading posts:', error);
+            showImagePostingError('Failed to load posts for preview');
+        });
+}
+
+function refreshImagePostingPosts() {
+    const select = document.getElementById('preview-post-select-image');
+    select.innerHTML = '<option value="">Loading posts...</option>';
+    loadPostsForImagePreview();
+}
+
+function generateImagePostingPreview() {
+    const select = document.getElementById('preview-post-select-image');
+    const resultsDiv = document.getElementById('image-posting-preview-results');
+    const contentDiv = document.getElementById('image-posting-preview-content');
+    const postId = select.value;
+    
+    if (!postId) {
+        alert('Please select a post first');
+        return;
+    }
+    
+    // Show loading state
+    contentDiv.innerHTML = '<div class="loading">🔍 Analyzing image posting decision...</div>';
+    resultsDiv.style.display = 'block';
+    hideImagePostingError();
+    
+    // Get current form configuration
+    const configData = getCurrentImagePostingConfig();
+    
+    // Make request to generate image posting decision
+    fetch('/admin/blog/linkedinconfig/preview-image-posting/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            post_id: postId,
+            config: configData
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            displayImagePostingResults(data.decision, data.details);
+        } else {
+            showImagePostingError(data.error || 'Failed to generate image posting decision');
+        }
+    })
+    .catch(error => {
+        console.error('Error generating image posting decision:', error);
+        showImagePostingError('Network error while generating image posting decision');
+    });
+}
+
+function getCurrentImagePostingConfig() {
+    return {
+        enable_image_posting: document.getElementById('id_enable_image_posting')?.checked || false,
+        image_posting_strategy: document.getElementById('id_image_posting_strategy')?.value || 'always',
+        category_image_overrides: getJsonFieldValue('id_category_image_overrides')
+    };
+}
+
+function getJsonFieldValue(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (!field || !field.value) return null;
+    
+    try {
+        return JSON.parse(field.value);
+    } catch (e) {
+        return null;
+    }
+}
+
+function displayImagePostingResults(decision, details) {
+    const contentDiv = document.getElementById('image-posting-preview-content');
+    
+    const decisionClass = decision ? 'include-images' : 'text-only';
+    const decisionText = decision ? 'Include Images' : 'Text-Only Post';
+    const decisionIcon = decision ? '🖼️' : '📝';
+    
+    let html = `
+        <div class="image-posting-decision ${decisionClass}">
+            <div style="font-size: 20px; margin-bottom: 15px; text-align: center;">
+                ${decisionIcon} <strong>${decisionText}</strong>
+            </div>
+            <div class="decision-details">
+                <div><strong>📄 Post:</strong> ${details.post_title}</div>
+                <div><strong>🌐 Global Setting:</strong> ${details.global_setting}</div>
+                <div><strong>⚙️ Strategy:</strong> ${details.strategy}</div>
+                <div><strong>💡 Reason:</strong> ${details.reason}</div>
+            </div>
+        </div>
+    `;
+    
+    // Add category information if available
+    if (details.categories && details.categories.length > 0) {
+        html += '<div class="category-analysis"><h5>📂 Category Analysis:</h5><ul>';
+        details.categories.forEach(category => {
+            let categoryHtml = `<li><strong>${category.name}</strong> <code>(${category.slug})</code>`;
+            if (category.override) {
+                const overrideClass = category.override.includes('Include') ? 'enabled' : 'disabled';
+                categoryHtml += ` - <span class="category-override-${overrideClass}">${category.override}</span>`;
+                if (category.description) {
+                    categoryHtml += `<br><em style="color: #666; font-size: 11px;">${category.description}</em>`;
+                }
+            } else {
+                categoryHtml += ' - <span class="category-override-default">Using default behavior</span>';
+            }
+            categoryHtml += '</li>';
+            html += categoryHtml;
+        });
+        html += '</ul></div>';
+    }
+    
+    contentDiv.innerHTML = html;
+}
+
+function clearImagePostingPreview() {
+    document.getElementById('image-posting-preview-results').style.display = 'none';
+    document.getElementById('preview-post-select-image').value = '';
+    hideImagePostingError();
+}
+
+function showImagePostingError(message) {
+    const errorDiv = document.getElementById('image-posting-preview-error');
+    errorDiv.innerHTML = `<strong>❌ Error:</strong> ${message}`;
+    errorDiv.style.display = 'block';
+    document.getElementById('image-posting-preview-results').style.display = 'none';
+}
+
+function hideImagePostingError() {
+    document.getElementById('image-posting-preview-error').style.display = 'none';
+}
+
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+}
+</script>
+</content>

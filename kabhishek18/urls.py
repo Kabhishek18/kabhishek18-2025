@@ -29,6 +29,9 @@ urlpatterns = [
     # API URLs - specific prefix with versioning
     path('api/v1/', include('api.urls')),
     
+    # Roadmap/Resume Parser API URLs
+    path('api/roadmap/', include('roadmap.urls')),
+    
     # Blog URLs - specific prefix
     path('blog/', include('blog.urls', namespace='blog')),
 
@@ -53,6 +56,11 @@ urlpatterns = [
         TemplateView.as_view(template_name="humans.txt", content_type="text/plain"),
         name="humans",
     ),
+    path(
+        "ads.txt",
+        TemplateView.as_view(template_name="ads.txt", content_type="text/plain"),
+        name="ads",
+    ),
 ]
 
 # Add Swagger URLs only when in DEBUG mode
@@ -63,7 +71,7 @@ if settings.DEBUG:
         # API schema
         path('swagger.json', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     ]
-    # Add media file serving for development
+    # Add media file serving for development (static files are served automatically when DEBUG=True)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # IMPORTANT: The "catch-all" pattern for the core app MUST be the LAST one

@@ -1,0 +1,221 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Content Quality Dashboard{% endblock %}
+
+{% block extrastyle %}
+<style>
+    .quality-dashboard {
+        padding: 20px;
+    }
+    
+    .quality-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+    }
+    
+    .stat-value {
+        font-size: 36px;
+        font-weight: bold;
+        color: #417690;
+    }
+    
+    .stat-label {
+        color: #666;
+        margin-top: 10px;
+    }
+    
+    .quality-table {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .quality-table table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .quality-table th {
+        background: #417690;
+        color: white;
+        padding: 12px;
+        text-align: left;
+    }
+    
+    .quality-table td {
+        padding: 12px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .quality-table tr:hover {
+        background: #f5f5f5;
+    }
+    
+    .score-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-weight: bold;
+        font-size: 14px;
+    }
+    
+    .score-excellent {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .score-good {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .score-warning {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .score-poor {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .issue-count {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 12px;
+        background: #dc3545;
+        color: white;
+    }
+    
+    .warning-count {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 12px;
+        background: #ffc107;
+        color: #333;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="quality-dashboard">
+    <h1>📊 Content Quality Dashboard</h1>
+    
+    <div class="quality-stats">
+        <div class="stat-card">
+            <div class="stat-value">{{ total_drafts }}</div>
+            <div class="stat-label">📝 Drafts Pending Review</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value">{{ total_published }}</div>
+            <div class="stat-label">✅ Published Posts</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value">
+                {% with needs_review=draft_posts|length %}
+                    {{ needs_review }}
+                {% endwith %}
+            </div>
+            <div class="stat-label">⚠️ Needs Attention</div>
+        </div>
+    </div>
+    
+    <h2>📝 Draft Posts - Quality Review</h2>
+    
+    <div class="quality-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Post Title</th>
+                    <th>Quality Score</th>
+                    <th>Issues</th>
+                    <th>Warnings</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in draft_posts %}
+                <tr>
+                    <td>
+                        <strong>{{ item.post.title|truncatewords:10 }}</strong>
+                    </td>
+                    <td>
+                        {% if item.score >= 90 %}
+                            <span class="score-badge score-excellent">🌟 {{ item.score|floatformat:0 }}/100</span>
+                        {% elif item.score >= 75 %}
+                            <span class="score-badge score-good">✅ {{ item.score|floatformat:0 }}/100</span>
+                        {% elif item.score >= 60 %}
+                            <span class="score-badge score-warning">⚠️ {{ item.score|floatformat:0 }}/100</span>
+                        {% else %}
+                            <span class="score-badge score-poor">❌ {{ item.score|floatformat:0 }}/100</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.issues_count > 0 %}
+                            <span class="issue-count">{{ item.issues_count }} issues</span>
+                        {% else %}
+                            <span style="color: green;">✓ None</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.warnings_count > 0 %}
+                            <span class="warning-count">{{ item.warnings_count }} warnings</span>
+                        {% else %}
+                            <span style="color: green;">✓ None</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ item.post.created_at|date:"M d, Y" }}</td>
+                    <td>
+                        <a href="{% url 'admin:blog_post_change' item.post.id %}" class="button">Edit</a>
+                        <a href="{% url 'admin:blog_post_check_quality' item.post.id %}" class="button" target="_blank">Check Quality</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 40px; color: #999;">
+                        🎉 No draft posts pending review!
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div style="margin-top: 30px;">
+        <h3>💡 Quality Guidelines</h3>
+        <ul>
+            <li><strong>Excellent (90-100):</strong> Ready to publish immediately</li>
+            <li><strong>Good (75-89):</strong> Minor improvements recommended</li>
+            <li><strong>Fair (60-74):</strong> Needs review and improvements</li>
+            <li><strong>Poor (&lt;60):</strong> Significant issues - requires major revision</li>
+        </ul>
+        
+        <h3>📋 Quality Checks Include:</h3>
+        <ul>
+            <li>✓ Word count (minimum 300 words, recommended 1000+)</li>
+            <li>✓ Readability score (Flesch Reading Ease)</li>
+            <li>✓ Content structure (headings, lists, paragraphs)</li>
+            <li>✓ Keyword density (avoiding keyword stuffing)</li>
+            <li>✓ Content uniqueness (plagiarism detection)</li>
+            <li>✓ SEO optimization (title, meta description, links)</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
