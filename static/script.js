@@ -34,8 +34,8 @@ class EnhancedLoader {
         this.currentMessageIndex = 0;
         this.progress = 0;
         this.isFirstLoad = !sessionStorage.getItem('visitedBefore');
-        this.isSlowConnection = navigator.connection && navigator.connection.effectiveType && 
-                               (navigator.connection.effectiveType === 'slow-2g' || navigator.connection.effectiveType === '2g');
+        this.isSlowConnection = navigator.connection && navigator.connection.effectiveType &&
+            (navigator.connection.effectiveType === 'slow-2g' || navigator.connection.effectiveType === '2g');
     }
 
     show() {
@@ -70,24 +70,24 @@ class EnhancedLoader {
             transition: all 0.3s ease;
             backdrop-filter: blur(10px);
         `;
-        
+
         skipBtn.addEventListener('mouseenter', () => {
             skipBtn.style.background = 'rgba(0, 217, 255, 0.3)';
             skipBtn.style.transform = 'translateY(-2px)';
         });
-        
+
         skipBtn.addEventListener('mouseleave', () => {
             skipBtn.style.background = 'rgba(0, 217, 255, 0.2)';
             skipBtn.style.transform = 'translateY(0)';
         });
-        
+
         skipBtn.addEventListener('click', () => {
             this.hideLoader(resolve);
             sessionStorage.setItem('visitedBefore', 'true');
         });
-        
+
         document.body.appendChild(skipBtn);
-        
+
         // Remove skip button when loader is done
         setTimeout(() => {
             if (skipBtn && skipBtn.parentNode) {
@@ -435,35 +435,35 @@ class EnhancedLoader {
         const messageEl = document.querySelector('.message-text');
         const progressFill = document.getElementById('progressFill');
         const progressPercentage = document.getElementById('progressPercentage');
-        
+
         const showMessage = () => {
             if (this.currentMessageIndex < this.messages.length) {
                 messageEl.textContent = this.messages[this.currentMessageIndex];
                 messageEl.style.animation = 'none';
                 messageEl.offsetHeight; // Trigger reflow
                 messageEl.style.animation = 'messageSlideIn 0.3s ease forwards';
-                
+
                 // Update progress
                 this.progress = ((this.currentMessageIndex + 1) / this.messages.length) * 100;
                 progressFill.style.width = this.progress + '%';
                 progressPercentage.textContent = Math.round(this.progress) + '%';
-                
+
                 this.currentMessageIndex++;
-                
+
                 const delay = this.currentMessageIndex === this.messages.length ? 500 : 600;
                 setTimeout(showMessage, delay);
             } else {
                 callback();
             }
         };
-        
+
         showMessage();
     }
 
     hideLoader(callback) {
         const loader = document.getElementById('enhancedLoader');
         loader.classList.add('loader-exit');
-        
+
         setTimeout(() => {
             if (loader && loader.parentNode) {
                 loader.parentNode.removeChild(loader);
@@ -478,57 +478,57 @@ class MatrixRain {
     constructor() {
         this.canvas = document.getElementById('matrix');
         if (!this.canvas) return;
-        
+
         this.ctx = this.canvas.getContext('2d');
         this.chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
         this.charArray = this.chars.split('');
         this.drops = [];
         this.fontSize = 14;
         this.animationId = null;
-        
+
         this.init();
         this.animate();
     }
-    
+
     init() {
         if (!this.canvas) return;
-        
+
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
-        
+
         const columns = Math.floor(this.canvas.width / this.fontSize);
         this.drops = [];
-        for(let i = 0; i < columns; i++) {
+        for (let i = 0; i < columns; i++) {
             this.drops[i] = 1;
         }
     }
-    
+
     animate() {
         if (!this.ctx) return;
-        
+
         this.ctx.fillStyle = 'rgba(10, 10, 10, 0.05)';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        
+
         this.ctx.fillStyle = '#00ff00';
         this.ctx.font = this.fontSize + 'px monospace';
-        
-        for(let i = 0; i < this.drops.length; i++) {
+
+        for (let i = 0; i < this.drops.length; i++) {
             const text = this.charArray[Math.floor(Math.random() * this.charArray.length)];
             this.ctx.fillText(text, i * this.fontSize, this.drops[i] * this.fontSize);
-            
-            if(this.drops[i] * this.fontSize > this.canvas.height && Math.random() > 0.975) {
+
+            if (this.drops[i] * this.fontSize > this.canvas.height && Math.random() > 0.975) {
                 this.drops[i] = 0;
             }
             this.drops[i]++;
         }
-        
+
         this.animationId = requestAnimationFrame(() => this.animate());
     }
-    
+
     resize() {
         this.init();
     }
-    
+
     destroy() {
         if (this.animationId) {
             cancelAnimationFrame(this.animationId);
@@ -541,23 +541,23 @@ class NeuralNetwork {
     constructor() {
         this.container = document.getElementById('neuralNetwork');
         if (!this.container) return;
-        
+
         this.nodes = [];
         this.connections = [];
         this.init();
     }
-    
+
     init() {
         this.createNodes();
         this.createConnections();
         this.animate();
     }
-    
+
     createNodes() {
         if (!this.container) return;
-        
+
         const nodeCount = Math.min(20, Math.floor(window.innerWidth / 100));
-        for(let i = 0; i < nodeCount; i++) {
+        for (let i = 0; i < nodeCount; i++) {
             const node = document.createElement('div');
             node.className = 'neural-node';
             node.style.cssText = `
@@ -576,7 +576,7 @@ class NeuralNetwork {
             this.nodes.push(node);
         }
     }
-    
+
     createConnections() {
         // Add CSS for neural connections
         if (!document.getElementById('neural-styles')) {
@@ -591,11 +591,11 @@ class NeuralNetwork {
             document.head.appendChild(style);
         }
     }
-    
+
     animate() {
         setInterval(() => {
             this.nodes.forEach(node => {
-                if(Math.random() > 0.98) {
+                if (Math.random() > 0.98) {
                     node.style.left = Math.random() * 100 + '%';
                     node.style.top = Math.random() * 100 + '%';
                 }
@@ -609,30 +609,30 @@ class DataParticles {
     constructor() {
         this.container = document.getElementById('dataParticles');
         if (!this.container) return;
-        
+
         this.particleCount = window.innerWidth < 768 ? 8 : 15;
         this.init();
     }
-    
+
     init() {
         this.createParticles();
     }
-    
+
     createParticles() {
-        for(let i = 0; i < this.particleCount; i++) {
+        for (let i = 0; i < this.particleCount; i++) {
             setTimeout(() => {
                 this.createParticle();
             }, i * 2000);
         }
-        
+
         setInterval(() => {
             this.createParticle();
         }, 3000);
     }
-    
+
     createParticle() {
         if (!this.container) return;
-        
+
         const particle = document.createElement('div');
         particle.className = 'data-particle';
         particle.style.cssText = `
@@ -640,11 +640,11 @@ class DataParticles {
             animation-duration: ${8 + Math.random() * 4}s;
             animation-delay: ${Math.random() * 2}s;
         `;
-        
+
         this.container.appendChild(particle);
-        
+
         setTimeout(() => {
-            if(particle && particle.parentNode) {
+            if (particle && particle.parentNode) {
                 particle.parentNode.removeChild(particle);
             }
         }, 12000);
@@ -661,21 +661,21 @@ class TypewriterEffect {
         this.currentCharIndex = 0;
         this.isDeleting = false;
         this.timeoutId = null;
-        
+
         if (this.element) {
             this.init();
         }
     }
-    
+
     init() {
         this.type();
     }
-    
+
     type() {
         if (!this.element) return;
-        
+
         const currentText = this.texts[this.currentTextIndex];
-        
+
         if (this.isDeleting) {
             this.element.textContent = currentText.substring(0, this.currentCharIndex - 1);
             this.currentCharIndex--;
@@ -683,13 +683,13 @@ class TypewriterEffect {
             this.element.textContent = currentText.substring(0, this.currentCharIndex + 1);
             this.currentCharIndex++;
         }
-        
+
         let typeSpeed = this.speed;
-        
+
         if (this.isDeleting) {
             typeSpeed /= 2;
         }
-        
+
         if (!this.isDeleting && this.currentCharIndex === currentText.length) {
             typeSpeed = 2000;
             this.isDeleting = true;
@@ -698,10 +698,10 @@ class TypewriterEffect {
             this.currentTextIndex = (this.currentTextIndex + 1) % this.texts.length;
             typeSpeed = 500;
         }
-        
+
         this.timeoutId = setTimeout(() => this.type(), typeSpeed);
     }
-    
+
     destroy() {
         if (this.timeoutId) {
             clearTimeout(this.timeoutId);
@@ -714,25 +714,25 @@ class GlitchText {
     constructor(element) {
         this.element = element;
         if (!this.element) return;
-        
+
         this.originalText = element.textContent;
         this.chars = '!<>-_\\/[]{}—=+*^?#________';
         this.intervalId = null;
         this.init();
     }
-    
+
     init() {
         this.intervalId = setInterval(() => {
             this.glitch();
         }, 4000 + Math.random() * 3000);
     }
-    
+
     glitch() {
         if (!this.element) return;
-        
+
         const iterations = 10;
         let iteration = 0;
-        
+
         const glitchInterval = setInterval(() => {
             this.element.textContent = this.originalText
                 .split('')
@@ -743,16 +743,16 @@ class GlitchText {
                     return this.chars[Math.floor(Math.random() * this.chars.length)];
                 })
                 .join('');
-            
+
             if (iteration >= this.originalText.length) {
                 clearInterval(glitchInterval);
                 this.element.textContent = this.originalText;
             }
-            
+
             iteration += 1 / 3;
         }, 30);
     }
-    
+
     destroy() {
         if (this.intervalId) {
             clearInterval(this.intervalId);
@@ -766,12 +766,12 @@ class ProgressAnimation {
         this.progressFill = document.querySelector('.progress-fill');
         this.progressPercentage = document.querySelector('.progress-percentage');
         this.observer = null;
-        
+
         if (this.progressFill) {
             this.init();
         }
     }
-    
+
     init() {
         this.observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
@@ -781,10 +781,10 @@ class ProgressAnimation {
                 }
             });
         });
-        
+
         this.observer.observe(this.progressFill);
     }
-    
+
     animateProgress() {
         const targetPercentage = 87;
         let currentPercentage = 0;
@@ -792,15 +792,15 @@ class ProgressAnimation {
         const stepTime = 50;
         const steps = duration / stepTime;
         const increment = targetPercentage / steps;
-        
+
         const progressInterval = setInterval(() => {
             currentPercentage += increment;
-            
+
             if (currentPercentage >= targetPercentage) {
                 currentPercentage = targetPercentage;
                 clearInterval(progressInterval);
             }
-            
+
             if (this.progressFill) {
                 this.progressFill.style.width = currentPercentage + '%';
             }
@@ -809,7 +809,7 @@ class ProgressAnimation {
             }
         }, stepTime);
     }
-    
+
     destroy() {
         if (this.observer) {
             this.observer.disconnect();
@@ -824,16 +824,16 @@ class InteractiveParticles {
         this.maxParticles = window.innerWidth < 768 ? 3 : 5;
         this.init();
     }
-    
+
     init() {
         document.addEventListener('mousemove', (e) => {
             if (Math.random() > 0.95 && this.particles.length < this.maxParticles) {
                 this.createParticle(e.clientX, e.clientY);
             }
         });
-        
+
         document.addEventListener('click', (e) => {
-            for(let i = 0; i < 3; i++) {
+            for (let i = 0; i < 3; i++) {
                 setTimeout(() => {
                     this.createParticle(
                         e.clientX + (Math.random() - 0.5) * 20,
@@ -843,13 +843,13 @@ class InteractiveParticles {
             }
         });
     }
-    
+
     createParticle(x, y) {
         const particle = document.createElement('div');
         const size = Math.random() * 4 + 2;
         const colors = ['#00ffff', '#8a2be2', '#ff6600', '#00ff00'];
         const color = colors[Math.floor(Math.random() * colors.length)];
-        
+
         particle.style.cssText = `
             position: fixed;
             left: ${x}px;
@@ -862,15 +862,15 @@ class InteractiveParticles {
             z-index: 1000;
             box-shadow: 0 0 ${size * 2}px ${color};
         `;
-        
+
         document.body.appendChild(particle);
         this.particles.push(particle);
-        
+
         // Animate particle
         const angle = Math.random() * Math.PI * 2;
         const velocity = Math.random() * 100 + 50;
         const lifetime = 2000 + Math.random() * 1000;
-        
+
         const animation = particle.animate([
             {
                 transform: 'translate(0, 0) scale(1)',
@@ -884,7 +884,7 @@ class InteractiveParticles {
             duration: lifetime,
             easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
         });
-        
+
         animation.onfinish = () => {
             if (particle && particle.parentNode) {
                 particle.parentNode.removeChild(particle);
@@ -898,23 +898,22 @@ class InteractiveParticles {
 class App {
     constructor() {
         this.components = [];
-        this.loader = new EnhancedLoader();
+        // Loader removed per user request
     }
 
     async init() {
         try {
-            // Show loader first
-            await this.loader.show();
-            
+            // Loader removed per user request
+
             // Initialize all components
             this.initializeComponents();
             this.addEventListeners();
             this.addConsoleCommands();
-            
+
             console.log('%c🤖 SYSTEM INITIALIZED', 'color: #00ffff; font-size: 16px; font-weight: bold;');
             console.log('%cWelcome to the digital consciousness of Kumar Abhishek', 'color: #8a2be2; font-size: 12px;');
             console.log('%cType "help()" for available commands', 'color: #00ff00; font-size: 10px;');
-            
+
         } catch (error) {
             console.error('Error initializing app:', error);
         }
@@ -925,15 +924,15 @@ class App {
             // Initialize Matrix Rain
             const matrixRain = new MatrixRain();
             this.components.push(matrixRain);
-            
+
             // Initialize Neural Network
             const neuralNetwork = new NeuralNetwork();
             this.components.push(neuralNetwork);
-            
+
             // Initialize Data Particles
             const dataParticles = new DataParticles();
             this.components.push(dataParticles);
-            
+
             // Initialize Typewriter Effect
             const typewriterTexts = [
                 'Crafting digital experiences...',
@@ -942,31 +941,31 @@ class App {
                 'Coding neural pathways...',
                 'Designing intelligent systems...'
             ];
-            
+
             const typewriterElement = document.getElementById('typewriter');
             if (typewriterElement) {
                 const typewriter = new TypewriterEffect(typewriterElement, typewriterTexts, 80);
                 this.components.push(typewriter);
             }
-            
+
             // Initialize Glitch Text
             const glitchElements = document.querySelectorAll('.digital-glitch');
             glitchElements.forEach(element => {
                 const glitch = new GlitchText(element);
                 this.components.push(glitch);
             });
-            
+
             // Initialize Progress Animation
             const progress = new ProgressAnimation();
             this.components.push(progress);
-            
+
             // Initialize Interactive Particles
             const interactiveParticles = new InteractiveParticles();
             this.components.push(interactiveParticles);
-            
+
             // Performance optimization - reduce effects on mobile
             this.optimizeForMobile();
-            
+
         } catch (error) {
             console.error('Error initializing components:', error);
         }
@@ -975,14 +974,14 @@ class App {
     optimizeForMobile() {
         const isMobile = window.innerWidth <= 768;
         const isSlowDevice = navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4;
-        
+
         if (isMobile || isSlowDevice) {
             // Reduce matrix rain opacity
             const matrixCanvas = document.getElementById('matrix');
             if (matrixCanvas) {
                 matrixCanvas.style.opacity = '0.02';
             }
-            
+
             // Reduce neural network nodes
             const neuralNodes = document.querySelectorAll('.neural-node');
             neuralNodes.forEach((node, index) => {
@@ -990,7 +989,7 @@ class App {
                     node.remove();
                 }
             });
-            
+
             // Disable heavy animations
             document.documentElement.style.setProperty('--animation-fast', '0.1s');
             document.documentElement.style.setProperty('--animation-normal', '0.2s');
@@ -1010,19 +1009,19 @@ class App {
 
         // Enhanced social link interactions
         this.initializeSocialLinks();
-        
+
         // AI Status Panel Animation
         this.initializeStatusPanel();
-        
+
         // Enhanced avatar interactions
         this.initializeAvatarInteractions();
-        
+
         // Email terminal enhancement
         this.initializeEmailTerminal();
-        
+
         // Stats animation on scroll
         this.initializeStatsAnimation();
-        
+
         // Domain cards enhancement
         this.initializeDomainCards();
     }
@@ -1030,15 +1029,15 @@ class App {
     initializeSocialLinks() {
         const socialLinks = document.querySelectorAll('.social-link');
         socialLinks.forEach(link => {
-            link.addEventListener('mouseenter', function() {
+            link.addEventListener('mouseenter', function () {
                 this.style.transform = 'translateY(-3px) scale(1.05)';
             });
-            
-            link.addEventListener('mouseleave', function() {
+
+            link.addEventListener('mouseleave', function () {
                 this.style.transform = 'translateY(0) scale(1)';
             });
-            
-            link.addEventListener('click', function(e) {
+
+            link.addEventListener('click', function (e) {
                 // Create ripple effect
                 const ripple = document.createElement('div');
                 ripple.style.cssText = `
@@ -1049,15 +1048,15 @@ class App {
                     animation: ripple 0.6s linear;
                     pointer-events: none;
                 `;
-                
+
                 const rect = this.getBoundingClientRect();
                 const size = Math.max(rect.width, rect.height);
                 ripple.style.width = ripple.style.height = size + 'px';
                 ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
                 ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
-                
+
                 this.appendChild(ripple);
-                
+
                 setTimeout(() => {
                     if (ripple && ripple.parentNode) {
                         ripple.parentNode.removeChild(ripple);
@@ -1065,7 +1064,7 @@ class App {
                 }, 600);
             });
         });
-        
+
         // Add ripple animation CSS if not exists
         if (!document.getElementById('ripple-styles')) {
             const rippleStyle = document.createElement('style');
@@ -1088,13 +1087,13 @@ class App {
             setInterval(() => {
                 const value = item.querySelector('.status-value');
                 if (!value) return;
-                
+
                 const originalText = value.textContent;
-                
+
                 // Simulate status checking
                 value.textContent = 'CHECKING...';
                 value.style.color = '#ff6600';
-                
+
                 setTimeout(() => {
                     value.textContent = originalText;
                     value.style.color = '#00ff00';
@@ -1108,7 +1107,7 @@ class App {
         if (avatar) {
             avatar.addEventListener('click', () => {
                 const scanLines = [];
-                for(let i = 0; i < 5; i++) {
+                for (let i = 0; i < 5; i++) {
                     const scanLine = document.createElement('div');
                     scanLine.style.cssText = `
                         position: absolute;
@@ -1124,7 +1123,7 @@ class App {
                     avatar.appendChild(scanLine);
                     scanLines.push(scanLine);
                 }
-                
+
                 setTimeout(() => {
                     scanLines.forEach(line => {
                         if (line && line.parentNode) {
@@ -1134,7 +1133,7 @@ class App {
                 }, 2000);
             });
         }
-        
+
         // Add quick scan animation CSS if not exists
         if (!document.getElementById('scan-styles')) {
             const quickScanStyle = document.createElement('style');
@@ -1155,7 +1154,7 @@ class App {
         if (emailLink) {
             emailLink.addEventListener('click', (e) => {
                 e.preventDefault();
-                
+
                 // Simulate sending message
                 const terminalBody = document.querySelector('.terminal-body');
                 if (terminalBody) {
@@ -1166,13 +1165,13 @@ class App {
                         <span class="command">send_encrypted_message()</span>
                     `;
                     terminalBody.appendChild(newLine);
-                    
+
                     setTimeout(() => {
                         const responseLine = document.createElement('div');
                         responseLine.className = 'terminal-line';
                         responseLine.innerHTML = `<span class="output">Message encrypted and sent via quantum channel...</span>`;
                         terminalBody.appendChild(responseLine);
-                        
+
                         // Open email client after animation
                         setTimeout(() => {
                             window.location.href = 'mailto:developer@kabhishek18.com';
@@ -1186,7 +1185,7 @@ class App {
     initializeStatsAnimation() {
         const statNumbers = document.querySelectorAll('.stat-number');
         if (statNumbers.length === 0) return;
-        
+
         const statsObserver = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -1195,7 +1194,7 @@ class App {
                 }
             });
         });
-        
+
         statNumbers.forEach(stat => {
             statsObserver.observe(stat);
         });
@@ -1204,21 +1203,21 @@ class App {
     animateStatNumber(element) {
         const finalText = element.textContent;
         const isInfinity = finalText === '∞';
-        
+
         if (isInfinity) {
             element.style.animation = 'infinityPulse 2s ease-in-out infinite';
             return;
         }
-        
+
         const hasPlus = finalText.includes('+');
         const number = parseInt(finalText.replace(/\D/g, '')) || 0;
         let current = 0;
         const increment = number / 50;
         const duration = 2000;
         const stepTime = duration / 50;
-        
+
         element.textContent = '0' + (hasPlus ? '+' : '');
-        
+
         const counter = setInterval(() => {
             current += increment;
             if (current >= number) {
@@ -1244,21 +1243,21 @@ class App {
                 technologies: ['React', 'Django', 'Machine Learning', 'WebRTC']
             }
         };
-        
+
         const domainCards = document.querySelectorAll('.domain-card');
         domainCards.forEach(card => {
             const domain = card.getAttribute('data-domain');
-            
+
             card.addEventListener('mouseenter', () => {
                 card.style.transform = 'translateY(-10px) scale(1.02)';
                 card.style.boxShadow = '0 20px 40px rgba(0, 255, 255, 0.3)';
             });
-            
+
             card.addEventListener('mouseleave', () => {
                 card.style.transform = 'translateY(0) scale(1)';
                 card.style.boxShadow = 'none';
             });
-            
+
             card.addEventListener('click', () => {
                 if (domainData[domain]) {
                     this.showDomainDetails(card, domainData[domain]);
@@ -1284,7 +1283,7 @@ class App {
             opacity: 0;
             transition: opacity 0.3s ease;
         `;
-        
+
         const modalContent = document.createElement('div');
         modalContent.style.cssText = `
             background: #111111;
@@ -1298,10 +1297,10 @@ class App {
             max-height: 80vh;
             overflow-y: auto;
         `;
-        
+
         const titleElement = card.querySelector('.domain-title');
         const title = titleElement ? titleElement.textContent : 'Domain Details';
-        
+
         modalContent.innerHTML = `
             <h3 style="color: #00ffff; margin-bottom: 1rem; font-family: 'Orbitron', monospace;">
                 ${title}
@@ -1326,29 +1325,29 @@ class App {
                 Close
             </button>
         `;
-        
+
         modal.className = 'modal-overlay';
         modal.appendChild(modalContent);
         document.body.appendChild(modal);
-        
+
         // Close button functionality
         const closeBtn = modalContent.querySelector('.modal-close-btn');
         closeBtn.addEventListener('click', () => {
             modal.remove();
         });
-        
+
         // Animate in
         setTimeout(() => {
             modal.style.opacity = '1';
         }, 10);
-        
+
         // Close on overlay click
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
                 modal.remove();
             }
         });
-        
+
         // Close on Escape key
         const handleEscape = (e) => {
             if (e.key === 'Escape') {
@@ -1361,7 +1360,7 @@ class App {
 
     addConsoleCommands() {
         // Add console commands for fun
-        window.help = function() {
+        window.help = function () {
             console.log(`
 %cAvailable Commands:
 %cprofile() - View developer profile
@@ -1370,40 +1369,40 @@ class App {
 %ccontact() - Get contact information
 %cmatrix() - Toggle matrix rain
 %cai_mode() - Activate AI assistance mode
-            `, 
-            'color: #00ffff; font-weight: bold;',
-            'color: #ffffff;', 'color: #ffffff;', 'color: #ffffff;', 
-            'color: #ffffff;', 'color: #ffffff;', 'color: #ffffff;');
+            `,
+                'color: #00ffff; font-weight: bold;',
+                'color: #ffffff;', 'color: #ffffff;', 'color: #ffffff;',
+                'color: #ffffff;', 'color: #ffffff;', 'color: #ffffff;');
         };
-        
-        window.profile = function() {
+
+        window.profile = function () {
             console.table(portfolioData.profile);
         };
-        
-        window.projects = function() {
+
+        window.projects = function () {
             console.log('%cRecent Projects:', 'color: #00ffff; font-weight: bold;');
             console.log('%c- Django E-commerce Template', 'color: #8a2be2; font-weight: bold;');
             console.log('%c- Flight Booking System', 'color: #8a2be2; font-weight: bold;');
             console.log('%c- Learning Management System', 'color: #8a2be2; font-weight: bold;');
         };
-        
-        window.skills = function() {
+
+        window.skills = function () {
             console.log('%cTechnical Skills:', 'color: #00ffff; font-weight: bold;');
             console.log('%cPython • PHP • JavaScript • React • Django • FastAPI', 'color: #00ff00;');
         };
-        
-        window.contact = function() {
+
+        window.contact = function () {
             console.log('%cContact Information:', 'color: #00ffff; font-weight: bold;');
             console.log('%cEmail: developer@kabhishek18.com', 'color: #ff6600;');
             console.log('%cGitHub: https://github.com/kabhishek18', 'color: #ff6600;');
         };
-        
-        window.ai_mode = function() {
+
+        window.ai_mode = function () {
             console.log('%c🧠 AI ASSISTANCE MODE ACTIVATED', 'color: #ff6600; font-size: 14px; font-weight: bold;');
             console.log('%cI am ready to help you navigate the digital realm...', 'color: #00ffff;');
         };
-        
-        window.matrix = function() {
+
+        window.matrix = function () {
             const canvas = document.getElementById('matrix');
             if (canvas) {
                 const currentOpacity = parseFloat(canvas.style.opacity) || 0.1;
@@ -1446,32 +1445,32 @@ class App {
 }
 
 // Global error handling with style
-window.addEventListener('error', function(e) {
+window.addEventListener('error', function (e) {
     console.error('%c⚠️ SYSTEM ERROR DETECTED', 'color: #ff0000; font-size: 14px; font-weight: bold;');
     console.error('%cInitiating auto-repair protocols...', 'color: #ff6600;');
     console.error('Error details:', e.error);
 });
 
 // Unhandled promise rejection handling
-window.addEventListener('unhandledrejection', function(e) {
+window.addEventListener('unhandledrejection', function (e) {
     console.error('%c⚠️ PROMISE REJECTION DETECTED', 'color: #ff0000; font-size: 14px; font-weight: bold;');
     console.error('Promise rejection details:', e.reason);
 });
 
 // Easter egg - Konami Code
-document.addEventListener('keydown', function(e) {
+document.addEventListener('keydown', function (e) {
     const konamiCode = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65];
     window.konamiProgress = window.konamiProgress || 0;
-    
+
     if (e.keyCode === konamiCode[window.konamiProgress]) {
         window.konamiProgress++;
         if (window.konamiProgress === konamiCode.length) {
             console.log('%c🎮 CHEAT CODE ACTIVATED!', 'color: #ff6600; font-size: 16px; font-weight: bold;');
             console.log('%cYou have unlocked the secret developer mode!', 'color: #00ffff;');
-            
+
             // Add special effects
             document.body.style.animation = 'rainbow 2s ease-in-out';
-            
+
             if (!document.getElementById('rainbow-styles')) {
                 const rainbowStyle = document.createElement('style');
                 rainbowStyle.id = 'rainbow-styles';
@@ -1483,7 +1482,7 @@ document.addEventListener('keydown', function(e) {
                 `;
                 document.head.appendChild(rainbowStyle);
             }
-            
+
             window.konamiProgress = 0;
         }
     } else {
@@ -1492,15 +1491,15 @@ document.addEventListener('keydown', function(e) {
 });
 
 // Initialize the app when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const app = new App();
     app.init().catch(error => {
         console.error('Failed to initialize app:', error);
     });
-    
+
     // Add infinity animation styles
     app.addInfinityAnimation();
-    
+
     // Cleanup on page unload
     window.addEventListener('beforeunload', () => {
         app.destroy();
