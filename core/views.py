@@ -479,6 +479,32 @@ class PageRequest(View):
             print(f"Error rendering page: {e}")
             raise Http404("Page not found")
 
+class LogsPageRequest(View):
+    def get(self, request):
+        context = {'title': 'System Logs - Kumar Abhishek'}
+        return render(request, 'logs.html', context)
+
+class WebAppsPageRequest(View):
+    def get(self, request):
+        context = {'title': 'Web Apps - Kumar Abhishek'}
+        return render(request, 'web_apps.html', context)
+
+class ConfigPageRequest(View):
+    def get(self, request):
+        context = {'title': 'System Config - Kumar Abhishek'}
+        return render(request, 'config.html', context)
+
+class ContactPageRequest(View):
+    """
+    View to handler the static terminal contact page
+    """
+    def get(self, request):
+        context = {
+            'title': 'Contact - Kumar Abhishek',
+            'meta_details': 'Contact Information for Kumar Abhishek',
+        }
+        return render(request, 'contact.html', context)
+
 
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import user_passes_test

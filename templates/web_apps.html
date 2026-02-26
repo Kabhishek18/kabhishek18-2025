@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}
+ <title>{{title}}: Kabhishek18</title>
+{% endblock title %}
+
+{% block meta_data %}
+    {% if meta_data %}
+        {{meta_data}}
+    {% else %}    
+    <meta name="description" content="Kumar Abhishek - Full Stack Software Developer with 9+ years of experience, crafting the future with AI, Python, and React.">
+    <meta name="author" content="Kumar Abhishek">
+    <meta name="keywords" content="Kumar Abhishek, Full Stack Developer, Software Engineer, AI, Machine Learning, Python, React, Portfolio, Digital Architect">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://kabhishek18.com/">
+
+    <meta property="og:title" content="Kumar Abhishek - The Digital Architect">
+    <meta property="og:description" content="Full Stack Software Developer crafting the future with AI and code.">
+    <meta property="og:image" content="https://kabhishek18.com/web-app-manifest-512x512.png">
+    <meta property="og:url" content="https://kabhishek18.com/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="The Digital Architect">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Kumar Abhishek - The Digital Architect">
+    <meta name="twitter:description" content="Full Stack Software Developer crafting the future with AI and code.">
+    <meta name="twitter:image" content="https://kabhishek18.com/web-app-manifest-512x512.png">
+    <meta name="twitter:site" content="@kabhishek18">
+    <meta name="twitter:creator" content="@kabhishek18">
+    {% endif %}
+{% endblock meta_data %}
+{% block navbar %}
+{% endblock navbar %}
+
+{% block content %}
+<div class="min-h-screen bg-background-dark text-white font-sans flex overflow-hidden">
+            <!-- Sidebar hidden for brevity -->
+
+            <main class="flex-1 flex flex-col w-full bg-background-dark relative">
+                <header class="h-14 border-b border-terminal-gray flex items-center gap-4 px-6 bg-background-dark/95 backdrop-blur sticky top-0 z-20">
+                    <a href="/" class="text-primary hover:text-white transition-colors flex items-center gap-1 bg-terminal-gray/20 px-2 py-1 border border-terminal-gray hover:border-primary shrink-0">
+                        <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+                        <span class="text-xs font-mono">cd ..</span>
+                    </a>
+                    <div class="flex items-center gap-2 text-sm text-gray-400">
+                        <span class="hidden sm:inline">root</span>
+                        <span class="hidden sm:inline">@</span>
+                        <span class="text-white hidden sm:inline">kabhishek18</span>
+                        <span class="hidden sm:inline">:</span>
+                        <span class="text-primary">~/projects/web_apps</span>
+                    </div>
+                </header>
+
+                <div class="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10 space-y-10">
+
+                    <section class="border-l-2 border-primary pl-6 py-2">
+                        <p class="text-primary text-sm mb-2 font-mono">&gt; load_module ai_systems.so</p>
+                        <h1 class="text-4xl md:text-5xl font-bold uppercase tracking-tighter text-white mb-4 leading-none">
+                            INTELLIGENT SYSTEMS<br />
+                            <span class="text-gray-600">// GEN_AI_&_ML_PIPELINES</span>
+                        </h1>
+                        <p class="text-gray-400 max-w-2xl text-lg font-light leading-relaxed">
+                            A curated selection of robust AI integrations, LLM-powered agents, and scalable machine learning architectures engineered for production environments.
+                        </p>
+                    </section>
+
+                    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+
+                        <!-- App Card 1 -->
+                        <div class="border border-terminal-gray bg-background-dark/50 hover:border-primary transition-colors group flex flex-col h-full">
+                            <div class="p-4 border-b border-terminal-gray flex justify-between items-center group-hover:bg-primary/5 transition-colors">
+                                <h3 class="font-bold text-lg group-hover:text-primary">Simkey (HERKEY)</h3>
+                                <span class="material-symbols-outlined text-gray-500 group-hover:text-primary">memory</span>
+                            </div>
+                            <div class="p-6 flex-1 flex flex-col gap-4">
+                                <p class="text-sm text-gray-400 leading-relaxed">
+                                    Architected and deployed an advanced AI-driven matching engine scaling to millions of users. Engineered custom RAG pipelines and highly optimized semantic vector search.
+                                </p>
+                                <div class="flex flex-wrap gap-2 mt-auto pt-4">
+                                    <span class="px-2 py-1 bg-white/5 border border-terminal-gray text-xs font-mono text-gray-300">PyTorch</span>
+                                    <span class="px-2 py-1 bg-white/5 border border-terminal-gray text-xs font-mono text-gray-300">LangChain</span>
+                                    <span class="px-2 py-1 bg-white/5 border border-terminal-gray text-xs font-mono text-gray-300">Pinecone</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- App Card 2 -->
+                        <div class="border border-terminal-gray bg-background-dark/50 hover:border-primary transition-colors group flex flex-col h-full">
+                            <div class="p-4 border-b border-terminal-gray flex justify-between items-center group-hover:bg-primary/5 transition-colors">
+                                <h3 class="font-bold text-lg group-hover:text-primary">HERKEY 4.0</h3>
+                                <span class="material-symbols-outlined text-gray-500 group-hover:text-primary">hub</span>
+                            </div>
+                            <div class="p-6 flex-1 flex flex-col gap-4">
+                                <p class="text-sm text-gray-400 leading-relaxed">
+                                    Spearheaded the backend machine learning infrastructure for India's largest women's career network. Automated data pipelines yielding a 40% reduction in inference latency.
+                                </p>
+                                <div class="flex flex-wrap gap-2 mt-auto pt-4">
+                                    <span class="px-2 py-1 bg-white/5 border border-terminal-gray text-xs font-mono text-gray-300">AWS SageMaker</span>
+                                    <span class="px-2 py-1 bg-white/5 border border-terminal-gray text-xs font-mono text-gray-300">FastAPI</span>
+                                    <span class="px-2 py-1 bg-white/5 border border-terminal-gray text-xs font-mono text-gray-300">PostgreSQL</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- App Card 3 -->
+                        <div class="border border-terminal-gray bg-background-dark/50 hover:border-primary transition-colors group flex flex-col h-full">
+                            <div class="p-4 border-b border-terminal-gray flex justify-between items-center group-hover:bg-primary/5 transition-colors">
+                                <h3 class="font-bold text-lg group-hover:text-primary">AIRBUS PLM</h3>
+                                <span class="material-symbols-outlined text-gray-500 group-hover:text-primary">model_training</span>
+                            </div>
+                            <div class="p-6 flex-1 flex flex-col gap-4">
+                                <p class="text-sm text-gray-400 leading-relaxed">
+                                    Developed predictive analytics and reporting models within the Capgemini team to process and derive insights from massive Product Lifecycle Management datasets.
+                                </p>
+                                <div class="flex flex-wrap gap-2 mt-auto pt-4">
+                                    <span class="px-2 py-1 bg-white/5 border border-terminal-gray text-xs font-mono text-gray-300">TensorFlow</span>
+                                    <span class="px-2 py-1 bg-white/5 border border-terminal-gray text-xs font-mono text-gray-300">Big Data BI</span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </section>
+                </div>
+            </main>
+        </div>
+{% endblock content %}

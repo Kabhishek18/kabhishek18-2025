@@ -20,47 +20,51 @@ export default function Home() {
               <span className="font-bold tracking-widest text-sm">TERM_V.1.0</span>
             </div>
           </div>
+          {/* User Profile Image */}
+          <div className="relative w-full aspect-square overflow-hidden bg-terminal-gray grayscale hover:grayscale-0 transition-all border-b border-terminal-gray">
+            <img alt="User Avatar" className="w-full h-full object-cover object-top" data-alt="Pixelated avatar of a developer" src="/static/avatar.png" />
+          </div>
           <nav className="p-4 flex flex-col gap-6">
-            {/* User Profile */}
-            <div className="flex gap-3 items-center pb-4 border-b border-terminal-gray border-dashed">
-              <div className="relative w-10 h-10 overflow-hidden bg-terminal-gray grayscale hover:grayscale-0 transition-all">
-                <img alt="User Avatar" className="w-full h-full object-cover" data-alt="Pixelated avatar of a developer" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKzDsLccCHRTYPF4BpHHNlLnGCW6jb5RxESs_evg8PXLQkFFX_ta2Y5IiM5AEBwZTMe9EP9w-gPWer_ajSfeqROs2TXUD4j1kMpI8cifWZFjoBHwTXsmo_oQkQWLyo-bIUJZ9dD5ts38jx5KXRFIkSJbjUmgJ1wcWBavZXfuHhbU2iT8MfEJqr2mjAkOBCKlVkgpicsRBb_rk5TyCU8bbLouB_f5we-g8RMB5FXpw7iSU5KWO_9F76ZU0DlxSjlny9Co839pCLakCo" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-white uppercase">Guest_User</h3>
-                <p className="text-xs text-primary">Access: Read-Only</p>
-              </div>
+            {/* User Profile Info */}
+            <div className="flex flex-col gap-2 pb-2">
+              <h3 className="text-sm font-bold text-white uppercase">KUMAR ABHISHEK</h3>
+              <p className="text-xs text-gray-400">Role: The Digital Architect</p>
             </div>
 
             {/* Directory Tree */}
             <div className="flex flex-col gap-1 text-sm font-mono">
               <div className="text-gray-500 uppercase text-xs tracking-wider mb-2">./ROOT_DIRECTORY</div>
-              <a className="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1" href="#">
+              <a className="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1" href="/#projects">
                 <span className="text-gray-600">├──</span>
                 <span className="material-symbols-outlined text-[18px] group-hover:text-primary">folder_open</span>
                 <span>projects/</span>
               </a>
-              <a className="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1 pl-4 border-l border-gray-800 ml-[7px]" href="#">
+              <a className="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1 pl-4 border-l border-gray-800 ml-[7px]" href="/web_apps">
                 <span className="text-gray-600">├──</span>
-                <span className="material-symbols-outlined text-[18px]">html</span>
+                <span className="material-symbols-outlined text-[18px] group-hover:text-primary">html</span>
                 <span>web_apps</span>
               </a>
-              <Link className="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1 pl-4 border-l border-gray-800 ml-[7px]" href="/blog">
+              <a className="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1 pl-4 border-l border-gray-800 ml-[7px]" href="/blog">
                 <span className="text-gray-600">└──</span>
-                <span className="material-symbols-outlined text-[18px]">article</span>
+                <span className="material-symbols-outlined text-[18px] group-hover:text-primary">article</span>
                 <span>blog_dir</span>
-              </Link>
-              <a className="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1 mt-2" href="/resume.pdf" target="_blank" rel="noopener noreferrer">
+              </a>
+              <a className="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1 mt-2" href="/static/resume.pdf" target="_blank" rel="noopener noreferrer">
                 <span className="text-gray-600">├──</span>
                 <span className="material-symbols-outlined text-[18px] group-hover:text-primary">description</span>
                 <span>resume.pdf</span>
               </a>
-              <a className="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1" href="#">
+              <a className="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1" href="/contact">
+                <span className="text-gray-600">├──</span>
+                <span className="material-symbols-outlined text-[18px] group-hover:text-primary">call</span>
+                <span>contact.exe</span>
+              </a>
+              <a className="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1" href="/logs">
                 <span className="text-gray-600">├──</span>
                 <span className="material-symbols-outlined text-[18px] group-hover:text-primary">history</span>
                 <span>logs/</span>
               </a>
-              <a className="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1" href="#">
+              <a className="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1" href="/config">
                 <span className="text-gray-600">└──</span>
                 <span className="material-symbols-outlined text-[18px] group-hover:text-primary">settings</span>
                 <span>config</span>
@@ -95,11 +99,11 @@ export default function Home() {
             <section className="border-l-2 border-primary pl-6 py-2">
               <p className="text-primary text-sm mb-2 font-mono">&gt; initialize_sequence_alpha_01...</p>
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold uppercase tracking-tighter text-white mb-4 leading-none">
-                KABHISHEK18<br />
-                <span className="text-gray-600">{`//`} SYSTEM_ARCHITECT</span>
+                KUMAR ABHISHEK<br />
+                <span className="text-gray-600">{`//`} THE DIGITAL ARCHITECT</span>
               </h1>
               <p className="text-gray-400 max-w-2xl text-lg font-light leading-relaxed">
-                Full Stack Developer specializing in scalable infrastructure and high-performance web applications. Currently executing commands in React, Node.js, and Python environments.
+                Senior AI & ML Engineer with 7.8+ years of experience architecting scalable distributed systems and intelligent generative pipelines. Expert in Python, Django, and deploying production-grade RAG architectures (LangChain, Ollama). Renowned for mastering complex data architectures and engineering ultra-low-latency, resilient machine learning models at scale.
               </p>
               <div className="mt-8 flex flex-col sm:flex-row gap-4 max-w-lg">
                 <div className="flex items-center bg-terminal-gray/30 border border-primary/50 w-full p-2">
@@ -113,8 +117,8 @@ export default function Home() {
             {/* Stats Grid */}
             <section className="grid grid-cols-2 md:grid-cols-4 border-t border-terminal-gray">
               <div className="p-4 border-r border-b border-terminal-gray hover:bg-white/5 transition-colors group">
-                <span className="text-xs text-gray-500 uppercase tracking-widest block mb-1 group-hover:text-primary">Uptime</span>
-                <span className="text-2xl font-bold text-white">4Y 2M</span>
+                <span className="text-xs text-gray-500 uppercase tracking-widest block mb-1 group-hover:text-primary">Experience</span>
+                <span className="text-2xl font-bold text-white">7.8 YRS</span>
               </div>
               <div className="p-4 border-r border-b border-terminal-gray hover:bg-white/5 transition-colors group">
                 <span className="text-xs text-gray-500 uppercase tracking-widest block mb-1 group-hover:text-primary">Commits</span>
@@ -140,33 +144,96 @@ export default function Home() {
                 <span className="text-xs text-gray-500 font-mono">[MODE: CHRONOLOGICAL]</span>
               </div>
               <div className="font-mono text-sm space-y-1">
-                {/* Log Entry 1 */}
+                {/* Log Entry 1: HerKey */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 hover:bg-terminal-gray/20 p-2 border-l border-transparent hover:border-primary transition-all">
-                  <div className="md:col-span-2 text-gray-500">2023-10-12 <span className="text-gray-700">14:02:55</span></div>
-                  <div className="md:col-span-2 text-primary">USER_PROMOTION</div>
+                  <div className="md:col-span-2 text-gray-500">2023-05-01 <span className="text-gray-700">PRESENT</span></div>
+                  <div className="md:col-span-2 text-primary">SYS_LEAD</div>
                   <div className="md:col-span-8 text-gray-300">
-                    <span className="text-white font-bold">Senior Developer @ TechCorp_Inc</span>
-                    <br /><span className="text-gray-500">&gt; Initiated microservices migration protocol. Optimized database queries reducing latency by 40%.</span>
+                    <span className="text-white font-bold">Senior Software Tech Lead @ HERKEY</span>
+                    <br /><span className="text-gray-500">&gt; Orchestrated HERKEY 4.0 migration with 99.9% uptime. Architected Agentic AI (Simkey) using LangChain & Ollama. Optimized Data Engineering ELT workflows.</span>
                   </div>
                 </div>
-                {/* Log Entry 2 */}
+                {/* Log Entry 2: Capgemini */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 hover:bg-terminal-gray/20 p-2 border-l border-transparent hover:border-primary transition-all">
-                  <div className="md:col-span-2 text-gray-500">2021-06-30 <span className="text-gray-700">09:15:22</span></div>
+                  <div className="md:col-span-2 text-gray-500">2021-08-01 <span className="text-gray-700">2023-04-30</span></div>
                   <div className="md:col-span-2 text-blue-400">SYS_UPDATE</div>
                   <div className="md:col-span-8 text-gray-300">
-                    <span className="text-white font-bold">Full Stack Engineer @ StartUp_Venture</span>
-                    <br /><span className="text-gray-500">&gt; Deployed MVP using React/Next.js stack. Integrated Stripe payment gateway API.</span>
+                    <span className="text-white font-bold">Senior Software Developer @ Capgemini</span>
+                    <br /><span className="text-gray-500">&gt; Led AIRBUS PLM Engineering ADB integration. Developed AI-driven anomaly detection models. Modernized legacy DQC architectures.</span>
                   </div>
                 </div>
-                {/* Log Entry 3 */}
+                {/* Log Entry 3: Softwill */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 hover:bg-terminal-gray/20 p-2 border-l border-transparent hover:border-primary transition-all">
-                  <div className="md:col-span-2 text-gray-500">2019-01-15 <span className="text-gray-700">11:00:00</span></div>
-                  <div className="md:col-span-2 text-yellow-500">INIT_BOOT</div>
+                  <div className="md:col-span-2 text-gray-500">2019-06-01 <span className="text-gray-700">2020-10-31</span></div>
+                  <div className="md:col-span-2 text-yellow-500">NET_BUILD</div>
                   <div className="md:col-span-8 text-gray-300">
-                    <span className="text-white font-bold">Junior Developer @ Agency_XYZ</span>
-                    <br /><span className="text-gray-500">&gt; Assisted in frontend component development. Bug fixing and QA testing.</span>
+                    <span className="text-white font-bold">Full Stack Developer @ SOFTWILL Infotech</span>
+                    <br /><span className="text-gray-500">&gt; Deployed ERP/CRM full-stack solutions. Integrated STRIPE payment gateways and built complex RBAC systems.</span>
                   </div>
                 </div>
+                {/* Log Entry 4: Bird Global */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 hover:bg-terminal-gray/20 p-2 border-l border-transparent hover:border-primary transition-all">
+                  <div className="md:col-span-2 text-gray-500">2017-08-01 <span className="text-gray-700">2019-05-31</span></div>
+                  <div className="md:col-span-2 text-gray-400">INIT_BOOT</div>
+                  <div className="md:col-span-8 text-gray-300">
+                    <span className="text-white font-bold">Junior Associate Engineer @ Bird Global</span>
+                    <br /><span className="text-gray-500">&gt; Engineered ETL workflows reducing data processing time by 40%. Built resilient REST APIs and Celery tasks.</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Core Competencies (Skills) */}
+            <section>
+              <div className="flex items-center justify-between mb-6 border-b border-terminal-gray pb-2">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">memory</span>
+                  CORE_COMPETENCIES
+                </h2>
+                <span className="text-xs text-gray-500 font-mono">cat /sys/skills.var</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 font-mono text-sm">
+
+                <div className="border border-terminal-gray p-4 bg-background-dark/50 group hover:border-primary transition-colors">
+                  <h3 className="text-primary text-xs uppercase tracking-widest mb-3 border-b border-terminal-gray pb-1 group-hover:border-primary">Backend_Engineering</h3>
+                  <ul className="text-gray-400 space-y-1">
+                    <li>Python</li>
+                    <li>Django / Flask</li>
+                    <li>Microservices</li>
+                    <li>RESTful APIs</li>
+                  </ul>
+                </div>
+
+                <div className="border border-terminal-gray p-4 bg-background-dark/50 group hover:border-yellow-500 transition-colors">
+                  <h3 className="text-yellow-500 text-xs uppercase tracking-widest mb-3 border-b border-terminal-gray pb-1 group-hover:border-yellow-500">AI_&_Machine_Learning</h3>
+                  <ul className="text-gray-400 space-y-1">
+                    <li>LLMs / LangChain</li>
+                    <li>RAG / Ollama</li>
+                    <li>Hugging Face</li>
+                    <li>TensorFlow / PyTorch</li>
+                  </ul>
+                </div>
+
+                <div className="border border-terminal-gray p-4 bg-background-dark/50 group hover:border-blue-400 transition-colors">
+                  <h3 className="text-blue-400 text-xs uppercase tracking-widest mb-3 border-b border-terminal-gray pb-1 group-hover:border-blue-400">Data_&_Cloud_Infra</h3>
+                  <ul className="text-gray-400 space-y-1">
+                    <li>AWS EC2 / S3</li>
+                    <li>Docker / Kubernetes</li>
+                    <li>MongoDB / Redis / SQL</li>
+                    <li>Celery / ETL Pipelines</li>
+                  </ul>
+                </div>
+
+                <div className="border border-terminal-gray p-4 bg-background-dark/50 group hover:border-white transition-colors">
+                  <h3 className="text-white text-xs uppercase tracking-widest mb-3 border-b border-terminal-gray pb-1 group-hover:border-white">Frontend_&_Misc</h3>
+                  <ul className="text-gray-400 space-y-1">
+                    <li>JavaScript</li>
+                    <li>React Native</li>
+                    <li>HTML5 / CSS3</li>
+                    <li>Agile / CI/CD</li>
+                  </ul>
+                </div>
+
               </div>
             </section>
 
@@ -179,64 +246,12 @@ export default function Home() {
                 </h2>
                 <span className="text-xs text-gray-500 font-mono">ls -la ./projects</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-0 border border-terminal-gray">
-                {/* Project 1 */}
-                <article className="border-r border-b border-terminal-gray p-6 flex flex-col justify-between hover:bg-white/5 group transition-colors min-h-[300px]">
-                  <div>
-                    <div className="flex justify-between items-start mb-4">
-                      <span className="text-primary material-symbols-outlined text-4xl">terminal</span>
-                      <span className="text-xs border border-gray-700 px-2 py-1 text-gray-400">PUBLIC</span>
-                    </div>
-                    <h3 className="text-xl font-bold text-white mb-2 group-hover:text-primary transition-colors">CLI_Dashboard_v2</h3>
-                    <p className="text-gray-400 text-sm font-mono mb-4">A React-based terminal emulator component library for developers building dev-tool interfaces.</p>
-                    <div className="flex flex-wrap gap-2 mb-6">
-                      <span className="text-xs bg-terminal-gray text-gray-300 px-2 py-1 font-mono">#react</span>
-                      <span className="text-xs bg-terminal-gray text-gray-300 px-2 py-1 font-mono">#typescript</span>
-                    </div>
-                  </div>
-                  <button className="w-full border border-primary/50 text-primary hover:bg-primary hover:text-black font-mono text-sm py-2 px-4 transition-all uppercase flex items-center justify-center gap-2">
-                    <span className="material-symbols-outlined text-sm">rocket_launch</span>
-                    Deploy
-                  </button>
-                </article>
-                {/* Project 2 */}
-                <article className="border-r border-b border-terminal-gray p-6 flex flex-col justify-between hover:bg-white/5 group transition-colors min-h-[300px]">
-                  <div>
-                    <div className="flex justify-between items-start mb-4">
-                      <span className="text-primary material-symbols-outlined text-4xl">dataset</span>
-                      <span className="text-xs border border-gray-700 px-2 py-1 text-gray-400">PRIVATE</span>
-                    </div>
-                    <h3 className="text-xl font-bold text-white mb-2 group-hover:text-primary transition-colors">Data_Stream_API</h3>
-                    <p className="text-gray-400 text-sm font-mono mb-4">High-throughput WebSocket server for real-time financial data streaming.</p>
-                    <div className="flex flex-wrap gap-2 mb-6">
-                      <span className="text-xs bg-terminal-gray text-gray-300 px-2 py-1 font-mono">#nodejs</span>
-                      <span className="text-xs bg-terminal-gray text-gray-300 px-2 py-1 font-mono">#redis</span>
-                    </div>
-                  </div>
-                  <button className="w-full border border-gray-600 text-gray-400 hover:border-primary hover:text-primary font-mono text-sm py-2 px-4 transition-all uppercase flex items-center justify-center gap-2">
-                    <span className="material-symbols-outlined text-sm">lock</span>
-                    Request Access
-                  </button>
-                </article>
-                {/* Project 3 */}
-                <article className="border-b md:border-r lg:border-r-0 border-terminal-gray p-6 flex flex-col justify-between hover:bg-white/5 group transition-colors min-h-[300px]">
-                  <div>
-                    <div className="flex justify-between items-start mb-4">
-                      <span className="text-primary material-symbols-outlined text-4xl">smart_toy</span>
-                      <span className="text-xs border border-gray-700 px-2 py-1 text-gray-400">BETA</span>
-                    </div>
-                    <h3 className="text-xl font-bold text-white mb-2 group-hover:text-primary transition-colors">Neural_Net_Visualizer</h3>
-                    <p className="text-gray-400 text-sm font-mono mb-4">Interactive 3D visualization of neural network layers training in real-time.</p>
-                    <div className="flex flex-wrap gap-2 mb-6">
-                      <span className="text-xs bg-terminal-gray text-gray-300 px-2 py-1 font-mono">#python</span>
-                      <span className="text-xs bg-terminal-gray text-gray-300 px-2 py-1 font-mono">#threejs</span>
-                    </div>
-                  </div>
-                  <button className="w-full border border-primary/50 text-primary hover:bg-primary hover:text-black font-mono text-sm py-2 px-4 transition-all uppercase flex items-center justify-center gap-2">
-                    <span className="material-symbols-outlined text-sm">visibility</span>
-                    View Demo
-                  </button>
-                </article>
+              <div id="github-projects-container" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-0 border border-terminal-gray">
+                {/* Repositories will be injected here via github_fetcher.js */}
+                <div className="p-6 text-gray-500 font-mono col-span-full">
+                  &gt; Fetching remote repositories from GitHub...
+                  <span className="animate-pulse inline-block w-2 bg-primary h-4 ml-1"></span>
+                </div>
               </div>
             </section>
 
@@ -245,8 +260,8 @@ export default function Home() {
                 <p>© 2026 KABHISHEK18. ALL SYSTEMS NOMINAL.</p>
               </div>
               <div className="flex gap-4">
-                <a className="hover:text-primary" href="#">[GITHUB]</a>
-                <a className="hover:text-primary" href="#">[LINKEDIN]</a>
+                <a className="hover:text-primary transition-colors" href="https://github.com/Kabhishek18?tab=repositories" target="_blank" rel="noopener noreferrer">[GITHUB]</a>
+                <a className="hover:text-primary transition-colors" href="https://www.linkedin.com/in/kabhishek18/" target="_blank" rel="noopener noreferrer">[LINKEDIN]</a>
                 <a className="hover:text-primary" href="#">[TWITTER]</a>
               </div>
             </footer>
@@ -268,29 +283,47 @@ export default function Home() {
               <div className="relative z-10 flex flex-col h-full justify-between">
                 <div className="flex justify-between text-xs text-primary font-mono">
                   <span>NET_IO</span>
-                  <span>842 KB/s</span>
+                  <span id="net-io-speed">842 KB/s</span>
                 </div>
-                <div className="flex items-end gap-[2px] h-16">
-                  <div className="w-1 bg-primary h-[40%]"></div>
-                  <div className="w-1 bg-primary h-[60%]"></div>
-                  <div className="w-1 bg-primary h-[30%]"></div>
-                  <div className="w-1 bg-primary h-[80%]"></div>
-                  <div className="w-1 bg-primary h-[50%]"></div>
-                  <div className="w-1 bg-primary h-[90%]"></div>
-                  <div className="w-1 bg-primary h-[20%]"></div>
-                  <div className="w-1 bg-primary h-[70%]"></div>
-                  <div className="w-1 bg-primary h-[45%]"></div>
-                  <div className="w-1 bg-primary h-[65%]"></div>
-                  <div className="w-1 bg-primary h-[35%]"></div>
-                  <div className="w-1 bg-primary h-[85%]"></div>
-                  <div className="w-1 bg-primary h-[55%]"></div>
-                  <div className="w-1 bg-primary h-[75%]"></div>
-                  <div className="w-1 bg-primary h-[25%]"></div>
-                  <div className="w-1 bg-primary h-[95%]"></div>
-                  <div className="w-1 bg-primary h-[40%]"></div>
-                  <div className="w-1 bg-primary h-[60%]"></div>
+                <div id="net-io-bars" className="flex items-end gap-[2px] h-16">
+                  <div className="w-1 bg-primary transition-all duration-300" style={{ height: '40%' }}></div>
+                  <div className="w-1 bg-primary transition-all duration-300" style={{ height: '60%' }}></div>
+                  <div className="w-1 bg-primary transition-all duration-300" style={{ height: '30%' }}></div>
+                  <div className="w-1 bg-primary transition-all duration-300" style={{ height: '80%' }}></div>
+                  <div className="w-1 bg-primary transition-all duration-300" style={{ height: '50%' }}></div>
+                  <div className="w-1 bg-primary transition-all duration-300" style={{ height: '90%' }}></div>
+                  <div className="w-1 bg-primary transition-all duration-300" style={{ height: '20%' }}></div>
+                  <div className="w-1 bg-primary transition-all duration-300" style={{ height: '70%' }}></div>
+                  <div className="w-1 bg-primary transition-all duration-300" style={{ height: '45%' }}></div>
+                  <div className="w-1 bg-primary transition-all duration-300" style={{ height: '65%' }}></div>
+                  <div className="w-1 bg-primary transition-all duration-300" style={{ height: '35%' }}></div>
+                  <div className="w-1 bg-primary transition-all duration-300" style={{ height: '85%' }}></div>
+                  <div className="w-1 bg-primary transition-all duration-300" style={{ height: '55%' }}></div>
+                  <div className="w-1 bg-primary transition-all duration-300" style={{ height: '75%' }}></div>
+                  <div className="w-1 bg-primary transition-all duration-300" style={{ height: '25%' }}></div>
+                  <div className="w-1 bg-primary transition-all duration-300" style={{ height: '95%' }}></div>
+                  <div className="w-1 bg-primary transition-all duration-300" style={{ height: '40%' }}></div>
+                  <div className="w-1 bg-primary transition-all duration-300" style={{ height: '60%' }}></div>
                 </div>
               </div>
+              <script dangerouslySetInnerHTML={{
+                __html: `
+                document.addEventListener('DOMContentLoaded', () => {
+                  setInterval(() => {
+                    const bars = document.getElementById('net-io-bars');
+                    const speed = document.getElementById('net-io-speed');
+                    if (bars && speed) {
+                      const currentSpeed = Math.floor(Math.random() * 800) + 200;
+                      speed.innerText = currentSpeed + ' KB/s';
+                      
+                      Array.from(bars.children).forEach(bar => {
+                        const newHeight = Math.floor(Math.random() * 90) + 10;
+                        bar.style.height = newHeight + '%';
+                      });
+                    }
+                  }, 1500);
+                });
+              `}} />
             </div>
 
             {/* Metrics */}
