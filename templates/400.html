@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}
+ <title>{{title}}</title>
+{% endblock title %}
+
+{% block meta_data %}
+    {% if meta_details %}
+        {{meta_details}}
+    {% else %}    
+    <meta name="description" content="Kumar Abhishek - Full Stack Software Developer with 9+ years of experience, crafting the future with AI, Python, and React.">
+    <meta name="author" content="Kumar Abhishek">
+    <meta name="keywords" content="Kumar Abhishek, Full Stack Developer, Software Engineer, AI, Machine Learning, Python, React, Portfolio, Digital Architect">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://kabhishek18.com/">
+
+    <meta property="og:title" content="Kumar Abhishek - The Digital Architect">
+    <meta property="og:description" content="Full Stack Software Developer crafting the future with AI and code.">
+    <meta property="og:image" content="https://kabhishek18.com/web-app-manifest-512x512.png">
+    <meta property="og:url" content="https://kabhishek18.com/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="The Digital Architect">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Kumar Abhishek - The Digital Architect">
+    <meta name="twitter:description" content="Full Stack Software Developer crafting the future with AI and code.">
+    <meta name="twitter:image" content="https://kabhishek18.com/web-app-manifest-512x512.png">
+    <meta name="twitter:site" content="@kabhishek18">
+    <meta name="twitter:creator" content="@kabhishek18">
+    {% endif %}
+{% endblock meta_data %}
+{% block navbar %}
+{% endblock navbar %}
+
+{% block content %}
+<div class="min-h-screen bg-background-dark text-white font-sans flex overflow-hidden">
+            <main class="flex-1 flex flex-col w-full bg-background-dark relative items-center justify-center p-6">
+                <div class="text-center font-mono max-w-lg mx-auto border border-terminal-gray bg-black p-10 relative shadow-[0_0_15px_rgba(0,255,204,0.1)]">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-red-500"></div>
+
+                    <h1 class="text-8xl md:text-9xl font-bold text-red-500 mb-2 tracking-tighter shadow-red-500/20 drop-shadow-lg">400</h1>
+
+                    <div class="bg-red-500/10 text-red-400 py-2 px-4 mb-6 border border-red-500/30 inline-block font-bold tracking-widest text-sm uppercase">
+                        &gt; SYS_ERR: BAD_REQUEST
+                    </div>
+
+                    <p class="text-gray-400 mb-10 leading-relaxed text-sm">
+                        The payload provided was malformed or failed validation checks. Please verify your transmission protocol and try again.
+                    </p>
+
+                    <a href="/" class="inline-flex items-center gap-2 border border-primary text-primary hover:bg-primary hover:text-black py-3 px-8 transition-all uppercase font-bold group text-sm">
+                        <span class="material-symbols-outlined group-hover:rotate-180 transition-transform">terminal</span>
+                        RETURN_TO_MAINFRAME
+                    </a>
+                </div>
+            </main>
+        </div>
+{% endblock content %}

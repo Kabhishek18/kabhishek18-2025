@@ -1,0 +1,380 @@
+{% extends "base.html" %}
+{% load static media_tags schema_tags cache %}
+
+{% block meta_data %}
+{% if meta_data %}
+{{ meta_data }}
+{% else %}
+<!-- Enhanced Social Media Meta Tags -->
+{% render_social_meta_tags post request %}
+<!-- Schema.org structured data markup for SEO and rich results -->
+{% render_article_schema post %}
+{% endif %}
+{% endblock meta_data %}
+
+{% block title %}
+<title>{{ title |truncatechars:10 }} - Digital Codex</title>
+{% endblock title %}
+
+{% block content %}
+<style>
+    .binary-dither {
+        filter: grayscale(100%) contrast(150%) brightness(80%);
+        mix-blend-mode: hard-light;
+    }
+
+    .monochromatic-heatmap {
+        filter: sepia(100%) hue-rotate(90deg) saturate(300%) contrast(150%);
+        mix-blend-mode: screen;
+    }
+
+    /* Glitch Decompression Effect */
+    .glitch-architecture {
+        position: relative;
+    }
+
+    .glitch-architecture::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(0deg,
+                transparent,
+                transparent 2px,
+                rgba(255, 176, 0, 0.1) 2px,
+                rgba(255, 176, 0, 0.1) 4px);
+        pointer-events: none;
+        z-index: 10;
+    }
+
+    .glitch-architecture:hover img {
+        animation: glitch-anim 0.2s linear infinite alternate-reverse;
+    }
+
+    @keyframes glitch-anim {
+        0% {
+            transform: translate(0)
+        }
+
+        20% {
+            transform: translate(-2px, 2px)
+        }
+
+        40% {
+            transform: translate(-2px, -2px)
+        }
+
+        60% {
+            transform: translate(2px, 2px)
+        }
+
+        80% {
+            transform: translate(2px, -2px)
+        }
+
+        100% {
+            transform: translate(0)
+        }
+    }
+
+    .image-hover-interference:hover {
+        filter: invert(10%) sepia(100%) hue-rotate(350deg) saturate(500%) contrast(200%);
+    }
+
+    .line-numbers {
+        user-select: none;
+        text-align: right;
+        padding-right: 1.5rem;
+        color: #4b5563;
+    }
+
+    /* Post Content Tailwind Resets */
+    .prose img {
+        width: 100%;
+        height: auto;
+    }
+
+    .prose pre {
+        background: #050505;
+        border: 1px solid #27272a;
+        padding: 1rem;
+        overflow-x: auto;
+    }
+
+    /* Heading Styles for markdown content */
+    .prose h1 {
+        font-size: 2.25rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid #3f3f46;
+        padding-bottom: 0.5rem;
+    }
+
+    .prose h2 {
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: #FFB000;
+        margin-top: 1.75rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .prose h3 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #f4f4f5;
+        margin-top: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .prose h4 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #e4e4e7;
+        margin-top: 1.25rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .prose p {
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+        line-height: 1.75;
+    }
+
+    .prose a {
+        color: #FFB000;
+        text-decoration: underline;
+        text-decoration-color: #FFB000;
+    }
+
+    .prose a:hover {
+        color: #ffffff;
+        background-color: #FFB000;
+    }
+
+    .prose ul {
+        list-style-type: disc;
+        padding-left: 1.5rem;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .prose ol {
+        list-style-type: decimal;
+        padding-left: 1.5rem;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .prose li {
+        margin-top: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .prose blockquote {
+        border-left: 4px solid #FFB000;
+        padding-left: 1rem;
+        font-style: italic;
+        color: #a1a1aa;
+        background-color: rgba(255, 176, 0, 0.05);
+    }
+
+    .prose code {
+        color: #FFB000;
+        background-color: #18181b;
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.25rem;
+        font-size: 0.875em;
+    }
+</style>
+
+<div class="flex-1 flex overflow-hidden">
+
+    <!-- Left Sidebar (Explorer) -->
+    <aside class="hidden lg:flex w-48 flex-shrink-0 border-r border-zinc-800 flex-col bg-black">
+        <div class="p-4 text-[10px] text-gray-500 uppercase tracking-widest border-b border-zinc-800">Explorer</div>
+        <nav class="p-2 text-xs font-mono">
+            <a href="{% url 'blog:list' %}"
+                class="flex items-center gap-2 py-1 text-gray-400 hover:text-white cursor-pointer pl-2">
+                <span class="text-[#FFB000]">&lt;</span>
+                <span>cd ..</span>
+            </a>
+            <div class="flex items-center gap-2 py-1 text-gray-400 mt-2">
+                <span class="material-symbols-outlined text-sm">folder_open</span>
+                <span>blog_dir/</span>
+            </div>
+            <div class="pl-4 space-y-1">
+                <div
+                    class="flex items-center gap-2 py-1 text-[#FFB000] bg-[#FFB000]/10 border-l-2 border-[#FFB000] pl-2 -ml-[2px]">
+                    <span class="material-symbols-outlined text-sm">description</span>
+                    <span class="truncate">{{ post.slug }}.md</span>
+                </div>
+                <!-- Related posts simulated as directory files -->
+                {% for related in related_posts %}
+                <a href="{% url 'blog:detail' related.slug %}"
+                    class="flex items-center gap-2 py-1 text-gray-500 hover:text-white cursor-pointer pl-2">
+                    <span class="material-symbols-outlined text-sm">description</span>
+                    <span class="truncate">{{ related.slug|truncatechars:15 }}.md</span>
+                </a>
+                {% endfor %}
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Editor Content -->
+    <main class="flex-1 flex flex-col relative bg-black overflow-hidden border-r border-zinc-800">
+        <div
+            class="bg-zinc-900/50 px-4 py-2 text-xs border-b border-zinc-800 flex items-center gap-2 text-gray-400 font-mono">
+            <a href="{% url 'blog:list' %}"
+                class="lg:hidden material-symbols-outlined text-[#FFB000] hover:text-white mr-2 text-base">arrow_back</a>
+            <span class="text-[#FFB000] hidden sm:inline">$</span>
+            <span class="hidden sm:inline">cat /blog_dir/{{ post.slug }}.md</span>
+            <span class="sm:hidden text-white truncate max-w-[200px]">{{ post.slug }}.md</span>
+
+            <div class="flex-1 flex justify-end gap-2">
+                <button id="shareBtn" class="text-zinc-500 hover:text-[#FFB000] transition-colors" title="Share">
+                    <span class="material-symbols-outlined text-sm">share</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto flex custom-scrollbar pb-20">
+            <!-- Line Numbers -->
+            <div
+                class="line-numbers py-6 px-2 sm:px-4 text-[10px] sm:text-xs font-mono min-w-[40px] sm:min-w-[60px] bg-[#050505] border-r border-zinc-800">
+                1<br />2<br />3<br />4<br />5<br />6<br />7<br />8<br />9<br />10<br />11<br />12<br />13<br />14<br />15<br />16<br />17<br />18<br />19<br />20<br />21<br />22<br />23<br />24<br />25<br />26<br />27<br />28<br />29<br />30<br />31<br />32<br />33<br />34<br />35
+            </div>
+
+            <!-- Article Content -->
+            <div class="flex-1 p-6 md:p-10 max-w-4xl font-mono text-sm overflow-x-hidden">
+
+                <!-- JSON Frontmatter metadata -->
+                <div class="mb-10 text-zinc-400">
+                    <span class="text-[#FFB000]">{</span><br />
+                    <span class="pl-4">"title": "<span class="text-white">{{ post.title|escapejs
+                            }}</span>",</span><br />
+                    <span class="pl-4">"author": "<span class="text-white">{{
+                            post.author.get_full_name|default:post.author.username }}</span>",</span><br />
+                    <span class="pl-4">"checksum": "<span class="text-[#FFB000]">0x{{ post.id
+                            }}F09</span>",</span><br />
+                    <span class="pl-4">"date": "<span class="text-zinc-200">{{ post.created_at|date:"Y-m-d"
+                            }}</span>",</span><br />
+                    <span class="pl-4">"tags": [{% for tag in post.tags.all %}"<span class="text-zinc-200">{{ tag.name
+                            }}</span>"{% if not forloop.last %}, {% endif %}{% endfor %}]</span><br />
+                    <span class="text-[#FFB000]">}</span>
+                </div>
+
+                <div class="prose prose-invert max-w-none space-y-8 font-mono text-zinc-300">
+                    <h1
+                        class="text-3xl font-bold text-white border-b border-dashed border-[#FFB000] pb-2 uppercase tracking-tight">
+                        # Abstract: {{ post.title }}
+                    </h1>
+
+                    <!-- Glitch-Architecture Hero Image -->
+                    {% if post.featured_image %}
+                    <div class="border border-zinc-800 p-2 bg-[#050505]">
+                        <div class="relative glitch-architecture h-64 md:h-96 overflow-hidden cursor-crosshair">
+                            <img src="{{ post.featured_image.url }}" alt="{{ post.title }}"
+                                class="w-full h-full object-cover binary-dither image-hover-interference transition-all duration-300" />
+                            <div
+                                class="absolute top-2 left-2 bg-black/80 border border-[#FFB000] px-2 py-1 text-[10px] text-[#FFB000]">
+                                FIG_1: FEATURED_IMG_0x{{ post.id }}
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    {% get_featured_media post as featured_media %}
+                    {% if featured_media %}
+                    <div class="article-featured-media border border-zinc-800 p-2 bg-[#050505]">
+                        {% render_media_item featured_media %}
+                    </div>
+                    {% endif %}
+                    {% endif %}
+
+                    <!-- Actual Django HTML Body -->
+                    <div class="blog-body mt-8 leading-relaxed">
+                        {{ post.content|process_media_shortcodes:post|safe }}
+                    </div>
+
+                    <!-- Display all media items after content -->
+                    <div class="media-gallery mt-12 pt-8 border-t border-zinc-800">
+                        {% render_media_gallery post %}
+                    </div>
+
+
+                    <!-- Bio Footer block -->
+                    <div
+                        class="border border-zinc-800 bg-[#050505] p-6 mt-16 flex gap-6 items-center hover-interference">
+                        <div class="w-16 h-16 bg-zinc-800 shrink-0 border border-zinc-700">
+                            {% if post.author.profile.profile_picture %}
+                            <img src="{{ post.author.profile.profile_picture.url }}"
+                                alt="{{ post.author.get_full_name }}"
+                                class="w-full h-full object-cover binary-dither" />
+                            {% else %}
+                            <div class="w-full h-full flex items-center justify-center text-xs text-zinc-500">INIT</div>
+                            {% endif %}
+                        </div>
+                        <div class="flex flex-col">
+                            <h3 class="text-white font-bold uppercase">{{
+                                post.author.get_full_name|default:post.author.username }}</h3>
+                            <p class="text-xs text-zinc-500 mb-2">
+                                {% if post.author.profile.about %}
+                                {{ post.author.profile.about }}
+                                {% else %}
+                                SYSTEM_ADMINISTRATOR // DEV_OPS
+                                {% endif %}
+                            </p>
+                            <!-- Social Medias -->
+                            {% if post.author.get_social_media %}
+                            {% with social=post.author.get_social_media %}
+                            <div class="flex gap-4 text-xs font-mono text-[#FFB000]">
+                                {% if social.website %}<a href="{{ social.website }}" class="hover:text-white"
+                                    target="_blank">[WEB]</a>{% endif %}
+                                {% if social.twitter %}<a href="{{ social.twitter }}" class="hover:text-white"
+                                    target="_blank">[TWX]</a>{% endif %}
+                                {% if social.linkedin %}<a href="{{ social.linkedin }}" class="hover:text-white"
+                                    target="_blank">[LNK]</a>{% endif %}
+                                {% if social.instagram %}<a href="{{ social.instagram }}" class="hover:text-white"
+                                    target="_blank">[IG]</a>{% endif %}
+                            </div>
+                            {% endwith %}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div
+                        class="mt-8 pt-8 border-t border-zinc-800 flex items-center text-xs text-zinc-500 justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[#FFB000] font-bold">kabhishek18@terminal:~/blog$</span>
+                            <span class="animate-pulse">_</span>
+                        </div>
+                        <span>EOF</span>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+<script>
+    // Copy/Share Button logic from previous template... 
+    document.addEventListener('DOMContentLoaded', function () {
+        const shareBtn = document.getElementById('shareBtn');
+        if (shareBtn) {
+            shareBtn.addEventListener('click', function () {
+                const url = window.location.href;
+                if (navigator.share) {
+                    navigator.share({
+                        title: document.title,
+                        url: url
+                    }).catch(err => console.log('Error sharing:', err));
+                } else {
+                    navigator.clipboard.writeText(url).then(() => {
+                        alert('Link copied to clipboard!');
+                    });
+                }
+            });
+        }
+    });
+</script>
+{% endblock content %}

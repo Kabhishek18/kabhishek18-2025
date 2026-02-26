@@ -1,11 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
-{% load media_tags %}
-{% load schema_tags %}
-{% load cache %}
-
-{% block extra_css %}
-{% endblock %}
+{% load static media_tags schema_tags cache %}
 
 {% block meta_data %}
 {% if meta_data %}
@@ -13,352 +7,368 @@
 {% else %}
 <!-- Enhanced Social Media Meta Tags -->
 {% render_social_meta_tags post request %}
-
 <!-- Schema.org structured data markup for SEO and rich results -->
-{% cache 1800 schema_markup post.id post.updated_at %}
 {% render_article_schema post %}
-{% endcache %}
 {% endif %}
 {% endblock meta_data %}
 
-{% block title %}<title>{{ title |truncatechars:10 }} - Digital Codex</title>{% endblock title %}
+{% block title %}
+<title>{{ title |truncatechars:10 }} - Digital Codex</title>
+{% endblock title %}
 
 {% block content %}
-<div class="reading-progress">
-    <div class="progress-bar" id="readingProgress"></div>
-</div>
+<style>
+    .binary-dither {
+        filter: grayscale(100%) contrast(150%) brightness(80%);
+        mix-blend-mode: hard-light;
+    }
 
-<nav class="detail-nav">
-    <div class="nav-container">
-        <a href="{% url 'blog:list' %}" class="nav-back"><i class="fas fa-arrow-left"></i><span>Back to Blog</span></a>
-        <div class="nav-actions">
-            <button class="share-btn" id="shareBtn"><i class="fas fa-share-alt"></i><span>Share</span></button>
-            <!-- <button class="bookmark-btn" id="bookmarkBtn"><i class="fas fa-bookmark"></i><span>Save</span></button> -->
-        </div>
-    </div>
-</nav>
+    .monochromatic-heatmap {
+        filter: sepia(100%) hue-rotate(90deg) saturate(300%) contrast(150%);
+        mix-blend-mode: screen;
+    }
 
-<div class="article-container">
-    <header class="article-header">
-        <a href="{% url 'blog:list_by_category' post.categories.first.slug %}" class="article-category">{{ post.categories.first.name|default:'General' }}</a>
-        <h1 class="article-title">{{ post.title }}</h1>
-        <div class="article-meta">
-            <div class="meta-item"><i class="fas fa-user"></i><a href="mailto:{{ post.author.email }}"
-                    style="text-transform:capitalize; text-decoration: none; color: inherit;">{{post.author.get_full_name|default:post.author.username                     }}</a></div>
-            <div class="meta-item"><i class="fas fa-calendar"></i><span>{{ post.updated_at|date:"F d, Y" }}</span></div>
-            <div class="meta-item"><i class="fas fa-clock"></i><span>{{ post.read_time }} min read</span></div>
-            <div class="meta-item"><i class="fas fa-eye"></i><span>{{ post.view_count }} views</span></div>
-        </div>
-    </header>
+    /* Glitch Decompression Effect */
+    .glitch-architecture {
+        position: relative;
+    }
 
-    {% if post.featured_image %}
-    <div class="article-image"><img src="{{ post.featured_image.url }}" alt="{{ post.title }}"
-            style="width:100%; height:auto; border-radius:15px; margin-bottom: 2rem;"></div>
-    {% else %}
-    {% get_featured_media post as featured_media %}
-    {% if featured_media %}
-    <div class="article-featured-media">
-        {% render_media_item featured_media %}
-    </div>
-    {% endif %}
-    {% endif %}
+    .glitch-architecture::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(0deg,
+                transparent,
+                transparent 2px,
+                rgba(255, 176, 0, 0.1) 2px,
+                rgba(255, 176, 0, 0.1) 4px);
+        pointer-events: none;
+        z-index: 10;
+    }
 
-    <article class="article-content">
-        {{ post.content|process_media_shortcodes:post|safe }}
+    .glitch-architecture:hover img {
+        animation: glitch-anim 0.2s linear infinite alternate-reverse;
+    }
 
-        <!-- Display all media items after content -->
-        {% render_media_gallery post %}
-    </article>
-
-    <!-- <div class="article-tags">
-            {% for category in post.categories.all %}
-                 <a href="{% url 'blog:list_by_category' category.slug %}" class="article-tag">{{ category.name }}</a>
-            {% endfor %}
-        </div> -->
-
-    <div class="author-section">
-        <div class="author-avatar">
-            {% if post.author.profile.profile_picture %}
-            <img src="{{ post.author.profile.profile_picture.url }}" alt="{{ post.author.get_full_name }}'s profile"
-                class="profile-image">
-            {% else %}
-            <!-- Fallback to initials if no profile image -->
-            <div class="profile-initials">
-                {% if post.author.first_name %}{{ post.author.first_name|first }}{{ post.author.last_name|first }}{%
-                else %}{{ post.author.username|first|upper }}{% endif %}
-            </div>
-            {% endif %}
-        </div>
-        <div class="author-info">
-            <h3><a href="mailto:{{ post.author.email }}" style="text-decoration: none; color: inherit;">{{ post.author.get_full_name|default:post.author.username }}</a></h3>
-
-            {% if post.author.profile.about %}
-            <p class="author-bio">{{ post.author.profile.about }}</p>
-            {% else %}
-            <p class="author-bio">Full Stack Developer | AI Enthusiast | Digital Architect</p>
-            {% endif %}
-
-            <!-- Only show social media section if get_social_media exists -->
-            {% if post.author.get_social_media %}
-            {% with social=post.author.get_social_media %}
-            {% if social.twitter or social.linkedin or social.instagram or social.website %}
-            <div class="author-social">
-                {% if social.website %}
-                <a href="{{ social.website }}" target="_blank">🌐 Website</a>
-                {% endif %}
-                {% if social.twitter %}
-                <a href="{{ social.twitter }}" target="_blank">🐦 Twitter</a>
-                {% endif %}
-                {% if social.linkedin %}
-                <a href="{{ social.linkedin }}" target="_blank">💼 LinkedIn</a>
-                {% endif %}
-                {% if social.instagram %}
-                <a href="{{ social.instagram }}" target="_blank">📸 Instagram</a>
-                {% endif %}
-            </div>
-            {% endif %}
-            {% endwith %}
-            {% endif %}
-        </div>
-    </div>
-
-    <section class="related-posts">
-        <h2 class="related-title">Related Articles : {% for category in post.categories.all %} <a
-                href="{% url 'blog:list_by_category' category.slug %}" class="article-tag">{{ category.name }}</a>{% endfor %}</h2>
-        <div class="related-grid">
-            {% for related_post in related_posts %}
-            <div class="related-card" onclick="window.location.href='{% url 'blog:detail' related_post.slug %}'">
-                <h4>{{ related_post.title }}</h4>
-                <p>{{ related_post.excerpt|striptags|truncatechars:100 }}</p>
-            </div>
-            {% empty %}
-            <p>No related articles found.</p>
-            {% endfor %}
-        </div>
-    </section>
-</div>
-<script>
-    // Blog Detail Page JavaScript Functionality
-
-    document.addEventListener('DOMContentLoaded', function () {
-        // Reading Progress Bar
-        const readingProgress = document.getElementById('readingProgress');
-
-        function updateReadingProgress() {
-            const article = document.querySelector('.article-content');
-            if (!article) return;
-
-            const articleTop = article.offsetTop;
-            const articleHeight = article.offsetHeight;
-            const windowHeight = window.innerHeight;
-            const scrollTop = window.pageYOffset;
-
-            const articleBottom = articleTop + articleHeight;
-            const windowBottom = scrollTop + windowHeight;
-
-            if (scrollTop >= articleTop && scrollTop <= articleBottom - windowHeight) {
-                const progress = ((scrollTop - articleTop) / (articleHeight - windowHeight)) * 100;
-                readingProgress.style.width = Math.min(Math.max(progress, 0), 100) + '%';
-            } else if (scrollTop < articleTop) {
-                readingProgress.style.width = '0%';
-            } else {
-                readingProgress.style.width = '100%';
-            }
+    @keyframes glitch-anim {
+        0% {
+            transform: translate(0)
         }
 
-        window.addEventListener('scroll', updateReadingProgress);
-        updateReadingProgress(); // Initial call
+        20% {
+            transform: translate(-2px, 2px)
+        }
 
-        // Share Button Functionality
+        40% {
+            transform: translate(-2px, -2px)
+        }
+
+        60% {
+            transform: translate(2px, 2px)
+        }
+
+        80% {
+            transform: translate(2px, -2px)
+        }
+
+        100% {
+            transform: translate(0)
+        }
+    }
+
+    .image-hover-interference:hover {
+        filter: invert(10%) sepia(100%) hue-rotate(350deg) saturate(500%) contrast(200%);
+    }
+
+    .line-numbers {
+        user-select: none;
+        text-align: right;
+        padding-right: 1.5rem;
+        color: #4b5563;
+    }
+
+    /* Post Content Tailwind Resets */
+    .prose img {
+        width: 100%;
+        height: auto;
+    }
+
+    .prose pre {
+        background: #050505;
+        border: 1px solid #27272a;
+        padding: 1rem;
+        overflow-x: auto;
+    }
+
+    /* Heading Styles for markdown content */
+    .prose h1 {
+        font-size: 2.25rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid #3f3f46;
+        padding-bottom: 0.5rem;
+    }
+
+    .prose h2 {
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: #FFB000;
+        margin-top: 1.75rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .prose h3 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #f4f4f5;
+        margin-top: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .prose h4 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #e4e4e7;
+        margin-top: 1.25rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .prose p {
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+        line-height: 1.75;
+    }
+
+    .prose a {
+        color: #FFB000;
+        text-decoration: underline;
+        text-decoration-color: #FFB000;
+    }
+
+    .prose a:hover {
+        color: #ffffff;
+        background-color: #FFB000;
+    }
+
+    .prose ul {
+        list-style-type: disc;
+        padding-left: 1.5rem;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .prose ol {
+        list-style-type: decimal;
+        padding-left: 1.5rem;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .prose li {
+        margin-top: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .prose blockquote {
+        border-left: 4px solid #FFB000;
+        padding-left: 1rem;
+        font-style: italic;
+        color: #a1a1aa;
+        background-color: rgba(255, 176, 0, 0.05);
+    }
+
+    .prose code {
+        color: #FFB000;
+        background-color: #18181b;
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.25rem;
+        font-size: 0.875em;
+    }
+</style>
+
+<div class="flex-1 flex overflow-hidden">
+
+    <!-- Left Sidebar (Explorer) -->
+    <aside class="hidden lg:flex w-48 flex-shrink-0 border-r border-zinc-800 flex-col bg-black">
+        <div class="p-4 text-[10px] text-gray-500 uppercase tracking-widest border-b border-zinc-800">Explorer</div>
+        <nav class="p-2 text-xs font-mono">
+            <a href="{% url 'blog:list' %}"
+                class="flex items-center gap-2 py-1 text-gray-400 hover:text-white cursor-pointer pl-2">
+                <span class="text-[#FFB000]">&lt;</span>
+                <span>cd ..</span>
+            </a>
+            <div class="flex items-center gap-2 py-1 text-gray-400 mt-2">
+                <span class="material-symbols-outlined text-sm">folder_open</span>
+                <span>blog_dir/</span>
+            </div>
+            <div class="pl-4 space-y-1">
+                <div
+                    class="flex items-center gap-2 py-1 text-[#FFB000] bg-[#FFB000]/10 border-l-2 border-[#FFB000] pl-2 -ml-[2px]">
+                    <span class="material-symbols-outlined text-sm">description</span>
+                    <span class="truncate">{{ post.slug }}.md</span>
+                </div>
+                <!-- Related posts simulated as directory files -->
+                {% for related in related_posts %}
+                <a href="{% url 'blog:detail' related.slug %}"
+                    class="flex items-center gap-2 py-1 text-gray-500 hover:text-white cursor-pointer pl-2">
+                    <span class="material-symbols-outlined text-sm">description</span>
+                    <span class="truncate">{{ related.slug|truncatechars:15 }}.md</span>
+                </a>
+                {% endfor %}
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Editor Content -->
+    <main class="flex-1 flex flex-col relative bg-black overflow-hidden border-r border-zinc-800">
+        <div
+            class="bg-zinc-900/50 px-4 py-2 text-xs border-b border-zinc-800 flex items-center gap-2 text-gray-400 font-mono">
+            <a href="{% url 'blog:list' %}"
+                class="lg:hidden material-symbols-outlined text-[#FFB000] hover:text-white mr-2 text-base">arrow_back</a>
+            <span class="text-[#FFB000] hidden sm:inline">$</span>
+            <span class="hidden sm:inline">cat /blog_dir/{{ post.slug }}.md</span>
+            <span class="sm:hidden text-white truncate max-w-[200px]">{{ post.slug }}.md</span>
+
+            <div class="flex-1 flex justify-end gap-2">
+                <button id="shareBtn" class="text-zinc-500 hover:text-[#FFB000] transition-colors" title="Share">
+                    <span class="material-symbols-outlined text-sm">share</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto flex custom-scrollbar pb-20">
+            <!-- Line Numbers -->
+            <div
+                class="line-numbers py-6 px-2 sm:px-4 text-[10px] sm:text-xs font-mono min-w-[40px] sm:min-w-[60px] bg-[#050505] border-r border-zinc-800">
+                1<br />2<br />3<br />4<br />5<br />6<br />7<br />8<br />9<br />10<br />11<br />12<br />13<br />14<br />15<br />16<br />17<br />18<br />19<br />20<br />21<br />22<br />23<br />24<br />25<br />26<br />27<br />28<br />29<br />30<br />31<br />32<br />33<br />34<br />35
+            </div>
+
+            <!-- Article Content -->
+            <div class="flex-1 p-6 md:p-10 max-w-4xl font-mono text-sm overflow-x-hidden">
+
+                <!-- JSON Frontmatter metadata -->
+                <div class="mb-10 text-zinc-400">
+                    <span class="text-[#FFB000]">{</span><br />
+                    <span class="pl-4">"title": "<span class="text-white">{{ post.title|escapejs }}</span>",</span><br />
+                    <span class="pl-4">"author": "<span class="text-white">{{ post.author.get_full_name|default:post.author.username }}</span>",</span><br />
+                    <span class="pl-4">"checksum": "<span class="text-[#FFB000]">0x{{ post.id }}F09</span>",</span><br />
+                    <span class="pl-4">"date": "<span class="text-zinc-200">{{ post.created_at|date:"Y-m-d" }}</span>",</span><br />
+                    <span class="pl-4">"tags": [{% for tag in post.tags.all %}"<span class="text-zinc-200">{{ tag.name }}</span>"{% if not forloop.last %}, {% endif %}{% endfor %}]</span><br />
+                    <span class="text-[#FFB000]">}</span>
+                </div>
+
+                <div class="prose prose-invert max-w-none space-y-8 font-mono text-zinc-300">
+                    <h1
+                        class="text-3xl font-bold text-white border-b border-dashed border-[#FFB000] pb-2 uppercase tracking-tight">
+                        # Abstract: {{ post.title }}
+                    </h1>
+
+                    <!-- Glitch-Architecture Hero Image -->
+                    {% if post.featured_image %}
+                    <div class="border border-zinc-800 p-2 bg-[#050505]">
+                        <div class="relative glitch-architecture h-64 md:h-96 overflow-hidden cursor-crosshair">
+                            <img src="{{ post.featured_image.url }}" alt="{{ post.title }}"
+                                class="w-full h-full object-cover binary-dither image-hover-interference transition-all duration-300" />
+                            <div
+                                class="absolute top-2 left-2 bg-black/80 border border-[#FFB000] px-2 py-1 text-[10px] text-[#FFB000]">
+                                FIG_1: FEATURED_IMG_0x{{ post.id }}
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    {% get_featured_media post as featured_media %}
+                    {% if featured_media %}
+                    <div class="article-featured-media border border-zinc-800 p-2 bg-[#050505]">
+                        {% render_media_item featured_media %}
+                    </div>
+                    {% endif %}
+                    {% endif %}
+
+                    <!-- Actual Django HTML Body -->
+                    <div class="blog-body mt-8 leading-relaxed">
+                        {{ post.content|process_media_shortcodes:post|safe }}
+                    </div>
+
+                    <!-- Display all media items after content -->
+                    <div class="media-gallery mt-12 pt-8 border-t border-zinc-800">
+                        {% render_media_gallery post %}
+                    </div>
+
+
+                    <!-- Bio Footer block -->
+                    <div
+                        class="border border-zinc-800 bg-[#050505] p-6 mt-16 flex gap-6 items-center hover-interference">
+                        <div class="w-16 h-16 bg-zinc-800 shrink-0 border border-zinc-700">
+                            {% if post.author.profile.profile_picture %}
+                            <img src="{{ post.author.profile.profile_picture.url }}"
+                                alt="{{ post.author.get_full_name }}"
+                                class="w-full h-full object-cover binary-dither" />
+                            {% else %}
+                            <div class="w-full h-full flex items-center justify-center text-xs text-zinc-500">INIT</div>
+                            {% endif %}
+                        </div>
+                        <div class="flex flex-col">
+                            <h3 class="text-white font-bold uppercase">{{ post.author.get_full_name|default:post.author.username }}</h3>
+                            <p class="text-xs text-zinc-500 mb-2">
+                                {% if post.author.profile.about %}
+                                {{ post.author.profile.about }}
+                                {% else %}
+                                SYSTEM_ADMINISTRATOR // DEV_OPS
+                                {% endif %}
+                            </p>
+                            <!-- Social Medias -->
+                            {% if post.author.get_social_media %}
+                            {% with social=post.author.get_social_media %}
+                            <div class="flex gap-4 text-xs font-mono text-[#FFB000]">
+                                {% if social.website %}<a href="{{ social.website }}" class="hover:text-white"
+                                    target="_blank">[WEB]</a>{% endif %}
+                                {% if social.twitter %}<a href="{{ social.twitter }}" class="hover:text-white"
+                                    target="_blank">[TWX]</a>{% endif %}
+                                {% if social.linkedin %}<a href="{{ social.linkedin }}" class="hover:text-white"
+                                    target="_blank">[LNK]</a>{% endif %}
+                                {% if social.instagram %}<a href="{{ social.instagram }}" class="hover:text-white"
+                                    target="_blank">[IG]</a>{% endif %}
+                            </div>
+                            {% endwith %}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div
+                        class="mt-8 pt-8 border-t border-zinc-800 flex items-center text-xs text-zinc-500 justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[#FFB000] font-bold">kabhishek18@terminal:~/blog$</span>
+                            <span class="animate-pulse">_</span>
+                        </div>
+                        <span>EOF</span>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+<script>
+    // Copy/Share Button logic from previous template... 
+    document.addEventListener('DOMContentLoaded', function () {
         const shareBtn = document.getElementById('shareBtn');
         if (shareBtn) {
             shareBtn.addEventListener('click', function () {
                 const url = window.location.href;
-                const title = document.querySelector('.article-title')?.textContent || document.title;
-
-                // Check if Web Share API is supported
                 if (navigator.share) {
                     navigator.share({
-                        title: title,
+                        title: document.title,
                         url: url
                     }).catch(err => console.log('Error sharing:', err));
                 } else {
-                    // Fallback: Copy to clipboard and show notification
                     navigator.clipboard.writeText(url).then(() => {
-                        showNotification('Link copied to clipboard!', 'success');
-                    }).catch(() => {
-                        // Fallback for older browsers
-                        const textArea = document.createElement('textarea');
-                        textArea.value = url;
-                        document.body.appendChild(textArea);
-                        textArea.select();
-                        document.execCommand('copy');
-                        document.body.removeChild(textArea);
-                        showNotification('Link copied to clipboard!', 'success');
+                        alert('Link copied to clipboard!');
                     });
                 }
             });
-        }
-
-        // Bookmark/Save Button Functionality
-        const bookmarkBtn = document.getElementById('bookmarkBtn');
-        if (bookmarkBtn) {
-            const postSlug = window.location.pathname.split('/').filter(Boolean).pop();
-
-            // Check if post is already bookmarked
-            const savedPosts = JSON.parse(localStorage.getItem('savedPosts') || '[]');
-            const isBookmarked = savedPosts.includes(postSlug);
-
-            // Update button appearance based on bookmark status
-            updateBookmarkButton(isBookmarked);
-
-            bookmarkBtn.addEventListener('click', function () {
-                const currentlySaved = savedPosts.includes(postSlug);
-
-                if (currentlySaved) {
-                    // Remove from bookmarks
-                    const index = savedPosts.indexOf(postSlug);
-                    savedPosts.splice(index, 1);
-                    updateBookmarkButton(false);
-                    showNotification('Article removed from saved items', 'info');
-                } else {
-                    // Add to bookmarks
-                    savedPosts.push(postSlug);
-                    updateBookmarkButton(true);
-                    showNotification('Article saved successfully!', 'success');
-                }
-
-                localStorage.setItem('savedPosts', JSON.stringify(savedPosts));
-            });
-        }
-
-        // Helper function to update bookmark button appearance
-        function updateBookmarkButton(isBookmarked) {
-            const icon = bookmarkBtn.querySelector('i');
-            const text = bookmarkBtn.querySelector('span');
-
-            if (isBookmarked) {
-                icon.className = 'fas fa-bookmark';
-                text.textContent = 'Saved';
-                bookmarkBtn.classList.add('bookmarked');
-            } else {
-                icon.className = 'far fa-bookmark';
-                text.textContent = 'Save';
-                bookmarkBtn.classList.remove('bookmarked');
-            }
-        }
-
-        // Notification system
-        function showNotification(message, type = 'info') {
-            // Remove existing notification if any
-            const existingNotification = document.querySelector('.notification');
-            if (existingNotification) {
-                existingNotification.remove();
-            }
-
-            // Create notification element
-            const notification = document.createElement('div');
-            notification.className = `notification notification-${type}`;
-            notification.innerHTML = `
-            <div class="notification-content">
-                <i class="fas fa-${getNotificationIcon(type)}"></i>
-                <span>${message}</span>
-            </div>
-        `;
-
-            // Add notification to page
-            document.body.appendChild(notification);
-
-            // Trigger animation
-            setTimeout(() => notification.classList.add('show'), 100);
-
-            // Remove notification after 3 seconds
-            setTimeout(() => {
-                notification.classList.remove('show');
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
-        }
-
-        function getNotificationIcon(type) {
-            switch (type) {
-                case 'success': return 'check-circle';
-                case 'error': return 'exclamation-circle';
-                case 'warning': return 'exclamation-triangle';
-                default: return 'info-circle';
-            }
-        }
-
-        // Enhanced share options (optional)
-        function showShareModal() {
-            const url = window.location.href;
-            const title = document.querySelector('.article-title')?.textContent || document.title;
-
-            const shareModal = document.createElement('div');
-            shareModal.className = 'share-modal-overlay';
-            shareModal.innerHTML = `
-            <div class="share-modal">
-                <div class="share-modal-header">
-                    <h3>Share Article</h3>
-                    <button class="close-modal">&times;</button>
-                </div>
-                <div class="share-options">
-                    <button class="share-option" data-platform="twitter">
-                        <i class="fab fa-twitter"></i> Twitter
-                    </button>
-                    <button class="share-option" data-platform="facebook">
-                        <i class="fab fa-facebook"></i> Facebook
-                    </button>
-                    <button class="share-option" data-platform="linkedin">
-                        <i class="fab fa-linkedin"></i> LinkedIn
-                    </button>
-                    <button class="share-option" data-platform="copy">
-                        <i class="fas fa-copy"></i> Copy Link
-                    </button>
-                </div>
-            </div>
-        `;
-
-            document.body.appendChild(shareModal);
-
-            // Handle share option clicks
-            shareModal.addEventListener('click', function (e) {
-                if (e.target.classList.contains('share-modal-overlay') ||
-                    e.target.classList.contains('close-modal')) {
-                    shareModal.remove();
-                    return;
-                }
-
-                const platform = e.target.closest('.share-option')?.dataset.platform;
-                if (platform) {
-                    handleSharePlatform(platform, url, title);
-                    shareModal.remove();
-                }
-            });
-        }
-
-        function handleSharePlatform(platform, url, title) {
-            const encodedUrl = encodeURIComponent(url);
-            const encodedTitle = encodeURIComponent(title);
-
-            switch (platform) {
-                case 'twitter':
-                    window.open(`https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`, '_blank');
-                    break;
-                case 'facebook':
-                    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`, '_blank');
-                    break;
-                case 'linkedin':
-                    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`, '_blank');
-                    break;
-                case 'copy':
-                    navigator.clipboard.writeText(url).then(() => {
-                        showNotification('Link copied to clipboard!', 'success');
-                    });
-                    break;
-            }
         }
     });
-
-    // Copy button functionality removed - using basic code blocks
 </script>
-{% endblock %}
+{% endblock content %}
