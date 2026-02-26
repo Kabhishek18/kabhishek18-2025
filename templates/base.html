@@ -1,125 +1,148 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    
-    {% block title %}Kumar Abhishek | The Digital Architect{% endblock title %}
-   
-    {% block meta_data %}
-        <meta name="description" content="Kumar Abhishek - Full Stack Software Developer with 9+ years of experience, crafting the future with AI, Python, and React.">
-        <meta name="author" content="Kumar Abhishek">
-        <meta name="keywords" content="Kumar Abhishek, Full Stack Developer, Software Engineer, AI, Machine Learning, Python, React, Portfolio, Digital Architect">
-        <meta name="robots" content="index, follow">
-        <link rel="canonical" href="https://kabhishek18.com/">
 
-        <meta property="og:title" content="Kumar Abhishek - The Digital Architect">
-        <meta property="og:description" content="Full Stack Software Developer crafting the future with AI and code.">
-        <meta property="og:image" content="https://kabhishek18.com/static/web-app-manifest-512x512.png">
-        <meta property="og:url" content="https://kabhishek18.com/">
-        <meta property="og:type" content="website">
-        <meta property="og:site_name" content="The Digital Architect">
+  {% block title %}Kumar Abhishek | The Digital Architect{% endblock title %}
 
-        <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:title" content="Kumar Abhishek - The Digital Architect">
-        <meta name="twitter:description" content="Full Stack Software Developer crafting the future with AI and code.">
-        <meta name="twitter:image" content="https://kabhishek18.com/static/web-app-manifest-512x512.png">
-        <meta name="twitter:site" content="@kabhishek18">
-        <meta name="twitter:creator" content="@kabhishek18">
-    {% endblock meta_data %}
+  {% block meta_data %}
+  <meta name="description"
+    content="Kumar Abhishek - Full Stack Software Developer with 9+ years of experience, crafting the future with AI, Python, and React.">
+  <meta name="author" content="Kumar Abhishek">
+  <meta name="keywords"
+    content="Kumar Abhishek, Full Stack Developer, Software Engineer, AI, Machine Learning, Python, React, Portfolio, Digital Architect">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://kabhishek18.com/">
 
-    
+  <meta property="og:title" content="Kumar Abhishek - The Digital Architect">
+  <meta property="og:description" content="Full Stack Software Developer crafting the future with AI and code.">
+  <meta property="og:image" content="https://kabhishek18.com/static/web-app-manifest-512x512.png">
+  <meta property="og:url" content="https://kabhishek18.com/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="The Digital Architect">
 
-    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
-    <link rel="manifest" href="/static/favicon_manifest.json">
-    <meta name="google-adsense-account" content="ca-pub-6078293202282096">
-    <meta name="theme-color" content="#FFB000">
-    <link rel="stylesheet" href="{% static 'css/tailwind_terminal.css' %}">
-    
-    <!-- Google Material Symbols -->
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@40,700,0,0&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
-    
-    <style>
-      body {
-        margin: 0;
-        padding: 0;
-        background-color: #000;
-        color: #fff;
-        height: 100vh;
-        overflow-x: hidden;
-      }
-      .scanlines {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: linear-gradient(
-          to bottom,
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Kumar Abhishek - The Digital Architect">
+  <meta name="twitter:description" content="Full Stack Software Developer crafting the future with AI and code.">
+  <meta name="twitter:image" content="https://kabhishek18.com/static/web-app-manifest-512x512.png">
+  <meta name="twitter:site" content="@kabhishek18">
+  <meta name="twitter:creator" content="@kabhishek18">
+  {% endblock meta_data %}
+
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+  <link rel="manifest" href="/static/favicon_manifest.json">
+  <meta name="google-adsense-account" content="ca-pub-6078293202282096">
+  <meta name="theme-color" content="#FFB000">
+  <link rel="stylesheet" href="{% static 'css/tailwind_terminal.css' %}">
+
+  <!-- Google Material Symbols -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@40,700,0,0&display=swap"
+    rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap"
+    rel="stylesheet">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      color: #fff;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .scanlines {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: linear-gradient(to bottom,
           rgba(255, 255, 255, 0),
           rgba(255, 255, 255, 0) 50%,
           rgba(0, 0, 0, 0.2) 50%,
-          rgba(0, 0, 0, 0.2)
-        );
-        background-size: 100% 4px;
-        pointer-events: none;
-        z-index: 9999;
-        opacity: 0.15;
+          rgba(0, 0, 0, 0.2));
+      background-size: 100% 4px;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.15;
+    }
+
+    .cursor-blink {
+      animation: blink 1s step-end infinite;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1;
       }
-      .cursor-blink {
-        animation: blink 1s step-end infinite;
+
+      50% {
+        opacity: 0;
       }
-      @keyframes blink {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0; }
-      }
-      /* Custom Webkit Scrollbar */
-      .custom-scrollbar::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      .custom-scrollbar::-webkit-scrollbar-track {
-        background: #000000;
-        border-left: 1px solid #27272a; /* zinc-800 */
-      }
-      .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #3f3f46; /* zinc-700 */
-        border-radius: 0px;
-      }
-      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: #FFB000;
-      }
-      * {
-        scrollbar-width: thin;
-        scrollbar-color: #3f3f46 #000000;
-      }
-    </style>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
-    <script async custom-element="amp-auto-ads"
-        src="https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js">
-    </script>
+    }
+
+    /* Custom Webkit Scrollbar */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #000000;
+      border-left: 1px solid #27272a;
+      /* zinc-800 */
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #3f3f46;
+      /* zinc-700 */
+      border-radius: 0px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #FFB000;
+    }
+
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #3f3f46 #000000;
+    }
+  </style>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+  <script async custom-element="amp-auto-ads" src="https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js">
+  </script>
 </head>
 
-<body class="bg-black text-white font-sans h-screen flex flex-col antialiased selection:bg-[#FFB000] selection:text-black">
-    <!-- Scanline Overlay -->
-    <div class="scanlines"></div>
+<body
+  class="bg-black text-white font-sans min-h-screen flex flex-col antialiased selection:bg-[#FFB000] selection:text-black">
+  <!-- Scanline Overlay -->
+  <div class="scanlines"></div>
 
-    <div id="__next" class="flex-1 flex flex-col h-full overflow-hidden">
-        {% block content %}{% endblock content %}
-    </div>
+  <div id="__next" class="flex-1 flex flex-col min-h-screen">
+    {% block content %}{% endblock content %}
+  </div>
 
-    <script src="{% static 'script.js' %}"></script>
+  <script src="{% static 'script.js' %}"></script>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6078293202282096"
-     crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6078293202282096"
+    crossorigin="anonymous"></script>
 </body>
+
 </html>

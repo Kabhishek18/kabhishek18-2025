@@ -191,7 +191,7 @@
 <div class="flex-1 flex overflow-hidden">
 
     <!-- Left Sidebar (Explorer) -->
-    <aside class="hidden lg:flex w-48 flex-shrink-0 border-r border-zinc-800 flex-col bg-black">
+    <aside class="hidden lg:flex w-48 flex-shrink-0 border-r border-zinc-800 flex-col bg-black sticky top-0 h-screen">
         <div class="p-4 text-[10px] text-gray-500 uppercase tracking-widest border-b border-zinc-800">Explorer</div>
         <nav class="p-2 text-xs font-mono">
             <a href="{% url 'blog:list' %}"
@@ -222,7 +222,7 @@
     </aside>
 
     <!-- Main Editor Content -->
-    <main class="flex-1 flex flex-col relative bg-black overflow-hidden border-r border-zinc-800">
+    <main class="flex-1 flex flex-col relative bg-black border-r border-zinc-800">
         <div
             class="bg-zinc-900/50 px-4 py-2 text-xs border-b border-zinc-800 flex items-center gap-2 text-gray-400 font-mono">
             <a href="{% url 'blog:list' %}"
@@ -238,12 +238,8 @@
             </div>
         </div>
 
-        <div class="flex-1 overflow-y-auto flex custom-scrollbar pb-20">
-            <!-- Line Numbers -->
-            <div
-                class="line-numbers py-6 px-2 sm:px-4 text-[10px] sm:text-xs font-mono min-w-[40px] sm:min-w-[60px] bg-[#050505] border-r border-zinc-800">
-                1<br />2<br />3<br />4<br />5<br />6<br />7<br />8<br />9<br />10<br />11<br />12<br />13<br />14<br />15<br />16<br />17<br />18<br />19<br />20<br />21<br />22<br />23<br />24<br />25<br />26<br />27<br />28<br />29<br />30<br />31<br />32<br />33<br />34<br />35
-            </div>
+        <div class="flex-1 flex custom-scrollbar pb-20">
+
 
             <!-- Article Content -->
             <div class="flex-1 p-6 md:p-10 max-w-4xl font-mono text-sm overflow-x-hidden">
@@ -251,18 +247,18 @@
                 <!-- JSON Frontmatter metadata -->
                 <div class="mb-10 text-zinc-400">
                     <span class="text-[#FFB000]">{</span><br />
-                    <span class="pl-4">"title": "<span class="text-white">{{ post.title|escapejs }}</span>",</span><br />
+                    <span class="pl-4">"title": "<span class="text-white">{{ post.title }}</span>",</span><br />
                     <span class="pl-4">"author": "<span class="text-white">{{ post.author.get_full_name|default:post.author.username }}</span>",</span><br />
                     <span class="pl-4">"checksum": "<span class="text-[#FFB000]">0x{{ post.id }}F09</span>",</span><br />
                     <span class="pl-4">"date": "<span class="text-zinc-200">{{ post.created_at|date:"Y-m-d" }}</span>",</span><br />
-                    <span class="pl-4">"tags": [{% for tag in post.tags.all %}"<span class="text-zinc-200">{{ tag.name }}</span>"{% if not forloop.last %}, {% endif %}{% endfor %}]</span><br />
+                    <span class="pl-4">"tags": [{% for tag in post.tags.all %}"<span class="text-zinc-200">{{ tag.name }}"</span>{% if not forloop.last %}, {% endif %}{% endfor %}]</span><br />
                     <span class="text-[#FFB000]">}</span>
                 </div>
 
                 <div class="prose prose-invert max-w-none space-y-8 font-mono text-zinc-300">
                     <h1
                         class="text-3xl font-bold text-white border-b border-dashed border-[#FFB000] pb-2 uppercase tracking-tight">
-                        # Abstract: {{ post.title }}
+                        {{ post.title }}
                     </h1>
 
                     <!-- Glitch-Architecture Hero Image -->

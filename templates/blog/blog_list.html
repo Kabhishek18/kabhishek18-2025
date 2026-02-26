@@ -44,7 +44,8 @@
 <div class="flex-1 flex flex-col md:flex-row h-full w-full border-b border-zinc-800">
 
     <!-- Sidebar Navigation -->
-    <aside class="hidden md:flex w-64 flex-shrink-0 border-r border-zinc-800 bg-black z-10 flex-col">
+    <aside
+        class="hidden md:flex w-64 flex-shrink-0 border-r border-zinc-800 bg-black z-10 flex-col sticky top-0 h-screen">
         <div class="p-4 border-b border-zinc-800">
             <div class="flex items-center gap-2 text-[#FFB000]">
                 <span class="material-symbols-outlined">terminal</span>
@@ -122,7 +123,7 @@
             </form>
         </header>
 
-        <div class="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10 space-y-12">
+        <div class="flex-1 custom-scrollbar p-6 md:p-10 space-y-12">
 
             <section class="border-l-2 border-[#FFB000] pl-6 py-2">
                 <p class="text-[#FFB000] text-sm mb-2 font-mono">&gt; ./exec fetch_logs --sort=DESC</p>
@@ -138,7 +139,8 @@
                     {% endif %}
                 </h1>
                 <p class="text-gray-400 max-w-2xl text-sm font-mono leading-relaxed">
-                    Aggregated low-res data artifacts and architectural notes. Showing [{{ total_results|default:posts|length }}] matched checksums.
+                    Aggregated low-res data artifacts and architectural notes. Showing [{{ posts.paginator.count }}]
+                    matched checksums.
                 </p>
             </section>
 
