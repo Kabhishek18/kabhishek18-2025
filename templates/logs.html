@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}
+<title>{{title}}: Kabhishek18</title>
+{% endblock title %}
+
+{% block meta_data %}
+{% if meta_data %}
+{{meta_data}}
+{% else %}
+<meta name="description"
+    content="Kumar Abhishek - Full Stack Software Developer with 9+ years of experience, crafting the future with AI, Python, and React.">
+<meta name="author" content="Kumar Abhishek">
+<meta name="keywords"
+    content="Kumar Abhishek, Full Stack Developer, Software Engineer, AI, Machine Learning, Python, React, Portfolio, Digital Architect">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://kabhishek18.com/">
+
+<meta property="og:title" content="Kumar Abhishek - The Digital Architect">
+<meta property="og:description" content="Full Stack Software Developer crafting the future with AI and code.">
+<meta property="og:image" content="https://kabhishek18.com/web-app-manifest-512x512.png">
+<meta property="og:url" content="https://kabhishek18.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Digital Architect">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Kumar Abhishek - The Digital Architect">
+<meta name="twitter:description" content="Full Stack Software Developer crafting the future with AI and code.">
+<meta name="twitter:image" content="https://kabhishek18.com/web-app-manifest-512x512.png">
+<meta name="twitter:site" content="@kabhishek18">
+<meta name="twitter:creator" content="@kabhishek18">
+{% endif %}
+{% endblock meta_data %}
+{% block navbar %}
+{% endblock navbar %}
+
+{% block content %}
+<div class="min-h-screen bg-background-dark text-white font-sans flex">
+    <!-- Sidebar hidden for brevity but the script output will copy it -->
+    <!-- ... We rely on Django's structure or just full static for NextJS preview ... -->
+
+    <main class="flex-1 flex flex-col w-full bg-background-dark relative">
+        <header
+            class="h-14 border-b border-terminal-gray flex items-center justify-between px-6 bg-background-dark/95 backdrop-blur sticky top-0 z-20">
+            <div class="flex items-center gap-2">
+                <a href="/"
+                    class="text-primary hover:text-white transition-colors flex items-center gap-1 bg-terminal-gray/20 px-2 py-1 border border-terminal-gray hover:border-primary mr-2 shrink-0">
+                    <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+                    <span class="text-xs font-mono">cd ..</span>
+                </a>
+                <div class="flex items-center gap-2 text-sm text-gray-400">
+                    <span
+                        class="md:hidden material-symbols-outlined text-primary hover:text-white mr-2 text-xl cursor-not-allowed hidden">menu</span>
+                    <span class="hidden sm:inline">root</span>
+                    <span class="hidden sm:inline">@</span>
+                    <span class="text-white hidden sm:inline">kabhishek18</span>
+                    <span class="hidden sm:inline">:</span>
+                    <span class="text-primary">~/system/logs</span>
+                </div>
+            </div>
+            <div class="flex gap-4 text-xs font-mono text-primary">
+                <span class="hidden sm:inline-block">CPU: 88%</span>
+                <span class="hidden sm:inline-block">RAM: 14.1GB</span>
+                <span class="animate-pulse">● TAILING</span>
+            </div>
+        </header>
+
+        <div class="flex-1 custom-scrollbar p-6 space-y-4 font-mono text-sm" id="log-terminal-output">
+            <div class="text-primary opacity-80 mb-4">&gt; tail -f /var/log/syslog</div>
+
+            {logs.map((log, i) => (
+            <div key={i}
+                class="text-gray-300 break-all border-l-2 border-terminal-gray pl-4 hover:border-primary transition-colors">
+                <span class="text-gray-500 mr-4">[{new Date().toISOString().split('T')[1].slice(0, 12)}]</span>
+                {log.includes('[ERR]') ? <span class="text-red-500">{log}</span> :
+                log.includes('[SEC]') ? <span class="text-yellow-500">{log}</span> :
+                log.includes('[OK]') ? <span class="text-green-500">{log}</span> : log}
+            </div>
+            ))}
+            <div ref={endRef} />
+        </div>
+    </main>
+
+    <!-- Script injected that convert_jsx.py will keep -->
+    <script dangerouslySetInnerHTML={{ __html: ` document.addEventListener('DOMContentLoaded', ()=> {
+            const container = document.getElementById('log-terminal-output');
+            if (!container) return;
+
+            const logMessages = [
+                "[NET] TCP CONNECTION ESTABLISHED FROM 192.168.1.45",
+                "[SYS] GARBAGE COLLECTION TRIGGERED (240ms)",
+                "[SEC] [ERR] UNAUTHORIZED ACCESS ATTEMPT DETECTED",
+                "[DB] QUERY EXECUTED IN 4ms",
+                "[API] RATE LIMIT CHECK [OK]",
+                "[SYS] KERNEL PANIC AVERTED",
+                "[WARN] HIGH MEMORY USAGE DETECTED",
+                "[AUTH] TOKEN VALIDATED FOR USER kb18",
+                "[OK] SYNCHRONIZATION COMPLETE"
+            ];
+
+            setInterval(() => {
+                const dateStr = new Date().toISOString().split('T')[1].slice(0, 12);
+                const msg = logMessages[Math.floor(Math.random() * logMessages.length)];
+
+                let htmlMsg = msg;
+                if (msg.includes('[ERR]')) htmlMsg = '<span class="text-red-500">' + msg + '</span>';
+                else if (msg.includes('[SEC]') || msg.includes('[WARN]')) htmlMsg = '<span class="text-yellow-500">' + msg + '</span>';
+                else if (msg.includes('[OK]')) htmlMsg = '<span class="text-green-500">' + msg + '</span>';
+
+                const div = document.createElement('div');
+                div.className = "text-gray-300 break-all border-l-2 border-terminal-gray pl-4 hover:border-primary transition-colors animate-fade-in";
+                div.innerHTML = '<span class="text-gray-500 mr-4">[' + dateStr + ']</span> ' + htmlMsg;
+
+                container.appendChild(div);
+
+                // Auto scroll
+                container.scrollTop = container.scrollHeight;
+
+                // Keep only latest 100 logs
+                if (container.children.length > 105) {
+                    container.removeChild(container.children[1]); // keep the > tail -f line
+                }
+            }, 1500 + Math.random() * 2000);
+        });
+        `}} />
+        </div>
+{% endblock content %}

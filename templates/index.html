@@ -1,111 +1,445 @@
 {% extends "base.html" %}
 
 {% block title %}
- <title>{{title}}: Kabhishek18</title>
+<title>{{title}}: Kabhishek18</title>
 {% endblock title %}
 
 {% block meta_data %}
-    {% if meta_data %}
-        {{meta_data}}
-    {% else %}    
-    <meta name="description" content="Kumar Abhishek - Full Stack Software Developer with 9+ years of experience, crafting the future with AI, Python, and React.">
-    <meta name="author" content="Kumar Abhishek">
-    <meta name="keywords" content="Kumar Abhishek, Full Stack Developer, Software Engineer, AI, Machine Learning, Python, React, Portfolio, Digital Architect">
-    <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://kabhishek18.com/">
+{% if meta_data %}
+{{meta_data}}
+{% else %}
+<meta name="description"
+  content="Kumar Abhishek - Full Stack Software Developer with 9+ years of experience, crafting the future with AI, Python, and React.">
+<meta name="author" content="Kumar Abhishek">
+<meta name="keywords"
+  content="Kumar Abhishek, Full Stack Developer, Software Engineer, AI, Machine Learning, Python, React, Portfolio, Digital Architect">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://kabhishek18.com/">
 
-    <meta property="og:title" content="Kumar Abhishek - The Digital Architect">
-    <meta property="og:description" content="Full Stack Software Developer crafting the future with AI and code.">
-    <meta property="og:image" content="https://kabhishek18.com/web-app-manifest-512x512.png">
-    <meta property="og:url" content="https://kabhishek18.com/">
-    <meta property="og:type" content="website">
-    <meta property="og:site_name" content="The Digital Architect">
+<meta property="og:title" content="Kumar Abhishek - The Digital Architect">
+<meta property="og:description" content="Full Stack Software Developer crafting the future with AI and code.">
+<meta property="og:image" content="https://kabhishek18.com/web-app-manifest-512x512.png">
+<meta property="og:url" content="https://kabhishek18.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Digital Architect">
 
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Kumar Abhishek - The Digital Architect">
-    <meta name="twitter:description" content="Full Stack Software Developer crafting the future with AI and code.">
-    <meta name="twitter:image" content="https://kabhishek18.com/web-app-manifest-512x512.png">
-    <meta name="twitter:site" content="@kabhishek18">
-    <meta name="twitter:creator" content="@kabhishek18">
-    {% endif %}
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Kumar Abhishek - The Digital Architect">
+<meta name="twitter:description" content="Full Stack Software Developer crafting the future with AI and code.">
+<meta name="twitter:image" content="https://kabhishek18.com/web-app-manifest-512x512.png">
+<meta name="twitter:site" content="@kabhishek18">
+<meta name="twitter:creator" content="@kabhishek18">
+{% endif %}
 {% endblock meta_data %}
 {% block navbar %}
-    {% if home_navbar %}
-        <!-- Home Page Navigation -->
-        <div class="scroll-indicator" id="scrollIndicator"></div>
-        <nav class="main-nav" id="mainNav">
-            <div class="nav-container">
-                <a href="#home" class="nav-logo">DIGITAL ARCHITECT</a>
-                <ul class="nav-menu">
-                    <li class="nav-item"><a href="#home" class="nav-link active">Home</a></li>
-                    <li class="nav-item"><a href="#about" class="nav-link">About</a></li>
-                    <li class="nav-item"><a href="#projects" class="nav-link">Projects</a></li>
-                    <li class="nav-item"><a href="/blog" class="nav-link">Blog</a></li>
-                    <li class="nav-item"><a href="#contact" class="nav-link">Contact</a></li>
-                    <li class="nav-item">
-                        <a href="mailto:developer@kabhishek18.com" class="nav-cta">
-                            <i class="fas fa-rocket"></i> Let's Connect
-                        </a>
-                    </li>
-                </ul>
-                <button class="mobile-menu-toggle" id="mobileMenuToggle">
-                    <i class="fas fa-bars"></i>
-                </button>
-            </div>
-            <!-- Mobile Menu -->
-            <div class="mobile-menu" id="mobileMenu">
-                <div class="mobile-nav-links">
-                    <a href="#home" class="nav-link">Home</a>
-                    <a href="#about" class="nav-link">About</a>
-                    <a href="#projects" class="nav-link">Projects</a>
-                    <a href="/blog" class="nav-link">Blog</a>
-                    <a href="#contact" class="nav-link">Contact</a>
-                    <a href="mailto:developer@kabhishek18.com" class="nav-cta">
-                        <i class="fas fa-rocket"></i> Let's Connect
-                    </a>
-                </div>
-            </div>
-        </nav>
-
-    {% elif blog_navbar %}
-        <!-- Blog Detail Page Navigation -->
-        <nav class="detail-nav">
-            <div class="nav-container">
-                <a href="/blog" class="nav-back">
-                    <i class="fas fa-arrow-left"></i> <span>Back to Blog</span>
-                </a>
-                <div class="nav-actions">
-                    <button class="share-btn" id="shareBtn">
-                        <i class="fas fa-share-alt"></i> <span>Share</span>
-                    </button>
-                    <button class="bookmark-btn" id="bookmarkBtn">
-                        <i class="fas fa-bookmark"></i> <span>Save</span>
-                    </button>
-                </div>
-            </div>
-        </nav>
-
-    {% else %}
-        <!-- Generic Page Navigation -->
-        <nav class="blog-nav">
-            <div class="nav-container">
-                <a href="/" class="nav-back">
-                    <i class="fas fa-arrow-left"></i> <span>Back to Home</span>
-                </a>
-                <div class="nav-logo">  KABHISHEK18 - THE DIGITAL ARCHITECT</div>
-            </div>
-        </nav>
-    {% endif %}
 {% endblock navbar %}
 
 {% block content %}
-   {% if template_includes %}
-    {# Loop through the list of component HTML provided by the view #}
-    {% for component_html in template_includes %}
-        {{ component_html|safe }}
-    {% endfor %}
-    {% elif page_content %}
-        {# Display manual page content if no template is used #}
-        {{ page_content|safe }}
-    {% endif %}
-{% endblock %}
+<!-- Scanline Overlay -->
+<div class="scanlines"></div>
+
+<!-- Main Layout Container -->
+<div class="flex-1 flex flex-col md:flex-row h-full w-full border-b border-terminal-gray">
+
+  <!-- Sidebar Navigation (Directory Tree) -->
+  <aside class="hidden md:block w-64 flex-shrink-0 border-r border-terminal-gray bg-background-dark z-10">
+    <div class="p-4 border-b border-terminal-gray">
+      <div class="flex items-center gap-2 text-primary">
+        <span class="material-symbols-outlined">terminal</span>
+        <span class="font-bold tracking-widest text-sm">TERM_V.1.0</span>
+      </div>
+    </div>
+    <!-- User Profile Image -->
+    <div
+      class="relative w-full aspect-square overflow-hidden bg-terminal-gray grayscale hover:grayscale-0 transition-all border-b border-terminal-gray">
+      <img alt="User Avatar" class="w-full h-full object-cover object-top" data-alt="Pixelated avatar of a developer"
+        src="/static/avatar.png" />
+    </div>
+    <nav class="p-4 flex flex-col gap-6">
+      <!-- User Profile Info -->
+      <div class="flex flex-col gap-2 pb-2">
+        <h3 class="text-sm font-bold text-white uppercase">KUMAR ABHISHEK</h3>
+        <p class="text-xs text-gray-400">Role: The Digital Architect</p>
+      </div>
+
+      <!-- Directory Tree -->
+      <div class="flex flex-col gap-1 text-sm font-mono">
+        <div class="text-gray-500 uppercase text-xs tracking-wider mb-2">./ROOT_DIRECTORY</div>
+        <a class="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1" href="/#projects">
+          <span class="text-gray-600">├──</span>
+          <span class="material-symbols-outlined text-[18px] group-hover:text-primary">folder_open</span>
+          <span>projects/</span>
+        </a>
+        <a class="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1 pl-4 border-l border-gray-800 ml-[7px]"
+          href="/web_apps">
+          <span class="text-gray-600">├──</span>
+          <span class="material-symbols-outlined text-[18px] group-hover:text-primary">html</span>
+          <span>web_apps</span>
+        </a>
+        <a class="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1 pl-4 border-l border-gray-800 ml-[7px]"
+          href="/blog">
+          <span class="text-gray-600">└──</span>
+          <span class="material-symbols-outlined text-[18px] group-hover:text-primary">article</span>
+          <span>blog_dir</span>
+        </a>
+        <a class="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1 mt-2"
+          href="/static/resume.pdf" target="_blank" rel="noopener noreferrer">
+          <span class="text-gray-600">├──</span>
+          <span class="material-symbols-outlined text-[18px] group-hover:text-primary">description</span>
+          <span>resume.pdf</span>
+        </a>
+        <a class="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1" href="/contact">
+          <span class="text-gray-600">├──</span>
+          <span class="material-symbols-outlined text-[18px] group-hover:text-primary">call</span>
+          <span>contact.exe</span>
+        </a>
+        <a class="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1" href="/logs">
+          <span class="text-gray-600">├──</span>
+          <span class="material-symbols-outlined text-[18px] group-hover:text-primary">history</span>
+          <span>logs/</span>
+        </a>
+        <a class="group flex items-center gap-2 text-white hover:text-primary transition-colors py-1" href="/config">
+          <span class="text-gray-600">└──</span>
+          <span class="material-symbols-outlined text-[18px] group-hover:text-primary">settings</span>
+          <span>config</span>
+        </a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 flex flex-col w-full bg-background-dark relative">
+    <!-- Top Bar -->
+    <header
+      class="h-14 border-b border-terminal-gray flex items-center justify-between px-6 bg-background-dark/95 backdrop-blur sticky top-0 z-20">
+      <div class="flex items-center gap-2 text-sm text-gray-400">
+        <span
+          class="md:hidden material-symbols-outlined text-primary hover:text-white mr-2 text-xl cursor-not-allowed hidden">menu</span>
+        <span class="hidden sm:inline">root</span>
+        <span class="hidden sm:inline">@</span>
+        <span class="text-white hidden sm:inline">kabhishek18</span>
+        <span class="hidden sm:inline">:</span>
+        <span class="text-primary">~/portfolio</span>
+      </div>
+      <div class="flex gap-4 text-xs font-mono text-primary">
+        <span class="hidden sm:inline-block">CPU: 12%</span>
+        <span class="hidden sm:inline-block">RAM: 4.2GB</span>
+        <span class="animate-pulse">● LIVE</span>
+      </div>
+    </header>
+
+    <!-- Content Scrollable -->
+    <div class="flex-1 custom-scrollbar p-6 md:p-10 space-y-16">
+
+      <!-- Hero Section -->
+      <section class="border-l-2 border-primary pl-6 py-2">
+        <p class="text-primary text-sm mb-2 font-mono">&gt; initialize_sequence_alpha_01...</p>
+        <h1 class="text-4xl md:text-6xl lg:text-7xl font-bold uppercase tracking-tighter text-white mb-4 leading-none">
+          KUMAR ABHISHEK<br />
+          <span class="text-gray-600">// THE DIGITAL ARCHITECT</span>
+        </h1>
+        <p class="text-gray-400 max-w-2xl text-lg font-light leading-relaxed">
+          Senior AI & ML Engineer with 7.8+ years of experience architecting scalable distributed systems and
+          intelligent generative pipelines. Expert in Python, Django, and deploying production-grade RAG architectures
+          (LangChain, Ollama). Renowned for mastering complex data architectures and engineering ultra-low-latency,
+          resilient machine learning models at scale.
+        </p>
+        <div class="mt-8 flex flex-col sm:flex-row gap-4 max-w-lg">
+          <div class="flex items-center bg-terminal-gray/30 border border-primary/50 w-full p-2">
+            <span class="text-primary mr-2 font-bold">&gt;</span>
+            <input
+              class="bg-transparent border-none text-white w-full focus:ring-0 placeholder-gray-600 font-mono text-sm outline-none"
+              placeholder="run contact_protocol.exe" type="text" />
+            <div class="w-3 h-5 bg-primary cursor-blink"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Stats Grid -->
+      <section class="grid grid-cols-2 md:grid-cols-4 border-t border-terminal-gray">
+        <div class="p-4 border-r border-b border-terminal-gray hover:bg-white/5 transition-colors group">
+          <span
+            class="text-xs text-gray-500 uppercase tracking-widest block mb-1 group-hover:text-primary">Experience</span>
+          <span class="text-2xl font-bold text-white">7.8 YRS</span>
+        </div>
+        <div class="p-4 border-r border-b border-terminal-gray hover:bg-white/5 transition-colors group">
+          <span
+            class="text-xs text-gray-500 uppercase tracking-widest block mb-1 group-hover:text-primary">Commits</span>
+          <span class="text-2xl font-bold text-white">8,492</span>
+        </div>
+        <div class="p-4 border-r border-b border-terminal-gray hover:bg-white/5 transition-colors group">
+          <span
+            class="text-xs text-gray-500 uppercase tracking-widest block mb-1 group-hover:text-primary">Projects</span>
+          <span class="text-2xl font-bold text-white">42</span>
+        </div>
+        <div class="p-4 border-b border-terminal-gray hover:bg-white/5 transition-colors group">
+          <span
+            class="text-xs text-gray-500 uppercase tracking-widest block mb-1 group-hover:text-primary">Status</span>
+          <span class="text-2xl font-bold text-primary">ONLINE</span>
+        </div>
+      </section>
+
+      <!-- System Logs (Experience) -->
+      <section>
+        <div class="flex items-center justify-between mb-6 border-b border-terminal-gray pb-2">
+          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">history</span>
+            SYSTEM_LOGS
+          </h2>
+          <span class="text-xs text-gray-500 font-mono">[MODE: CHRONOLOGICAL]</span>
+        </div>
+        <div class="font-mono text-sm space-y-1">
+          <!-- Log Entry 1: HerKey -->
+          <div
+            class="grid grid-cols-1 md:grid-cols-12 gap-4 hover:bg-terminal-gray/20 p-2 border-l border-transparent hover:border-primary transition-all">
+            <div class="md:col-span-2 text-gray-500">2023-05-01 <span class="text-gray-700">PRESENT</span></div>
+            <div class="md:col-span-2 text-primary">SYS_LEAD</div>
+            <div class="md:col-span-8 text-gray-300">
+              <span class="text-white font-bold">Senior Software Tech Lead @ HERKEY</span>
+              <br /><span class="text-gray-500">&gt; Orchestrated HERKEY 4.0 migration with 99.9% uptime. Architected
+                Agentic AI (Simkey) using LangChain & Ollama. Optimized Data Engineering ELT workflows.</span>
+            </div>
+          </div>
+          <!-- Log Entry 2: Capgemini -->
+          <div
+            class="grid grid-cols-1 md:grid-cols-12 gap-4 hover:bg-terminal-gray/20 p-2 border-l border-transparent hover:border-primary transition-all">
+            <div class="md:col-span-2 text-gray-500">2021-08-01 <span class="text-gray-700">2023-04-30</span></div>
+            <div class="md:col-span-2 text-blue-400">SYS_UPDATE</div>
+            <div class="md:col-span-8 text-gray-300">
+              <span class="text-white font-bold">Senior Software Developer @ Capgemini</span>
+              <br /><span class="text-gray-500">&gt; Led AIRBUS PLM Engineering ADB integration. Developed AI-driven
+                anomaly detection models. Modernized legacy DQC architectures.</span>
+            </div>
+          </div>
+          <!-- Log Entry 3: Softwill -->
+          <div
+            class="grid grid-cols-1 md:grid-cols-12 gap-4 hover:bg-terminal-gray/20 p-2 border-l border-transparent hover:border-primary transition-all">
+            <div class="md:col-span-2 text-gray-500">2019-06-01 <span class="text-gray-700">2020-10-31</span></div>
+            <div class="md:col-span-2 text-yellow-500">NET_BUILD</div>
+            <div class="md:col-span-8 text-gray-300">
+              <span class="text-white font-bold">Full Stack Developer @ SOFTWILL Infotech</span>
+              <br /><span class="text-gray-500">&gt; Deployed ERP/CRM full-stack solutions. Integrated STRIPE payment
+                gateways and built complex RBAC systems.</span>
+            </div>
+          </div>
+          <!-- Log Entry 4: Bird Global -->
+          <div
+            class="grid grid-cols-1 md:grid-cols-12 gap-4 hover:bg-terminal-gray/20 p-2 border-l border-transparent hover:border-primary transition-all">
+            <div class="md:col-span-2 text-gray-500">2017-08-01 <span class="text-gray-700">2019-05-31</span></div>
+            <div class="md:col-span-2 text-gray-400">INIT_BOOT</div>
+            <div class="md:col-span-8 text-gray-300">
+              <span class="text-white font-bold">Junior Associate Engineer @ Bird Global</span>
+              <br /><span class="text-gray-500">&gt; Engineered ETL workflows reducing data processing time by 40%.
+                Built resilient REST APIs and Celery tasks.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Core Competencies (Skills) -->
+      <section>
+        <div class="flex items-center justify-between mb-6 border-b border-terminal-gray pb-2">
+          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">memory</span>
+            CORE_COMPETENCIES
+          </h2>
+          <span class="text-xs text-gray-500 font-mono">cat /sys/skills.var</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 font-mono text-sm">
+
+          <div
+            class="border border-terminal-gray p-4 bg-background-dark/50 group hover:border-primary transition-colors">
+            <h3
+              class="text-primary text-xs uppercase tracking-widest mb-3 border-b border-terminal-gray pb-1 group-hover:border-primary">
+              Backend_Engineering</h3>
+            <ul class="text-gray-400 space-y-1">
+              <li>Python</li>
+              <li>Django / Flask</li>
+              <li>Microservices</li>
+              <li>RESTful APIs</li>
+            </ul>
+          </div>
+
+          <div
+            class="border border-terminal-gray p-4 bg-background-dark/50 group hover:border-yellow-500 transition-colors">
+            <h3
+              class="text-yellow-500 text-xs uppercase tracking-widest mb-3 border-b border-terminal-gray pb-1 group-hover:border-yellow-500">
+              AI_&_Machine_Learning</h3>
+            <ul class="text-gray-400 space-y-1">
+              <li>LLMs / LangChain</li>
+              <li>RAG / Ollama</li>
+              <li>Hugging Face</li>
+              <li>TensorFlow / PyTorch</li>
+            </ul>
+          </div>
+
+          <div
+            class="border border-terminal-gray p-4 bg-background-dark/50 group hover:border-blue-400 transition-colors">
+            <h3
+              class="text-blue-400 text-xs uppercase tracking-widest mb-3 border-b border-terminal-gray pb-1 group-hover:border-blue-400">
+              Data_&_Cloud_Infra</h3>
+            <ul class="text-gray-400 space-y-1">
+              <li>AWS EC2 / S3</li>
+              <li>Docker / Kubernetes</li>
+              <li>MongoDB / Redis / SQL</li>
+              <li>Celery / ETL Pipelines</li>
+            </ul>
+          </div>
+
+          <div class="border border-terminal-gray p-4 bg-background-dark/50 group hover:border-white transition-colors">
+            <h3
+              class="text-white text-xs uppercase tracking-widest mb-3 border-b border-terminal-gray pb-1 group-hover:border-white">
+              Frontend_&_Misc</h3>
+            <ul class="text-gray-400 space-y-1">
+              <li>JavaScript</li>
+              <li>React Native</li>
+              <li>HTML5 / CSS3</li>
+              <li>Agile / CI/CD</li>
+            </ul>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Project Directory (Cards) -->
+      <section>
+        <div class="flex items-center justify-between mb-6 border-b border-terminal-gray pb-2">
+          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">folder_special</span>
+            PROJECT_DIRECTORY
+          </h2>
+          <span class="text-xs text-gray-500 font-mono">ls -la ./projects</span>
+        </div>
+        <div id="github-projects-container"
+          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-0 border border-terminal-gray">
+          <!-- Repositories will be injected here via github_fetcher.js -->
+          <div class="p-6 text-gray-500 font-mono col-span-full">
+            &gt; Fetching remote repositories from GitHub...
+            <span class="animate-pulse inline-block w-2 bg-primary h-4 ml-1"></span>
+          </div>
+        </div>
+      </section>
+
+      <footer
+        class="border-t border-terminal-gray pt-8 pb-4 text-xs font-mono text-gray-500 flex justify-between items-center">
+        <div>
+          <p>© 2026 KABHISHEK18. ALL SYSTEMS NOMINAL.</p>
+        </div>
+        <div class="flex gap-4">
+          <a class="hover:text-primary transition-colors" href="https://github.com/Kabhishek18?tab=repositories"
+            target="_blank" rel="noopener noreferrer">[GITHUB]</a>
+          <a class="hover:text-primary transition-colors" href="https://www.linkedin.com/in/kabhishek18/"
+            target="_blank" rel="noopener noreferrer">[LINKEDIN]</a>
+          <a class="hover:text-primary" href="#">[TWITTER]</a>
+        </div>
+      </footer>
+    </div>
+  </main>
+
+  <!-- Right Sidebar (Agent Status) -->
+  <aside
+    class="flex w-full xl:w-72 border-t md:border-t-0 border-l-0 md:border-l border-terminal-gray bg-background-dark flex-col z-10">
+    <div class="p-4 border-b border-terminal-gray">
+      <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+        <span class="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
+        Agent_Status
+      </h3>
+    </div>
+    <div class="p-4 flex flex-col xl:flex flex-1 gap-6">
+      <!-- Data Visualizer Placeholder -->
+      <div class="h-32 border border-terminal-gray bg-black relative overflow-hidden p-2">
+        <div
+          class="absolute top-0 left-0 w-full h-full opacity-20 bg-[url('https://placeholder.pics/svg/300')] bg-cover"
+          data-alt="Abstract data noise pattern"></div>
+        <div class="relative z-10 flex flex-col h-full justify-between">
+          <div class="flex justify-between text-xs text-primary font-mono">
+            <span>NET_IO</span>
+            <span id="net-io-speed">842 KB/s</span>
+          </div>
+          <div id="net-io-bars" class="flex items-end gap-[2px] h-16">
+            <div class="w-1 bg-primary transition-all duration-300" style="height: 40%;"></div>
+            <div class="w-1 bg-primary transition-all duration-300" style="height: 60%;"></div>
+            <div class="w-1 bg-primary transition-all duration-300" style="height: 30%;"></div>
+            <div class="w-1 bg-primary transition-all duration-300" style="height: 80%;"></div>
+            <div class="w-1 bg-primary transition-all duration-300" style="height: 50%;"></div>
+            <div class="w-1 bg-primary transition-all duration-300" style="height: 90%;"></div>
+            <div class="w-1 bg-primary transition-all duration-300" style="height: 20%;"></div>
+            <div class="w-1 bg-primary transition-all duration-300" style="height: 70%;"></div>
+            <div class="w-1 bg-primary transition-all duration-300" style="height: 45%;"></div>
+            <div class="w-1 bg-primary transition-all duration-300" style="height: 65%;"></div>
+            <div class="w-1 bg-primary transition-all duration-300" style="height: 35%;"></div>
+            <div class="w-1 bg-primary transition-all duration-300" style="height: 85%;"></div>
+            <div class="w-1 bg-primary transition-all duration-300" style="height: 55%;"></div>
+            <div class="w-1 bg-primary transition-all duration-300" style="height: 75%;"></div>
+            <div class="w-1 bg-primary transition-all duration-300" style="height: 25%;"></div>
+            <div class="w-1 bg-primary transition-all duration-300" style="height: 95%;"></div>
+            <div class="w-1 bg-primary transition-all duration-300" style="height: 40%;"></div>
+            <div class="w-1 bg-primary transition-all duration-300" style="height: 60%;"></div>
+          </div>
+        </div>
+        <script>
+          document.addEventListener('DOMContentLoaded', () => {
+            setInterval(() => {
+              const bars = document.getElementById('net-io-bars');
+              const speed = document.getElementById('net-io-speed');
+              if (bars && speed) {
+                const currentSpeed = Math.floor(Math.random() * 800) + 200;
+                speed.innerText = currentSpeed + ' KB/s';
+
+                Array.from(bars.children).forEach(bar => {
+                  const newHeight = Math.floor(Math.random() * 90) + 10;
+                  bar.style.height = newHeight + '%';
+                });
+              }
+            }, 1500);
+          });
+        </script>
+      </div>
+
+      <!-- Metrics -->
+      <div class="space-y-4 font-mono text-xs">
+        <div>
+          <div class="flex justify-between text-gray-400 mb-1">
+            <span>SYS_LOAD</span>
+            <span>42%</span>
+          </div>
+          <div class="w-full bg-terminal-gray h-1">
+            <div class="bg-primary h-1 w-[42%]"></div>
+          </div>
+        </div>
+        <div>
+          <div class="flex justify-between text-gray-400 mb-1">
+            <span>MEM_USAGE</span>
+            <span>64%</span>
+          </div>
+          <div class="w-full bg-terminal-gray h-1">
+            <div class="bg-yellow-500 h-1 w-[64%]"></div>
+          </div>
+        </div>
+        <div>
+          <div class="flex justify-between text-gray-400 mb-1">
+            <span>DISK_SWAP</span>
+            <span>12%</span>
+          </div>
+          <div class="w-full bg-terminal-gray h-1">
+            <div class="bg-blue-500 h-1 w-[12%]"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Console Output -->
+      <div
+        class="flex-1 bg-black border border-terminal-gray p-2 font-mono text-[10px] text-gray-500 overflow-hidden flex flex-col justify-end">
+        <p>&gt; scanning ports...</p>
+        <p>&gt; port 80 [OPEN]</p>
+        <p>&gt; port 443 [OPEN]</p>
+        <p>&gt; fetching assets...</p>
+        <p>&gt; rendering 3d_mesh.obj</p>
+        <p class="text-primary">&gt; connection established</p>
+        <p class="text-white animate-pulse">_</p>
+      </div>
+    </div>
+  </aside>
+</div>
+<script src="/static/github_fetcher.js"></script>
+{% endblock content %}

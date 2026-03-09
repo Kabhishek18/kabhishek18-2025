@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {% load static random_icons search_extras %}
 
-{# Override meta details for this specific page #}
 {% block meta_data %}
 <meta name="description" content="{{ meta_details }}">
 <meta property="og:title" content="{{ title }}">
@@ -15,497 +14,218 @@
 {% endblock title %}
 
 {% block content %}
-<!-- Navigation -->
-<nav class="blog-nav">
-    <div class="nav-container">
-        <a href="/" class="nav-back"> {# Assumes '/' is the homepage #}
-            <i class="fas fa-arrow-left"></i>
-            <span>Back to Portfolio</span>
-        </a>
-        <div class="nav-logo">DIGITAL CODEX</div>
-    </div>
-</nav>
+<style>
+    .binary-dither {
+        filter: grayscale(100%) contrast(150%) brightness(80%);
+        mix-blend-mode: hard-light;
+    }
 
-<!-- Main Container -->
-<div class="blog-container">
-    <!-- Breadcrumb Navigation -->
-    {% if breadcrumbs %}
-    <nav class="breadcrumb-nav" aria-label="Breadcrumb">
-        <ol class="breadcrumb-list">
-            {% for breadcrumb in breadcrumbs %}
-            <li class="breadcrumb-item {% if breadcrumb.active %}active{% endif %}">
-                {% if not breadcrumb.active %}
-                <a href="{{ breadcrumb.url }}" class="breadcrumb-link">
-                    {{ breadcrumb.name }}
-                </a>
-                {% else %}
-                <span class="breadcrumb-current">{{ breadcrumb.name }}</span>
-                {% endif %}
-                {% if not forloop.last %}
-                <i class="fas fa-chevron-right breadcrumb-separator"></i>
-                {% endif %}
-            </li>
-            {% endfor %}
-        </ol>
-    </nav>
-    {% endif %}
+    .amber-glow {
+        box-shadow: 0 0 15px 2px rgba(255, 176, 0, 0.2);
+        border: 1px solid #FFB000;
+    }
 
-    <div class="blog-header">
-        <h1 class="blog-title">DIGITAL CODEX</h1>
-        <p class="blog-subtitle">
-            Exploring the intersection of artificial intelligence, machine learning, and the future of software
-            development through the lens of a digital architect.
-        </p>
-    </div>
+    .hover-interference {
+        transition: all 0.1s steps(3);
+    }
 
-    <!-- Featured Posts Carousel -->
-    {% if featured_posts and not current_category and not current_tag and not query %}
-    <div id="featuredCarousel">
-        <div class="carousel-container">
-            <div class="carousel-viewport">
-                <span class="featured-badge text-center">
-                    <i class="fas fa-star"></i>
-                    Featured Digital Codex
-                </span>
-                <div class="carousel-track" id="carouselTrack">
-                    {% for post in featured_posts %}
-                    <div class="featured-post-card">
-                        {% if post.featured_image %}
-                        <div class="featured-post-image"
-                            style="background-image: url('{{ post.featured_image.url }}');"></div>
-                        {% else %}
-                        <div class="featured-post-image featured-post-placeholder">
-                            <i class="{% random_icon %}"></i>
-                        </div>
-                        {% endif %}
-                        <div class="featured-post-content">
-                            <div class="featured-post-meta">
-                                {% if post.categories.first %}
+    .hover-interference:hover {
+        transform: translate(-1px, 1px);
+        filter: drop-shadow(2px 0 0 rgba(255, 0, 0, 0.5)) drop-shadow(-2px 0 0 rgba(0, 255, 255, 0.5));
+        background-color: rgba(255, 176, 0, 0.05);
+    }
 
-                                <span class="featured-post-category">
-                                    <a href="{% url 'blog:list_by_category' post.categories.first.slug %}">
-                                        {{ post.categories.first.name }}
-                                    </a>
-                                </span>
-                                {% endif %}
+    .image-hover-interference:hover {
+        filter: invert(10%) sepia(100%) hue-rotate(350deg) saturate(500%) contrast(200%);
+    }
+</style>
 
-                                <span class="featured-post-date">{{ post.created_at|date:"M d, Y" }}</span>
-                            </div>
-                            <h3 class="featured-post-title">
-                                <a href="{% url 'blog:detail' post.slug %}">{{ post.title }}</a>
-                            </h3>
-                            <p class="featured-post-excerpt">{{ post.excerpt|safe|truncatechars:250 }}</p>
-                            {% if post.tags.all %}
-                            <div class="featured-post-tags">
-                                {% for tag in post.tags.all|slice:":3" %}
-                                <a href="{% url 'blog:list_by_tag' tag.slug %}" class="featured-post-tag"
-                                    style="--tag-color: {{ tag.color }};">
-                                    {{ tag.name }}
-                                </a>
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                            <a href="{% url 'blog:detail' post.slug %}" class="featured-post-link">
-                                Read Article
-                                <i class="fas fa-arrow-right"></i>
-                            </a>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
+<!-- Main Layout Container -->
+<div class="flex-1 flex flex-col md:flex-row h-full w-full border-b border-zinc-800">
+
+    <!-- Sidebar Navigation -->
+    <aside
+        class="hidden md:flex w-64 flex-shrink-0 border-r border-zinc-800 bg-black z-10 flex-col sticky top-0 h-screen">
+        <div class="p-4 border-b border-zinc-800">
+            <div class="flex items-center gap-2 text-[#FFB000]">
+                <span class="material-symbols-outlined">terminal</span>
+                <span class="font-bold tracking-widest text-sm text-[#FFB000]">TERM_V.1.0</span>
             </div>
         </div>
-        {% if featured_posts|length > 1 %}
-        <div class="carousel-controls">
-            <button class="carousel-btn carousel-prev" id="carouselPrev">
-                <i class="fas fa-chevron-left"></i>
-            </button>
-            <div class="carousel-indicators" id="carouselIndicators">
-                {% for post in featured_posts %}
-                <button class="carousel-indicator {% if forloop.first %}active{% endif %}"
-                    data-slide="{{ forloop.counter0 }}"></button>
-                {% endfor %}
-            </div>
-            <button class="carousel-btn carousel-next" id="carouselNext">
-                <i class="fas fa-chevron-right"></i>
-            </button>
-        </div>
-        {% endif %}
-    </div>
-
-    {% endif %}
-
-
-
-    <!-- Search Results Summary -->
-    {% if query or current_category or current_tag %}
-    <div class="search-results-summary">
-        <div class="results-info">
-            <h2 class="results-title">
-                {% if query %}
-                Search Results for "{{ query }}"
-                {% elif current_category and current_tag %}
-                {{ current_category.name }} posts tagged with {{ current_tag.name }}
-                {% elif current_category %}
-                Posts in {{ current_category.name }}
-                {% elif current_tag %}
-                Posts tagged with {{ current_tag.name }}
-                {% endif %}
-            </h2>
-            <p class="results-count">
-                {{ total_results }} post{{ total_results|pluralize }} found
-                {% if current_filters.date_range and current_filters.date_range != 'all' %}
-                in the {{ current_filters.date_range }}
-                {% endif %}
-            </p>
-        </div>
-
-        {% if query or current_filters.category != 'all' or current_filters.tag != 'all' or current_filters.date_range != 'all' %}
-        <div class="active-filters-summary">
-            <span class="filters-label">Active filters:</span>
-            {% if query %}
-            <span class="filter-tag search-filter">
-                <i class="fas fa-search"></i>
-                "{{ query }}"
-                <a href="{% url 'blog:list' %}" class="remove-filter" title="Clear search">&times;</a>
-            </span>
-            {% endif %}
-            {% if current_category %}
-            <span class="filter-tag category-filter">
-                <i class="fas fa-folder"></i>
-                {{ current_category.name }}
-                <a href="{% if current_tag %}{% url 'blog:list_by_tag' current_tag.slug %}{% else %}{% url 'blog:list' %}{% endif %}"
-                    class="remove-filter" title="Remove category filter">&times;</a>
-            </span>
-            {% endif %}
-            {% if current_tag %}
-            <span class="filter-tag tag-filter">
-                <i class="fas fa-tag"></i>
-                {{ current_tag.name }}
-                <a href="{% if current_category %}{% url 'blog:list_by_category' current_category.slug %}{% else %}{% url 'blog:list' %}{% endif %}"
-                    class="remove-filter" title="Remove tag filter">&times;</a>
-            </span>
-            {% endif %}
-            <a href="{% url 'blog:list' %}" class="clear-all-filters">
-                <i class="fas fa-times-circle"></i>
-                Clear all
+        <nav class="p-4 flex flex-col gap-6 font-mono text-sm">
+            <div class="text-gray-500 uppercase text-xs tracking-wider mb-2">./ROOT_DIRECTORY</div>
+            <a href="/" class="group flex items-center gap-2 text-white hover:text-[#FFB000] transition-colors py-1">
+                <span class="text-gray-600">├──</span>
+                <span class="material-symbols-outlined text-[18px]">home</span>
+                <span>index.sh</span>
             </a>
-        </div>
-        {% endif %}
-    </div>
-    {% endif %}
-
-
-
-    <!-- Navigation and Filters -->
-    <div class="blog-filters">
-        <!-- Category Navigation -->
-        {% if all_categories %}
-        <div class="filter-section">
-            <h3 class="filter-title">Categories</h3>
-            <div class="category-nav">
-                <a href="{% url 'blog:list' %}" class="category-link {% if not current_category %}active{% endif %}">All
-                    Posts</a>
-                {% for category in all_categories %}
-                <a href="{% url 'blog:list_by_category' category.slug %}"
-                    class="category-link {% if current_category.slug == category.slug %}active{% endif %}">
-                    {{ category.name }}
+            <div class="flex flex-col gap-1">
+                <a href="{% url 'blog:list' %}"
+                    class="group flex items-center gap-2 text-[#FFB000] py-1 bg-[#FFB000]/10 border-l-2 border-[#FFB000] pl-2 -ml-[2px]">
+                    <span class="text-gray-600 hidden">├──</span>
+                    <span class="material-symbols-outlined text-[18px]">article</span>
+                    <span>blog_dir/</span>
                 </a>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Tag Cloud -->
-        {% if tag_cloud %}
-        <div class="filter-section">
-            <h3 class="filter-title">Tags</h3>
-            <div class="tag-cloud">
-                {% for tag in tag_cloud %}
-                <a href="{% url 'blog:list_by_tag' tag.slug %}"
-                    class="tag-link {% if current_tag.slug == tag.slug %}active{% endif %}"
-                    style="--tag-color: {{ tag.color }};" data-count="{{ tag.post_count }}">
-                    {{ tag.name }}
-                    <span class="tag-count">{{ tag.post_count }}</span>
-                </a>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Active Filters Display -->
-        {% if current_category or current_tag %}
-        <div class="active-filters">
-            <h4>Active Filters:</h4>
-            {% if current_category %}
-            <span class="active-filter">
-                Category: {{ current_category.name }}
-                <a href="{% if current_tag %}{% url 'blog:list_by_tag' current_tag.slug %}{% else %}{% url 'blog:list' %}{% endif %}"
-                    class="remove-filter">&times;</a>
-            </span>
-            {% endif %}
-            {% if current_tag %}
-            <span class="active-filter">
-                Tag: {{ current_tag.name }}
-                <a href="{% if current_category %}{% url 'blog:list_by_category' current_category.slug %}{% else %}{% url 'blog:list' %}{% endif %}"
-                    class="remove-filter">&times;</a>
-            </span>
-            {% endif %}
-        </div>
-        {% endif %}
-    </div>
-
-    <div class="blog-grid" id="blogGrid">
-        {% for post in posts %}
-        <article class="blog-card">
-            {% if post.featured_image %}
-            <div class="blog-image" style="background-image: url('{{ post.featured_image.url }}');"></div>
-            {% else %}
-            <div class="blog-image"><i class="{% random_icon %}"></i></div>
-            {% endif %}
-            <div class="blog-content">
-                <div class="blog-meta">
-                    <span class="blog-category">{{ post.categories.first.name|default:'General' }}</span>
-                    <span class="blog-date"><i class="fas fa-calendar"></i> {{ post.created_at|date:"F d, Y" }}</span>
-                </div>
-                {% if post.tags.all %}
-                <div class="post-tags">
-                    {% for tag in post.tags.all %}
-                    <a href="{% url 'blog:list_by_tag' tag.slug %}" class="post-tag"
-                        style="--tag-color: {{ tag.color }};">
-                        {{ tag.name }}
+                <div class="pl-6 flex flex-col gap-1 mt-1 text-gray-400 text-xs">
+                    <a href="{% url 'blog:list' %}"
+                        class="flex justify-between hover:text-white cursor-pointer {% if not current_category %}text-[#FFB000]{% endif %}">
+                        <span>- ALL</span>
+                    </a>
+                    {% for category in all_categories %}
+                    <a href="{% url 'blog:list_by_category' category.slug %}"
+                        class="flex justify-between hover:text-white cursor-pointer {% if current_category.slug == category.slug %}text-[#FFB000]{% endif %}">
+                        <span>- {{ category.name|upper }}</span>
                     </a>
                     {% endfor %}
                 </div>
-                {% endif %}
-                <h2 class="blog-card-title">{{ post.title }}</h2>
-                <p class="blog-excerpt">{{ post.excerpt|safe|truncatechars:200 }}</p>
-                <a href="{% url 'blog:detail' post.slug %}" class="featured-post-link">Read More <i
-                        class="fas fa-arrow-right"></i></a>
             </div>
-        </article>
+        </nav>
 
-        <!-- AdSense In-Feed Ad every 3 posts -->
-        {% if forloop.counter|divisibleby:3 and not forloop.last %}
-        <article class="blog-card ad-card">
-            <script async
-                src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6078293202282096"
-                crossorigin="anonymous"></script>
-            <ins class="adsbygoogle" style="display:block" data-ad-format="fluid" data-ad-layout-key="-5d+c9-1y-85+x4"
-                data-ad-client="ca-pub-6078293202282096" data-ad-slot="9266644485"></ins>
-            <script>
-                (adsbygoogle = window.adsbygoogle || []).push({});
-            </script>
-        </article>
-        {% endif %}
-
-        {% empty %}
-        <p style="grid-column: 1 / -1; text-align: center; padding: 4rem 0;">No posts found matching your criteria.</p>
-        {% endfor %}
-    </div>
-</div>
-
-<!-- Enhanced Pagination -->
-{% if posts.has_other_pages %}
-<div class="pagination">
-    {% if posts.has_previous %}
-    <a href="?page={{ posts.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
-        class="page-btn">&larr;</a>
-    {% else %}
-    <span class="page-btn disabled">&larr;</span>
-    {% endif %}
-
-    {% for i in posts.paginator.page_range %}
-    {% if posts.number == i %}
-    <span class="page-btn active">{{ i }}</span>
-    {% elif i > posts.number|add:'-3' and i < posts.number|add:'3' %} <a
-        href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
-        class="page-btn">{{ i }}</a>
-        {% endif %}
-        {% endfor %}
-
-        {% if posts.has_next %}
-        <a href="?page={{ posts.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
-            class="page-btn">&rarr;</a>
-        {% else %}
-        <span class="page-btn disabled">&rarr;</span>
-        {% endif %}
-</div>
-
-
-{% endif %}
-
-<!-- Newsletter Signup -->
-<div class="newsletter-signup">
-    <h3 class="newsletter-title">Join the Digital Evolution</h3>
-    <p style="color: var(--text-secondary); margin-bottom: 0;">
-        Subscribe to receive the latest insights on AI, development, and the future of technology.
-    </p>
-
-    {% if messages %}
-    <div class="newsletter-messages">
-        {% for message in messages %}
-        <p class="message {{ message.tags }}">{{ message }}</p>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    <form class="newsletter-form" method="post" action="{% url 'blog:subscribe_newsletter' %}">
-        {% csrf_token %}
-        {{ newsletter_form.email }}
-        <button type="submit" class="newsletter-btn">Subscribe</button>
-    </form>
-</div>
-
-<!-- Popular Posts Sidebar -->
-{% if popular_posts %}
-<div class="popular-posts-section">
-    <h3 class="section-title">
-        <i class="fas fa-fire"></i>
-        Popular This Week
-    </h3>
-    <div class="popular-posts-list">
-        {% for post in popular_posts %}
-        <div class="popular-post-item">
-            <div class="popular-post-rank">{{ forloop.counter }}</div>
-            <div class="popular-post-content">
-                <h4 class="popular-post-title">
-                    <a href="{% url 'blog:detail' post.slug %}">{{ post.title }}</a>
-                </h4>
-                <div class="popular-post-meta">
-                    <span class="popular-post-views">
-                        <i class="fas fa-eye"></i>
-                        {{ post.view_count }}
-                    </span>
-                    <span class="popular-post-date">{{ post.created_at|date:"M d" }}</span>
+        <!-- Tags Directory -->
+        <nav class="p-4 flex flex-col gap-6 font-mono text-sm border-t border-zinc-800">
+            <div class="text-gray-500 uppercase text-xs tracking-wider mb-2">./TAGS</div>
+            <div class="flex flex-col gap-1">
+                <div class="pl-2 flex flex-col gap-1 mt-1 text-gray-400 text-xs">
+                    {% for tag in tag_cloud %}
+                    <a href="{% url 'blog:list_by_tag' tag.slug %}"
+                        class="flex justify-between hover:text-white cursor-pointer {% if current_tag.slug == tag.slug %}text-[#FFB000]{% endif %}">
+                        <span># {{ tag.name|upper }}</span>
+                        <span>[{{ tag.post_count }}]</span>
+                    </a>
+                    {% empty %}
+                    <span class="text-gray-600 italic">No tags found.</span>
+                    {% endfor %}
                 </div>
             </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col w-full bg-black relative">
+        <!-- Top Bar -->
+        <header
+            class="h-14 border-b border-zinc-800 flex items-center justify-between px-6 bg-black/95 backdrop-blur sticky top-0 z-20">
+            <div class="flex items-center gap-2 text-sm text-gray-400 font-mono">
+                <a href="/"
+                    class="md:hidden material-symbols-outlined text-[#FFB000] hover:text-white mr-2 text-xl">menu</a>
+                <span class="hidden sm:inline">root</span>
+                <span class="hidden sm:inline">@</span>
+                <span class="text-white hidden sm:inline">kabhishek18</span>
+                <span class="hidden sm:inline">:</span>
+                <span class="text-[#FFB000]">~/blog_dir</span>
+            </div>
+
+            <form action="{% url 'blog:list' %}" method="get"
+                class="flex flex-1 max-w-sm mx-6 items-center bg-zinc-900 border border-zinc-700 px-3 py-1">
+                <span class="text-[#FFB000] font-bold mr-2">&gt;</span>
+                <input type="text" name="q" value="{{ query|default:'' }}" placeholder="grep --search..."
+                    class="bg-transparent border-none text-white focus:ring-0 text-xs font-mono w-full outline-none placeholder-zinc-500" />
+            </form>
+        </header>
+
+        <div class="flex-1 custom-scrollbar p-6 md:p-10 space-y-12">
+
+            <section class="border-l-2 border-[#FFB000] pl-6 py-2">
+                <p class="text-[#FFB000] text-sm mb-2 font-mono">&gt; ./exec fetch_logs --sort=DESC</p>
+                <h1 class="text-4xl md:text-5xl font-bold uppercase tracking-tighter text-white mb-4 leading-none">
+                    {% if current_category %}
+                    DIR: {{ current_category.name|upper }}
+                    {% elif current_tag %}
+                    GREP: {{ current_tag.name|upper }}
+                    {% elif query %}
+                    SEARCH: {{ query|upper }}
+                    {% else %}
+                    SYS_BLOG_FEED
+                    {% endif %}
+                </h1>
+                <p class="text-gray-400 max-w-2xl text-sm font-mono leading-relaxed">
+                    Aggregated low-res data artifacts and architectural notes. Showing [{{ posts.paginator.count }}]
+                    matched checksums.
+                </p>
+            </section>
+
+            <!-- Blog Feed -->
+            <section class="space-y-8">
+                {% for post in posts %}
+                <a href="{% url 'blog:detail' post.slug %}"
+                    class="block border border-zinc-800 bg-black p-4 hover-interference group relative overflow-hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-6 relative z-10">
+                        <div
+                            class="md:col-span-4 border border-zinc-800 bg-zinc-900 h-48 relative overflow-hidden image-hover-interference cursor-pointer">
+                            {% if post.featured_image %}
+                            <img src="{{ post.featured_image.url }}" alt="{{ post.title }}"
+                                class="w-full h-full object-cover binary-dither opacity-70 group-hover:opacity-100 transition-opacity" />
+                            {% else %}
+                            <div
+                                class="w-full h-full flex flex-col items-center justify-center text-zinc-600 binary-dither bg-zinc-900 border border-zinc-800">
+                                <span class="material-symbols-outlined text-4xl mb-2">image_not_supported</span>
+                                <span class="font-mono text-xs">NO_IMAGE_DATA</span>
+                            </div>
+                            {% endif %}
+                            <div
+                                class="absolute inset-0 border border-[#FFB000] opacity-0 group-hover:opacity-100 transition-opacity amber-glow pointer-events-none">
+                            </div>
+                        </div>
+                        <div class="md:col-span-8 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center gap-4 text-xs font-mono text-[#FFB000] mb-3">
+                                    <span class="border border-[#FFB000]/30 px-2 py-0.5 bg-[#FFB000]/10">CHK: 0x{{ post.id }}F0{{ forloop.counter }}</span>
+                                    <span class="text-zinc-500">{{ post.created_at|date:"Y-m-d" }}</span>
+                                    <span class="text-zinc-500">TAGS: [{{ post.categories.first.name|default:'GENERAL'|upper }}]</span>
+                                </div>
+                                <h2
+                                    class="text-2xl font-bold text-white uppercase group-hover:text-[#FFB000] transition-colors mb-4 inline-block border-b border-transparent group-hover:border-[#FFB000] pb-1">
+                                    {{ post.title }}
+                                </h2>
+                                <p class="text-zinc-400 font-mono text-sm leading-relaxed mb-4">
+                                    {{ post.excerpt|safe|truncatechars:200 }}
+                                </p>
+                            </div>
+                            <div
+                                class="flex items-center text-xs font-mono text-zinc-600 uppercase group-hover:text-[#FFB000]">
+                                <span>&gt; INITIATE_READ()</span>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+                {% empty %}
+                <div class="text-zinc-500 font-mono p-4 border border-zinc-800 bg-zinc-900/50">
+                    <p>&gt; ERR: NO_RECORDS_FOUND</p>
+                </div>
+                {% endfor %}
+            </section>
+
+            <!-- Terminal Pagination -->
+            {% if posts.has_other_pages %}
+            <div class="flex items-center gap-2 font-mono text-sm pt-8 border-t border-zinc-800">
+                <span class="text-zinc-500 mr-4">PAGE:</span>
+                {% if posts.has_previous %}
+                <a href="?page={{ posts.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
+                    class="border border-zinc-700 text-white hover:border-[#FFB000] hover:text-[#FFB000] px-3 py-1 bg-black transition-colors">&lt;</a>
+                {% else %}
+                <span class="border border-zinc-800 text-zinc-600 px-3 py-1 bg-black cursor-not-allowed">&lt;</span>
+                {% endif %}
+
+                {% for i in posts.paginator.page_range %}
+                {% if posts.number == i %}
+                <span class="border border-[#FFB000] bg-[#FFB000]/10 text-[#FFB000] px-3 py-1">{{ i }}</span>
+                {% elif i > posts.number|add:'-3' and i < posts.number|add:'3' %} <a
+                    href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
+                    class="border border-zinc-700 text-white hover:border-[#FFB000] hover:text-[#FFB000] px-3 py-1 bg-black transition-colors">
+                    {{ i }}</a>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if posts.has_next %}
+                    <a href="?page={{ posts.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
+                        class="border border-zinc-700 text-white hover:border-[#FFB000] hover:text-[#FFB000] px-3 py-1 bg-black transition-colors">&gt;</a>
+                    {% else %}
+                    <span class="border border-zinc-800 text-zinc-600 px-3 py-1 bg-black cursor-not-allowed">&gt;</span>
+                    {% endif %}
+            </div>
+            {% endif %}
+
         </div>
-        {% endfor %}
-    </div>
+    </main>
 </div>
-{% endif %}
-<!-- Enhanced Search and Navigation JavaScript -->
-<script src="{% static 'js/blog-search.js' %}"></script>
-
-<!-- Featured Posts Carousel JavaScript -->
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Featured Posts Carousel Functionality
-        const carousel = document.getElementById('featuredCarousel');
-        if (carousel) {
-            const track = document.getElementById('carouselTrack');
-            const prevBtn = document.getElementById('carouselPrev');
-            const nextBtn = document.getElementById('carouselNext');
-            const indicators = document.querySelectorAll('.carousel-indicator');
-
-            let currentSlide = 0;
-            const totalSlides = indicators.length;
-
-            if (totalSlides <= 1) return; // No need for carousel with single slide
-
-            function updateCarousel() {
-                const translateX = -currentSlide * 100;
-                track.style.transform = `translateX(${translateX}%)`;
-
-                // Update indicators
-                indicators.forEach((indicator, index) => {
-                    indicator.classList.toggle('active', index === currentSlide);
-                });
-
-                // Update button states
-                prevBtn.disabled = currentSlide === 0;
-                nextBtn.disabled = currentSlide === totalSlides - 1;
-            }
-
-            function nextSlide() {
-                if (currentSlide < totalSlides - 1) {
-                    currentSlide++;
-                    updateCarousel();
-                }
-            }
-
-            function prevSlide() {
-                if (currentSlide > 0) {
-                    currentSlide--;
-                    updateCarousel();
-                }
-            }
-
-            function goToSlide(slideIndex) {
-                currentSlide = slideIndex;
-                updateCarousel();
-            }
-
-            // Event listeners
-            if (nextBtn) nextBtn.addEventListener('click', nextSlide);
-            if (prevBtn) prevBtn.addEventListener('click', prevSlide);
-
-            indicators.forEach((indicator, index) => {
-                indicator.addEventListener('click', () => goToSlide(index));
-            });
-
-            // Auto-play carousel (optional)
-            let autoPlayInterval;
-            function startAutoPlay() {
-                autoPlayInterval = setInterval(() => {
-                    if (currentSlide < totalSlides - 1) {
-                        nextSlide();
-                    } else {
-                        currentSlide = 0;
-                        updateCarousel();
-                    }
-                }, 5000); // Change slide every 5 seconds
-            }
-
-            function stopAutoPlay() {
-                clearInterval(autoPlayInterval);
-            }
-
-            // Start auto-play
-            startAutoPlay();
-
-            // Pause auto-play on hover
-            carousel.addEventListener('mouseenter', stopAutoPlay);
-            carousel.addEventListener('mouseleave', startAutoPlay);
-
-            // Touch/swipe support for mobile
-            let startX = 0;
-            let currentX = 0;
-            let isDragging = false;
-
-            carousel.addEventListener('touchstart', (e) => {
-                startX = e.touches[0].clientX;
-                isDragging = true;
-                stopAutoPlay();
-            });
-
-            carousel.addEventListener('touchmove', (e) => {
-                if (!isDragging) return;
-                currentX = e.touches[0].clientX;
-            });
-
-            carousel.addEventListener('touchend', () => {
-                if (!isDragging) return;
-                isDragging = false;
-
-                const diffX = startX - currentX;
-                const threshold = 50; // Minimum swipe distance
-
-                if (Math.abs(diffX) > threshold) {
-                    if (diffX > 0) {
-                        nextSlide();
-                    } else {
-                        prevSlide();
-                    }
-                }
-
-                startAutoPlay();
-            });
-
-            // Initialize carousel
-            updateCarousel();
-        }
-    });
-</script>
-{% endblock %}
+{% endblock content %}
