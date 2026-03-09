@@ -247,15 +247,17 @@
                 <!-- JSON Frontmatter metadata -->
                 <div class="mb-10 text-zinc-400">
                     <span class="text-[#FFB000]">{</span><br />
-                    <span class="pl-4">"title": "<span class="text-white">{{ post.title }}</span>",</span><br />
-                    <span class="pl-4">"author": "<span class="text-white">{{
-                            post.author.get_full_name|default:post.author.username }}</span>",</span><br />
-                    <span class="pl-4">"checksum": "<span class="text-[#FFB000]">0x{{ post.id
-                            }}F09</span>",</span><br />
-                    <span class="pl-4">"date": "<span class="text-zinc-200">{{ post.created_at|date:"Y-m-d"
-                            }}</span>",</span><br />
-                    <span class="pl-4">"tags": [{% for tag in post.tags.all %}"<span class="text-zinc-200">{{ tag.name
-                            }}"</span>{% if not forloop.last %}, {% endif %}{% endfor %}]</span><br />
+                    <span class="pl-4">"title": "<span class="text-white">{{post.title}}</span>",</span><br />
+                    <span class="pl-4">"author": "<span
+                            class="text-white">{{post.author.get_full_name|default:post.author.username}}</span>",</span><br />
+                    <span class="pl-4">"checksum": "<span class="text-[#FFB000]">0x{{post.id}}F09</span>",</span><br />
+                    <span class="pl-4">"date": "<span
+                            class="text-zinc-200">{{post.created_at|date:"Y-m-d"}}</span>",</span><br />
+                    <span class="pl-4">"tags": [
+                        {% for tag in post.tags.all %}
+                        "<span class="text-zinc-200">{{tag.name}}</span>"{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                        ]</span><br />
                     <span class="text-[#FFB000]">}</span>
                 </div>
 
@@ -312,13 +314,17 @@
                             {% endif %}
                         </div>
                         <div class="flex flex-col">
-                            <h3 class="text-white font-bold uppercase">{{
-                                post.author.get_full_name|default:post.author.username }}</h3>
+                            <h3 class="text-white font-bold uppercase">
+                                {{post.author.get_full_name|default:post.author.username}}</h3>
                             <p class="text-xs text-zinc-500 mb-2">
                                 {% if post.author.profile.about %}
                                 {{ post.author.profile.about }}
                                 {% else %}
-                                SYSTEM_ADMINISTRATOR // DEV_OPS
+                                I’m Kumar Abhishek, a high-impact software engineer and AI specialist with over 9 years
+                                of delivering secure, scalable, and intelligent systems across E‑commerce, EdTech,
+                                Aviation, and SaaS. I don’t just write code — I engineer ecosystems. From system
+                                architecture, debugging, and AI pipelines to securing and scaling cloud-native
+                                infrastructure, I build end-to-end solutions that drive impact.
                                 {% endif %}
                             </p>
                             <!-- Social Medias -->
