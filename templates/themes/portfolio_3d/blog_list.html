@@ -1,0 +1,11 @@
+{# portfolio_3d — purple/violet accent #}
+{% extends "themes/base_blog_list.html" %}
+
+{% block theme_css %}
+.post-card:hover { border-color:#ac89ff; transform:translateY(-4px); box-shadow: 0 8px 32px rgba(172,137,255,.08); }
+.blog-filter-list a.active, .blog-filter-list a:hover { color:#ac89ff; border-color:#ac89ff; }
+.blog-theme-chip { color:#ac89ff; border-color:rgba(172,137,255,.28); }
+.blog-pagination a:hover { border-color:#ac89ff; color:#ac89ff; }
+.post-tag { border-color:rgba(172,137,255,.18); }
+.blog-panel { border-color:rgba(172,137,255,.12); }
+{% endblock theme_css %}

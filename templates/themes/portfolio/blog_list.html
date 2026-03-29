@@ -1,0 +1,11 @@
+{# portfolio — amber/gold accent #}
+{% extends "themes/base_blog_list.html" %}
+
+{% block theme_css %}
+.post-card:hover { border-color:#FFB000; transform:translateY(-4px); box-shadow: 0 8px 32px rgba(255,176,0,.08); }
+.blog-filter-list a.active, .blog-filter-list a:hover { color:#FFB000; border-color:#FFB000; }
+.blog-theme-chip { color:#FFB000; border-color:rgba(255,176,0,.28); }
+.blog-pagination a:hover { border-color:#FFB000; color:#FFB000; }
+.post-tag { border-color:rgba(255,176,0,.18); }
+.blog-panel { border-color:rgba(255,176,0,.12); }
+{% endblock theme_css %}

@@ -1,0 +1,25 @@
+.stack-header {
+  margin-bottom: var(--spacing-8);
+}
+
+.stack-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-4);
+}
+
+.stack-category {
+  padding: 2rem;
+  border-radius: var(--radius-md);
+}
+
+.stack-category-title {
+  margin-bottom: 1.5rem;
+  color: var(--color-secondary);
+}
+
+.stack-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}

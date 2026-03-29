@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}<title>{{ title|default:"Kumar Abhishek" }}</title>{% endblock title %}
+
+{% block meta_data %}
+<meta name="description" content="{{ meta_details }}">
+<meta name="keywords" content="{{ default_meta_keywords }}, portfolio, django templates, 3d portfolio, engineering blog">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="author" content="Kumar Abhishek">
+<meta name="publisher" content="{{ publisher_name }}">
+<meta property="og:title" content="{{ title }}">
+<meta property="og:description" content="{{ meta_details }}">
+<meta property="og:type" content="website">
+<meta property="og:image" content="{{ publisher_logo_url }}">
+<meta property="og:url" content="{{ canonical_url }}">
+<meta property="og:site_name" content="{{ publisher_name }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ title }}">
+<meta name="twitter:description" content="{{ meta_details }}">
+<meta name="twitter:image" content="{{ publisher_logo_url }}">
+<link rel="canonical" href="{{ canonical_url }}">
+{% endblock meta_data %}
+
+{% block schema_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "{{ publisher_name|escapejs }}",
+  "url": "{{ canonical_url|escapejs }}",
+  "publisher": {
+    "@type": "Organization",
+    "name": "{{ publisher_name|escapejs }}",
+    "url": "{{ site_url|escapejs }}",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "{{ publisher_logo_url|escapejs }}"
+    }
+  },
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": "{{ site_url|escapejs }}{% url 'blog:list' %}?q={search_term_string}",
+    "query-input": "required name=search_term_string"
+  }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "name": "Kumar Abhishek",
+  "url": "{{ site_url|escapejs }}/",
+  "email": "mailto:developer@kabhishek18.com",
+  "sameAs": [
+    "https://www.linkedin.com/in/kabhishek18/",
+    "https://github.com/kabhishek18"
+  ]
+}
+</script>
+{% endblock schema_data %}
+
+{% block content %}
+<style>
+  .theme-shell { padding: 7rem 8vw 4rem; }
+  .theme-nav { position: sticky; top: 0; z-index: 30; backdrop-filter: blur(18px); background: rgba(7,10,16,.78); border-bottom: 1px solid rgba(255,255,255,.08); }
+  .theme-nav-inner, .theme-hero, .theme-sections { max-width: 1320px; margin: 0 auto; }
+  .theme-nav-inner { display:flex; justify-content:space-between; align-items:center; padding:1rem 8vw; }
+  .theme-nav-links { display:flex; gap:1.25rem; flex-wrap:wrap; }
+  .theme-nav a { color:#fff; text-decoration:none; text-transform:uppercase; letter-spacing:.08em; font-size:.85rem; }
+  .theme-grid { display:grid; grid-template-columns:1.05fr .95fr; gap:2rem; align-items:center; }
+  .theme-kicker { color:#8ff5ff; text-transform:uppercase; letter-spacing:.12em; font-size:.8rem; }
+  .theme-title { font-size:clamp(3.4rem, 7vw, 6.2rem); line-height:.95; margin:.8rem 0 1rem; }
+  .theme-copy { max-width:44rem; color:#c5c5c5; font-size:1.05rem; line-height:1.8; }
+  .theme-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; margin-top:2rem; }
+  .theme-card { border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.03); border-radius:1rem; padding:1.2rem; }
+  .theme-card strong { display:block; color:#fff; font-size:1.35rem; margin-top:.35rem; }
+  .theme-panel { min-height:480px; border-radius:1.5rem; border:1px solid rgba(255,255,255,.1); padding:2rem; display:flex; align-items:flex-end; justify-content:flex-start; }
+  .theme-panel-label { font-size:1.8rem; color:#fff; max-width:14ch; }
+  .theme-sections { display:grid; gap:1.5rem; margin-top:3rem; }
+  .theme-section { scroll-margin-top:100px; border:1px solid rgba(255,255,255,.08); border-radius:1.25rem; padding:1.5rem; background:rgba(255,255,255,.02); }
+  .theme-section p { color:#b8b8b8; line-height:1.8; max-width:60rem; }
+  .theme-cta { display:inline-flex; margin-top:1.5rem; padding:.95rem 1.35rem; border-radius:.8rem; text-decoration:none; color:#061018; background:#8ff5ff; font-weight:700; text-transform:uppercase; letter-spacing:.08em; }
+  .theme-portfolio-badge { display:inline-flex; margin-top:1rem; padding:.35rem .7rem; border-radius:999px; border:1px solid rgba(255,255,255,.14); color:#ddd; font-size:.78rem; text-transform:uppercase; letter-spacing:.08em; }
+  .theme-others_3d .theme-panel { background: radial-gradient(circle at top, rgba(76,178,255,.24), transparent 38%), linear-gradient(135deg, rgba(10,20,28,.98), rgba(4,6,11,.96)); }
+  .theme-portfolio_3d .theme-panel { background: radial-gradient(circle at top, rgba(172,137,255,.24), transparent 38%), linear-gradient(135deg, rgba(15,8,22,.98), rgba(5,6,12,.96)); }
+  .theme-portfolio .theme-panel { background: radial-gradient(circle at top, rgba(255,176,0,.18), transparent 38%), linear-gradient(135deg, rgba(17,14,8,.98), rgba(5,5,6,.96)); }
+  @media (max-width: 920px) {
+    .theme-grid { grid-template-columns:1fr; }
+    .theme-stats { grid-template-columns:1fr; }
+    .theme-nav-inner { padding:1rem 5vw; }
+    .theme-shell { padding:6rem 5vw 3rem; }
+  }
+</style>
+
+<div class="theme-nav">
+  <div class="theme-nav-inner theme-nav">
+    <a href="/">Kumar Abhishek</a>
+    <div class="theme-nav-links">
+      <a href="#about">About</a>
+      <a href="#work">Work</a>
+      <a href="#stack">Stack</a>
+      <a href="#contact">Contact</a>
+      <a href="{% url 'blog:list' %}">Blog</a>
+    </div>
+  </div>
+</div>
+
+<div class="theme-shell theme-{{ active_theme }}">
+  <section class="theme-hero theme-grid">
+    <div>
+      <p class="theme-kicker">Admin Switchable Portfolio</p>
+      <h1 class="theme-title">
+        {% if active_theme == 'others_3d' %}
+        Others-3d as the primary immersive portfolio.
+        {% elif active_theme == 'portfolio_3d' %}
+        portfolio-3d as the animated secondary showcase.
+        {% else %}
+        portfolio as the structured system-first experience.
+        {% endif %}
+      </h1>
+      <p class="theme-copy">
+        This homepage is now driven by Django and can be switched from the admin panel. The same blog, category pages,
+        SEO metadata, and ad-ready article structure stay active regardless of which portfolio theme is selected.
+      </p>
+      <a class="theme-cta" href="{% url 'blog:list' %}">Open Blog</a>
+      <div class="theme-portfolio-badge">Active Template: {{ active_theme_label }}</div>
+
+      <div class="theme-stats">
+        <div class="theme-card">
+          <span class="theme-kicker">Blog</span>
+          <strong>SEO Ready</strong>
+        </div>
+        <div class="theme-card">
+          <span class="theme-kicker">Navigation</span>
+          <strong>Anchors + Blog URL</strong>
+        </div>
+        <div class="theme-card">
+          <span class="theme-kicker">Switching</span>
+          <strong>Django Admin Controlled</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="theme-panel">
+      <div>
+        <p class="theme-kicker">Theme Focus</p>
+        <div class="theme-panel-label">
+          {% if active_theme == 'others_3d' %}
+          Character-driven 3D storytelling with bold section movement.
+          {% elif active_theme == 'portfolio_3d' %}
+          Cinematic portfolio with avatar-led navigation and blog support.
+          {% else %}
+          Terminal-style portfolio with stronger reading and article depth.
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="theme-sections">
+    <section id="about" class="theme-section">
+      <p class="theme-kicker">About</p>
+      <h2>One backend, multiple portfolio presentations.</h2>
+      <p>The active portfolio is selected from Django Admin, so you can promote one template as primary while keeping the same content architecture underneath.</p>
+    </section>
+    <section id="work" class="theme-section">
+      <p class="theme-kicker">Work</p>
+      <h2>Blog and article URLs stay stable.</h2>
+      <p>Your blog list, blog detail, category pages, and previous/next article navigation continue working even when you switch from one portfolio template to another.</p>
+    </section>
+    <section id="stack" class="theme-section">
+      <p class="theme-kicker">Stack</p>
+      <h2>SEO and ads remain attached to the Django layer.</h2>
+      <p>That means canonical tags, metadata, category URLs, and ad-friendly article layouts are not tied to one frontend implementation.</p>
+    </section>
+    <section id="contact" class="theme-section">
+      <p class="theme-kicker">Contact</p>
+      <h2>Use the blog as the main content engine.</h2>
+      <p>Drive discovery from article content, then let whichever portfolio theme is active handle the brand expression around it.</p>
+    </section>
+  </div>
+</div>
+{% endblock content %}

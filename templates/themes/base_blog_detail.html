@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+
+{% block title %}<title>{{ title }}</title>{% endblock title %}
+
+{% block meta_data %}
+<meta name="description" content="{{ meta_details|striptags|truncatechars:160 }}">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="author" content="{{ author_display_name }}">
+<meta name="publisher" content="{{ publisher_name }}">
+<meta name="keywords" content="{% for category in post.categories.all %}{{ category.name }}, {% endfor %}{% for tag in post.tags.all %}{{ tag.name }}, {% endfor %}{{ post.title }}, {{ default_meta_keywords }}">
+<meta property="og:title" content="{{ title }}">
+<meta property="og:description" content="{{ meta_details|striptags|truncatechars:160 }}">
+<meta property="og:type" content="article">
+<meta property="og:url" content="{{ canonical_url }}">
+<meta property="og:site_name" content="{{ publisher_name }}">
+<meta property="article:published_time" content="{{ post.created_at|date:'c' }}">
+<meta property="article:modified_time" content="{{ post.updated_at|date:'c' }}">
+<meta property="article:author" content="{{ author_display_name }}">
+<meta property="article:publisher" content="{{ site_url }}">
+{% for category in post.categories.all %}
+<meta property="article:section" content="{{ category.name }}">
+{% endfor %}
+{% if primary_image %}
+<meta property="og:image" content="{{ site_url }}{{ primary_image.url }}">
+{% endif %}
+<link rel="canonical" href="{{ canonical_url }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ title }}">
+<meta name="twitter:description" content="{{ meta_details|striptags|truncatechars:160 }}">
+{% if primary_image %}
+<meta name="twitter:image" content="{{ site_url }}{{ primary_image.url }}">
+{% else %}
+<meta name="twitter:image" content="{{ publisher_logo_url }}">
+{% endif %}
+{% endblock meta_data %}
+
+{% block schema_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "{{ post.title|escapejs }}",
+  "description": "{{ meta_details|striptags|truncatechars:160|escapejs }}",
+  "keywords": "{% for tag in post.tags.all %}{{ tag.name }}{% if not forloop.last %}, {% endif %}{% endfor %}",
+  "url": "{{ canonical_url|escapejs }}",
+  "author": {
+    "@type": "Person",
+    "name": "{{ author_display_name|escapejs }}"
+  },
+  "datePublished": "{{ post.created_at|date:'c' }}",
+  "dateModified": "{{ post.updated_at|date:'c' }}",
+  "publisher": {
+    "@type": "Organization",
+    "name": "{{ publisher_name|escapejs }}",
+    "url": "{{ site_url|escapejs }}",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "{{ publisher_logo_url|escapejs }}"
+    }
+  },
+  "mainEntityOfPage": "{{ canonical_url|escapejs }}"{% if primary_image %},
+  "image": "{{ site_url|escapejs }}{{ primary_image.url }}"{% else %},
+  "image": "{{ publisher_logo_url|escapejs }}"{% endif %}
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "{{ site_url|escapejs }}/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Blog",
+      "item": "{{ site_url|escapejs }}{% url 'blog:list' %}"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "{{ post.title|escapejs }}",
+      "item": "{{ canonical_url|escapejs }}"
+    }
+  ]
+}
+</script>
+{% endblock schema_data %}
+
+{% block content %}
+<style>
+  .detail-shell { max-width: 1360px; margin: 0 auto; padding: 7rem 7vw 4rem; display:grid; grid-template-columns:minmax(0,1.3fr) minmax(300px,.7fr); gap:1.5rem; }
+  .detail-main, .detail-side, .detail-card, .detail-nav-link, .detail-chip { border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.03); border-radius:1.25rem; }
+  .detail-main, .detail-side { padding:1.75rem; min-width:0; }
+  .detail-kicker { display:inline-flex; align-items:center; gap:.55rem; font-size:.78rem; letter-spacing:.14em; text-transform:uppercase; color:#9dd9ff; }
+  .detail-kicker::before { content:""; width:2.5rem; height:1px; background:currentColor; opacity:.6; }
+  .detail-title { font-size:clamp(2.6rem,5vw,4.9rem); line-height:.98; margin:1rem 0; max-width:12ch; }
+  .detail-meta { display:flex; flex-wrap:wrap; gap:.85rem; color:#bdbdbd; font-size:.95rem; }
+  .detail-lead { color:#d1d1d1; font-size:1.08rem; line-height:1.85; margin-top:1rem; }
+  .detail-cover { margin:1.5rem 0; overflow:hidden; border-radius:1.1rem; background:linear-gradient(135deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); }
+  .detail-cover img { width:100%; max-height:460px; object-fit:cover; display:block; }
+  .detail-cover-fallback { min-height:260px; display:flex; align-items:flex-end; padding:1.5rem; color:#fff; background:radial-gradient(circle at top left, rgba(255,255,255,.12), transparent 42%), linear-gradient(160deg, rgba(14,22,38,.96), rgba(8,10,16,.98)); }
+  .detail-body { color:#cacaca; line-height:1.95; font-size:1.04rem; min-width:0; }
+  .detail-body h2, .detail-body h3 { color:#fff; margin:2.2rem 0 .9rem; line-height:1.2; }
+  .detail-body p, .detail-body ul, .detail-body ol, .detail-body pre { margin-bottom:1.2rem; }
+  .detail-body pre {
+    max-width:100%;
+    overflow-x:auto;
+    padding:1.25rem 1.35rem;
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:1rem;
+    background:rgba(5,7,11,.92);
+    white-space:pre;
+    scrollbar-width:thin;
+  }
+  .detail-body code {
+    font-family: "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
+    font-size:.95em;
+    word-break:break-word;
+  }
+  .detail-body pre code {
+    display:block;
+    min-width:max-content;
+    word-break:normal;
+  }
+  .detail-body img, .detail-body iframe, .detail-body video, .detail-body table {
+    max-width:100%;
+  }
+  .detail-body table {
+    display:block;
+    overflow-x:auto;
+  }
+  .detail-link-list {
+    align-items:flex-start;
+  }
+  .detail-chip-row, .detail-link-list, .detail-pagination { display:flex; flex-wrap:wrap; gap:.75rem; }
+  .detail-chip, .detail-nav-link { padding:.45rem .8rem; text-decoration:none; color:#d7d7d7; transition:.2s ease; }
+  .detail-author { display:grid; grid-template-columns:72px 1fr; gap:1rem; align-items:start; margin-top:2rem; padding-top:1.5rem; border-top:1px solid rgba(255,255,255,.08); }
+  .author-avatar { width:72px; height:72px; border-radius:50%; overflow:hidden; background:rgba(255,255,255,.06); display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.4rem; font-weight:700; }
+  .author-avatar img { width:100%; height:100%; object-fit:cover; }
+  .author-links { display:flex; flex-wrap:wrap; gap:.65rem; margin-top:.75rem; }
+  .detail-pagination { margin-top:2rem; }
+  .detail-side { position:sticky; top:7rem; height:max-content; display:flex; flex-direction:column; gap:1.25rem; }
+  .detail-side h2 { color:#fff; font-size:1.15rem; margin:0; }
+  .detail-side p { margin:0; }
+  .related-link { text-decoration:none; color:#fff; display:block; padding:.9rem 1rem; border:1px solid rgba(255,255,255,.08); border-radius:1rem; overflow:hidden; }
+  .related-link strong { display:block; }
+  .related-link + .related-link { margin-top:.75rem; }
+  .inline-ad-slot { margin:2rem 0; padding:1rem 1.1rem; border:1px dashed rgba(255,255,255,.16); border-radius:1rem; color:#a7a7a7; font-size:.92rem; }
+  @media (max-width: 980px) {
+    .detail-shell { grid-template-columns:1fr; padding:6rem 5vw 3rem; }
+    .detail-side { position:static; }
+    .detail-author { grid-template-columns:1fr; }
+  }
+
+  {% block theme_css %}
+  .detail-kicker, .detail-theme-chip { color:#8ff5ff; }
+  .detail-chip:hover, .detail-nav-link:hover, .related-link:hover { color:#8ff5ff; border-color:#8ff5ff; }
+  .detail-body a { color:#8ff5ff; }
+  {% endblock theme_css %}
+</style>
+
+<div class="detail-shell" id="blog">
+  <article class="detail-main" itemscope itemtype="https://schema.org/BlogPosting">
+    <p class="detail-kicker">Article Detail</p>
+    <h1 class="detail-title" itemprop="headline">{{ post.title }}</h1>
+    <div class="detail-meta">
+      <span>{{ post.created_at|date:"F d, Y" }}</span>
+      <span>{{ post.read_time }} min read</span>
+      <span>{{ comment_count }} comment{{ comment_count|pluralize }}</span>
+      <span>{{ total_shares }} shares</span>
+    </div>
+
+    <p class="detail-lead" itemprop="description">{{ post.excerpt|default:meta_details|striptags }}</p>
+
+    <div class="detail-chip-row">
+      <span class="detail-chip detail-theme-chip">{{ active_theme_label }}</span>
+      {% for category in post.categories.all %}
+      <a class="detail-chip" href="{% url 'blog:list_by_category' category.slug %}">{{ category.name }}</a>
+      {% empty %}
+      <span class="detail-chip">General</span>
+      {% endfor %}
+    </div>
+
+    <div class="detail-cover">
+      {% if primary_image %}
+      <img src="{{ primary_image.url }}" alt="{{ post.title }}" itemprop="image">
+      {% else %}
+      <div class="detail-cover-fallback">
+        <div>
+          <p class="detail-kicker">No Feature Image</p>
+          <strong>{{ author_display_name }}</strong>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if toc_data.items %}
+    <div class="detail-card" style="padding:1.2rem;margin-bottom:1.5rem;">
+      <p class="detail-kicker">Contents</p>
+      <div class="detail-link-list" style="margin-top:.8rem;">
+        {% for item in toc_data.items %}
+        <a class="detail-nav-link" href="#{{ item.id }}">{{ item.title }}</a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="detail-body" itemprop="articleBody">
+      {{ rendered_content|default:post.content|safe }}
+    </div>
+
+    <div class="inline-ad-slot" aria-label="Reserved space for article ad placement">
+      Ad-friendly inline slot reserved for future placements. Content spacing remains readable even with monetization enabled.
+    </div>
+
+    <section class="detail-author">
+      <div class="author-avatar" aria-hidden="true">
+        {% if author_profile and author_profile.profile_picture %}
+        <img src="{{ author_profile.profile_picture.url }}" alt="{{ author_display_name }}">
+        {% else %}
+        {{ author_display_name|slice:":1"|upper }}
+        {% endif %}
+      </div>
+      <div>
+        <p class="detail-kicker">Author</p>
+        <h2 style="color:#fff; margin:.35rem 0 0;">{{ author_display_name }}</h2>
+        <p class="body-lg">
+          {% if author_profile and author_profile.bio %}
+          {{ author_profile.get_short_bio }}
+          {% else %}
+          {{ post.author.username }} writes about engineering, architecture, and production-grade software systems.
+          {% endif %}
+        </p>
+        {% if author_social_links %}
+        <div class="author-links">
+          {% for key, link in author_social_links.items %}
+          <a class="detail-nav-link" href="{{ link.url }}" target="_blank" rel="noopener noreferrer">{{ link.display }}</a>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </section>
+
+    <nav class="detail-pagination" aria-label="Article pagination">
+      {% if previous_post %}
+      <a class="detail-nav-link" href="{% url 'blog:detail' previous_post.slug %}">Older: {{ previous_post.title|truncatechars:44 }}</a>
+      {% endif %}
+      <a class="detail-nav-link" href="{% url 'blog:list' %}">Back to Blog</a>
+      {% if next_post %}
+      <a class="detail-nav-link" href="{% url 'blog:detail' next_post.slug %}">Newer: {{ next_post.title|truncatechars:44 }}</a>
+      {% endif %}
+    </nav>
+  </article>
+
+  <aside class="detail-side">
+    <section>
+      <p class="detail-kicker">Quick Links</p>
+      <div class="detail-link-list" style="margin-top:.8rem;">
+        <a class="detail-nav-link" href="/">Home</a>
+        <a class="detail-nav-link" href="{% url 'blog:list' %}">All Posts</a>
+        {% for category in post.categories.all %}
+        <a class="detail-nav-link" href="{% url 'blog:list_by_category' category.slug %}">{{ category.name }}</a>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section>
+      <p class="detail-kicker">Related Reading</p>
+      {% for related in related_posts %}
+      <a class="related-link" href="{% url 'blog:detail' related.slug %}">
+        <strong>{{ related.title }}</strong>
+        <p class="body-lg" style="margin-top:.4rem;">{{ related.excerpt|default:related.content|striptags|truncatechars:90 }}</p>
+      </a>
+      {% empty %}
+      <p class="body-lg">Related posts will appear here as more content is published.</p>
+      {% endfor %}
+    </section>
+  </aside>
+</div>
+{% endblock content %}

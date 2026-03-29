@@ -91,6 +91,7 @@ TEMPLATES = [
                 'django.template.context_processors.debug',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.active_theme',
             ],
         },
     },
@@ -770,7 +771,7 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@kabhishek18.com')
 # Site Configuration
 SITE_ID = 1
 SITE_NAME = os.getenv('SITE_NAME', 'Digital Codex')
-SITE_URL = os.getenv('SITE_URL', 'http://127.0.0.1:8000')
+SITE_URL = os.getenv('SITE_URL', 'https://kabhishek18.com')
 SITE_DOMAIN = os.getenv('SITE_DOMAIN', 'https://kabhishek18.com')
 
 # LinkedIn

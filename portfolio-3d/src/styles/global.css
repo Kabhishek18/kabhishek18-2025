@@ -1,0 +1,131 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Space+Grotesk:wght@500&display=swap');
+
+:root {
+  /* Aether Core Palette */
+  --color-primary: #8ff5ff;
+  --color-primary-dim: #00deec;
+  --color-primary-container: #00eefc;
+  --color-secondary: #ac89ff;
+  --color-tertiary: #ff6b98;
+
+  --color-bg: #0a0a0a;
+  --color-surface: #0e0e0e;
+  --color-surface-dim: #0e0e0e;
+  --color-surface-low: #131313;
+  --color-surface-high: #201f1f;
+  --color-surface-highest: #262626;
+  --color-surface-bright: #2c2c2c;
+  --color-surface-variant: rgba(38, 38, 38, 0.4); /* Glassmorphism basis */
+  
+  --color-outline: rgba(119, 117, 117, 0.2);
+  --color-outline-variant: rgba(73, 72, 71, 0.15);
+
+  --color-on-surface: #ffffff;
+  --color-on-surface-variant: #adaaaa;
+
+  /* Typography */
+  --font-body: 'Inter', sans-serif;
+  --font-label: 'Space Grotesk', monospace;
+
+  /* Spacing */
+  --spacing-4: 1.4rem;
+  --spacing-8: 2.8rem;
+  --spacing-16: 5.5rem;
+  --spacing-20: 7rem;
+  --spacing-24: 8.5rem;
+
+  /* Radii */
+  --radius-sm: 0.125rem;
+  --radius-md: 0.5rem;
+  --radius-full: 9999px;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-on-surface);
+  font-family: var(--font-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Typography Classes */
+.display-lg {
+  font-family: var(--font-body);
+  font-size: 3.5rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--color-on-surface);
+}
+
+.headline-lg {
+  font-family: var(--font-body);
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-on-surface);
+}
+
+.title-lg {
+  font-family: var(--font-body);
+  font-size: 1.375rem;
+  font-weight: 600;
+  color: var(--color-on-surface);
+}
+
+.label-md {
+  font-family: var(--font-label);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.body-lg {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--color-on-surface-variant);
+}
+
+/* Layout Utilities */
+.section-container {
+  padding: var(--spacing-20) 10vw;
+  max-width: 1400px;
+  margin: 0 auto;
+  scroll-margin-top: 100px;
+}
+
+.glass-panel {
+  background: var(--color-surface-variant);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--color-outline-variant);
+}
+
+.global-canvas-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  pointer-events: none; /* Let clicks pass through to sections below */
+}
+
+.layout-wrapper {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+}

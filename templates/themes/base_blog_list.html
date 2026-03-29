@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}<title>{{ title }}</title>{% endblock title %}
+
+{% block meta_data %}
+<meta name="description" content="{{ meta_details }}">
+<meta name="keywords" content="{% if current_category %}{{ current_category.name }}, {% endif %}{% if current_tag %}{{ current_tag.name }}, {% endif %}{% if query %}{{ query }}, {% endif %}{{ default_meta_keywords }}, software engineering blog, AI blog">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="author" content="Kumar Abhishek">
+<meta name="publisher" content="{{ publisher_name }}">
+<meta property="og:title" content="{{ title }}">
+<meta property="og:description" content="{{ meta_details }}">
+<meta property="og:type" content="website">
+<meta property="og:image" content="{{ publisher_logo_url }}">
+<meta property="og:url" content="{{ canonical_url }}">
+<meta property="og:site_name" content="{{ publisher_name }}">
+<link rel="canonical" href="{{ canonical_url }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ title }}">
+<meta name="twitter:description" content="{{ meta_details }}">
+<meta name="twitter:image" content="{{ publisher_logo_url }}">
+{% endblock meta_data %}
+
+{% block schema_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "{{ publisher_name|escapejs }} Blog",
+  "url": "{{ canonical_url|escapejs }}",
+  "mainEntity": {
+    "@type": "Blog",
+    "name": "{{ publisher_name|escapejs }} Blog",
+    "publisher": {
+      "@type": "Organization",
+      "name": "{{ publisher_name|escapejs }}",
+      "url": "{{ site_url|escapejs }}",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "{{ publisher_logo_url|escapejs }}"
+      }
+    }
+  }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "{{ site_url|escapejs }}/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Blog",
+      "item": "{{ site_url|escapejs }}{% url 'blog:list' %}"
+    }
+  ]
+}
+</script>
+{% endblock schema_data %}
+
+{% block content %}
+<style>
+  .blog-shell { max-width: 1360px; margin: 0 auto; padding: 7rem 7vw 4rem; }
+  .blog-toolbar { display:grid; grid-template-columns: minmax(0,1.2fr) minmax(320px,.8fr); gap:1.5rem; align-items:start; }
+  .blog-hero, .blog-filter-panel, .post-card, .archive-section, .pagination-link, .pagination-status { border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.03); border-radius:1.25rem; }
+  .blog-hero, .blog-filter-panel, .archive-section { padding:1.7rem; }
+  .blog-kicker { display:inline-flex; align-items:center; gap:.55rem; font-size:.78rem; letter-spacing:.14em; text-transform:uppercase; color:#9dd9ff; }
+  .blog-kicker::before { content:""; width:2.5rem; height:1px; background:currentColor; opacity:.6; }
+  .blog-title { font-size:clamp(2.7rem,5vw,4.8rem); line-height:.98; margin:1rem 0; max-width:12ch; }
+  .blog-intro { color:#c8c8c8; max-width:48rem; font-size:1.05rem; line-height:1.9; }
+  .blog-theme-chip { display:inline-flex; margin-top:1.15rem; padding:.45rem .75rem; border-radius:999px; border:1px solid rgba(255,255,255,.16); font-size:.78rem; text-transform:uppercase; letter-spacing:.08em; }
+  .blog-filter-label { color:#fff; font-size:1.1rem; margin:0 0 .85rem; }
+  .filter-group + .filter-group { margin-top:1.25rem; }
+  .chip-list { display:flex; flex-wrap:wrap; gap:.7rem; }
+  .chip-link { color:#d7d7d7; text-decoration:none; border:1px solid rgba(255,255,255,.1); border-radius:999px; padding:.45rem .8rem; font-size:.9rem; transition:.2s ease; }
+  .archive-section { margin-top:2rem; }
+  .archive-meta { display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; }
+  .archive-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:1.25rem; }
+  .post-card { display:grid; grid-template-rows: 220px auto; overflow:hidden; text-decoration:none; color:inherit; transition: transform .28s ease, border-color .28s ease, box-shadow .28s ease; }
+  .post-card:hover { transform:translateY(-6px); }
+  .post-card-media { position:relative; background:linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); }
+  .post-card-media img { width:100%; height:100%; object-fit:cover; display:block; }
+  .post-card-fallback { width:100%; height:100%; display:flex; align-items:flex-end; padding:1.25rem; background:radial-gradient(circle at top left, rgba(255,255,255,.12), transparent 42%), linear-gradient(160deg, rgba(14,22,38,.96), rgba(8,10,16,.98)); color:#fff; font-size:1.15rem; }
+  .post-card-body { padding:1.25rem; display:flex; flex-direction:column; gap:.9rem; }
+  .post-card-meta, .post-card-taxonomy { display:flex; flex-wrap:wrap; gap:.75rem; color:#b8b8b8; font-size:.92rem; }
+  .post-card-title { color:#fff; font-size:1.4rem; line-height:1.2; margin:0; }
+  .post-card-excerpt { color:#c8c8c8; line-height:1.75; margin:0; }
+  .post-card-footer { display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-top:auto; }
+  .post-card-author { color:#fff; font-size:.95rem; }
+  .read-link { font-size:.82rem; letter-spacing:.12em; text-transform:uppercase; }
+  .pagination-row { display:flex; gap:.8rem; flex-wrap:wrap; margin-top:2rem; }
+  .pagination-link, .pagination-status { padding:.8rem 1rem; text-decoration:none; color:#fff; }
+  .pagination-status { color:#cfcfcf; }
+  @media (max-width: 980px) {
+    .blog-shell { padding:6rem 5vw 3rem; }
+    .blog-toolbar { grid-template-columns:1fr; }
+    .archive-grid { grid-template-columns:1fr; }
+  }
+
+  {% block theme_css %}
+  .blog-kicker, .blog-theme-chip, .read-link { color:#8ff5ff; }
+  .chip-link:hover, .chip-link.active { color:#8ff5ff; border-color:#8ff5ff; }
+  .post-card:hover { border-color:#8ff5ff; box-shadow:0 12px 36px rgba(143,245,255,.08); }
+  .pagination-link:hover { border-color:#8ff5ff; color:#8ff5ff; }
+  {% endblock theme_css %}
+</style>
+
+<div class="blog-shell" id="blog">
+  <div class="blog-toolbar">
+    <section class="blog-hero" aria-labelledby="blog-page-title">
+      <p class="blog-kicker">Knowledge Base</p>
+      <h1 id="blog-page-title" class="blog-title">
+        {% if current_category %}
+        {{ current_category.name }}
+        {% elif current_tag %}
+        Posts tagged {{ current_tag.name }}
+        {% elif query %}
+        Search results for "{{ query }}"
+        {% else %}
+        Production-focused writing for engineering and AI systems.
+        {% endif %}
+      </h1>
+      <p class="blog-intro">{{ meta_details }}</p>
+      <div class="blog-theme-chip">Active Template: {{ active_theme_label }}</div>
+    </section>
+
+    <aside class="blog-filter-panel" aria-label="Blog filters">
+      <div class="filter-group">
+        <p class="blog-filter-label">Primary Navigation</p>
+        <div class="chip-list">
+          <a href="/" class="chip-link">Home</a>
+          <a href="{% url 'blog:list' %}" class="chip-link {% if not current_category and not current_tag and not query %}active{% endif %}">All Posts</a>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <p class="blog-filter-label">Categories</p>
+        <div class="chip-list">
+          {% for category in all_categories %}
+          <a href="{% url 'blog:list_by_category' category.slug %}" class="chip-link {% if current_category and current_category.slug == category.slug %}active{% endif %}">
+            {{ category.name }}
+          </a>
+          {% empty %}
+          <span class="body-lg">No categories available.</span>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if tag_cloud %}
+      <div class="filter-group">
+        <p class="blog-filter-label">Popular Tags</p>
+        <div class="chip-list">
+          {% for tag in tag_cloud|slice:":12" %}
+          <a href="{% url 'blog:list_by_tag' tag.slug %}" class="chip-link {% if current_tag and current_tag.slug == tag.slug %}active{% endif %}">#{{ tag.name }}</a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </aside>
+  </div>
+
+  <section class="archive-section" aria-labelledby="archive-heading">
+    <div class="archive-meta">
+      <div>
+        <p class="blog-kicker">Archive</p>
+        <h2 id="archive-heading" class="title-lg">Readable articles with proper metadata, categories, and author context.</h2>
+      </div>
+      <p class="body-lg">{{ total_results }} result{{ total_results|pluralize }}</p>
+    </div>
+
+    <div class="archive-grid">
+      {% for post in posts %}
+      <article class="post-card">
+        <a class="post-card-media" href="{% url 'blog:detail' post.slug %}" aria-label="Open {{ post.title }}">
+          {% if post.featured_image %}
+          <img src="{{ post.featured_image.url }}" alt="{{ post.title }}">
+          {% elif post.social_image %}
+          <img src="{{ post.social_image.url }}" alt="{{ post.title }}">
+          {% else %}
+          <div class="post-card-fallback">
+            <span>{{ post.categories.first.name|default:"Engineering Notes" }}</span>
+          </div>
+          {% endif %}
+        </a>
+        <div class="post-card-body">
+          <div class="post-card-meta">
+            <span>{{ post.created_at|date:"M d, Y" }}</span>
+            <span>{{ post.read_time }} min read</span>
+            <span>{{ post.view_count }} views</span>
+          </div>
+          <h3 class="post-card-title">
+            <a href="{% url 'blog:detail' post.slug %}" style="text-decoration:none;color:inherit;">{{ post.title }}</a>
+          </h3>
+          <p class="post-card-excerpt">{{ post.excerpt|default:post.content|striptags|truncatechars:190 }}</p>
+          <div class="post-card-taxonomy">
+            {% for category in post.categories.all|slice:":3" %}
+            <span class="post-tag">{{ category.name }}</span>
+            {% empty %}
+            <span class="post-tag">General</span>
+            {% endfor %}
+          </div>
+          <div class="post-card-footer">
+            <span class="post-card-author">
+              {% if post.author.get_full_name %}{{ post.author.get_full_name }}{% else %}{{ post.author.username }}{% endif %}
+            </span>
+            <a href="{% url 'blog:detail' post.slug %}" class="read-link">Read Article</a>
+          </div>
+        </div>
+      </article>
+      {% empty %}
+      <div class="blog-filter-panel"><p class="body-lg">No posts matched this filter. Try another category, tag, or search term.</p></div>
+      {% endfor %}
+    </div>
+
+    {% if posts.has_other_pages %}
+    <nav class="pagination-row" aria-label="Blog pagination">
+      {% if posts.has_previous %}
+      <a class="pagination-link" href="?page={{ posts.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Previous</a>
+      {% endif %}
+      <span class="pagination-status">Page {{ posts.number }} of {{ posts.paginator.num_pages }}</span>
+      {% if posts.has_next %}
+      <a class="pagination-link" href="?page={{ posts.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Next</a>
+      {% endif %}
+    </nav>
+    {% endif %}
+  </section>
+</div>
+{% endblock content %}

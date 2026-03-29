@@ -1,0 +1,50 @@
+.exp-header {
+  margin-bottom: var(--spacing-8);
+}
+
+.timeline-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  border-left: 2px solid var(--color-surface-high);
+  padding-left: 2rem;
+  margin-left: 1rem;
+}
+
+.timeline-item {
+  position: relative;
+}
+
+.timeline-marker {
+  position: absolute;
+  left: -2.75rem;
+  top: 1rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--color-surface-dim);
+  border: 2px solid var(--color-primary);
+  box-shadow: 0 0 10px rgba(143, 245, 255, 0.2);
+  z-index: 1;
+}
+
+.timeline-content {
+  padding: 2rem;
+  border-radius: var(--radius-md);
+}
+
+.text-primary {
+  color: var(--color-primary);
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.text-secondary {
+  color: var(--color-secondary);
+  font-weight: 500;
+  margin-bottom: 1rem;
+}
+
+.timeline-desc {
+  color: var(--color-on-surface-variant);
+}

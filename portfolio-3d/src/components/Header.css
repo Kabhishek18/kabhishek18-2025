@@ -1,0 +1,150 @@
+.site-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 100;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 2vw 0;
+  background: linear-gradient(180deg, rgba(10, 10, 10, 0.96) 0%, rgba(10, 10, 10, 0.72) 58%, rgba(10, 10, 10, 0) 100%);
+}
+
+.site-header.scrolled {
+  background: rgba(10, 10, 10, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: var(--spacing-4) 0;
+  border-bottom: 1px solid rgba(0, 240, 255, 0.1);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+}
+
+.header-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 10vw;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Logo styling */
+.logo {
+  font-family: var(--font-family-tech);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  text-decoration: none;
+  letter-spacing: 0.15em;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+}
+
+.logo-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.logo:hover {
+  text-shadow: 0 0 15px var(--color-primary-base);
+}
+
+.logo .text-secondary {
+  color: var(--color-primary-base);
+  font-size: inherit;
+}
+
+/* Navigation Links */
+.main-nav {
+  display: flex;
+  align-items: center;
+  gap: 2.5rem;
+}
+
+.nav-links {
+  display: flex;
+  list-style: none;
+  gap: 2.2rem;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-links a,
+.nav-action {
+  font-family: var(--font-family-tech);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: color 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  padding: 0.5rem 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.nav-links a::after,
+.nav-action::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0%;
+  height: 1px;
+  background-color: var(--color-primary-base);
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-links a.active,
+.nav-links a:hover,
+.nav-action.active,
+.nav-action:hover {
+  color: var(--color-text-primary);
+}
+
+.nav-links a.active::after,
+.nav-links a:hover::after,
+.nav-action.active::after,
+.nav-action:hover::after {
+  width: 100%;
+}
+
+.nav-num {
+  color: var(--color-primary-base);
+  opacity: 0.75;
+}
+
+/* Resume Outline Button */
+.resume-btn {
+  font-family: var(--font-family-tech);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  color: var(--color-primary-base);
+  text-decoration: none;
+  padding: 0.6rem 1.4rem;
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  background: rgba(0, 240, 255, 0.05);
+  text-transform: uppercase;
+}
+
+.resume-btn:hover {
+  background: rgba(0, 240, 255, 0.15);
+  border-color: var(--color-primary-base);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+  color: var(--color-text-primary);
+}
+
+/* Responsive Hide */
+@media (max-width: 768px) {
+  .nav-links {
+    display: none;
+  }
+}

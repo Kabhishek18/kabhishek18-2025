@@ -1,0 +1,41 @@
+.aether-btn {
+  font-family: var(--font-label);
+  font-size: 0.875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.75rem 2rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  text-decoration: none;
+}
+
+.aether-btn-primary {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dim));
+  color: #000;
+  border: none;
+  box-shadow: 0 0 10px rgba(143, 245, 255, 0.1);
+}
+
+.aether-btn-primary:hover {
+  background: linear-gradient(135deg, var(--color-primary-container), var(--color-primary));
+  box-shadow: 0 0 20px rgba(143, 245, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.aether-btn-secondary {
+  background: transparent;
+  color: var(--color-on-surface);
+  border: 1px solid var(--color-outline);
+}
+
+.aether-btn-secondary:hover {
+  background: var(--color-surface-bright);
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+}

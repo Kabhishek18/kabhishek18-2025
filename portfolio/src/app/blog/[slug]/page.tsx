@@ -1,11 +1,14 @@
-'use client';
-
 import React from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
 
-export default function BlogDetail() {
-    const params = useParams();
+export async function generateStaticParams() {
+    return [
+        { slug: 'neural-net-visualizer' },
+        { slug: 'terminal-ui' },
+    ];
+}
+
+export default function BlogDetail({ params }: { params: { slug: string } }) {
 
     return (
         <>

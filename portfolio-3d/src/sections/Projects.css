@@ -1,0 +1,33 @@
+.projects-header {
+  margin-bottom: var(--spacing-8);
+}
+
+.projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--spacing-4);
+}
+
+.project-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 2.5rem;
+}
+
+.project-tech {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.project-link {
+  margin-top: 1rem;
+  text-decoration: none;
+  transition: opacity 0.3s;
+}
+
+.project-link:hover {
+  opacity: 0.8;
+}

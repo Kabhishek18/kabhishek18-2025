@@ -4,7 +4,7 @@ from django.shortcuts import redirect
 from django.utils.html import format_html
 from django.utils import timezone
 from unfold.admin import ModelAdmin
-from .models import Page, Template, Component, HealthMetric, SystemAlert
+from .models import Page, Template, Component, HealthMetric, SiteThemeSettings, SystemAlert
 from django.db import models
 from ckeditor.widgets import CKEditorWidget
 
@@ -73,6 +73,20 @@ class PageAdmin(ModelAdmin):
             'fields': ('is_published', 'is_homepage', 'navbar_type')
         }),
     )
+
+
+@admin.register(SiteThemeSettings)
+class SiteThemeSettingsAdmin(ModelAdmin):
+    list_display = ('site_name', 'active_theme', 'enable_template_switch', 'updated_at')
+
+    fieldsets = (
+        (None, {
+            'fields': ('site_name', 'active_theme', 'enable_template_switch')
+        }),
+    )
+
+    def has_add_permission(self, request):
+        return not SiteThemeSettings.objects.exists()
 
 
 @admin.register(HealthMetric)

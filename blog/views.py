@@ -23,6 +23,7 @@ from .author_services.author_service import AuthorService
 from .security_clean import RateLimiter, SecurityAuditLogger
 from .performance import CacheManager, QueryOptimizer, ViewCountOptimizer, PerformanceMonitor
 import time
+from core.theme import get_active_theme
 
 def blog_list(request, category_slug=None, tag_slug=None):
     """
@@ -119,7 +120,11 @@ def blog_list(request, category_slug=None, tag_slug=None):
         posts_list = posts_list.order_by('-created_at')
     
     # Pagination with enhanced page size options
-    page_size = int(request.GET.get('per_page', 10))
+    try:
+        page_size = int(request.GET.get('per_page', 10))
+    except (TypeError, ValueError):
+        page_size = 10
+
     if page_size not in [5, 10, 20, 50]:
         page_size = 10
     
@@ -227,7 +232,10 @@ def blog_list(request, category_slug=None, tag_slug=None):
         'popular_posts': popular_posts,
         'trending_tags': trending_tags,
     }
-    return render(request, 'blog/blog_list.html', context)
+    active_theme = get_active_theme()
+    context['active_theme'] = active_theme
+    template_name = f'themes/{active_theme}/blog_list.html'
+    return render(request, template_name, context)
 
 @PerformanceMonitor.time_function
 @PerformanceMonitor.track_query_count
@@ -240,12 +248,22 @@ def blog_detail(request, slug):
     
     # Get author profile
     author_profile = AuthorService.get_author_profile(post.author)
+    author_social_links = author_profile.get_social_links() if author_profile else {}
+    author_display_name = author_profile.get_display_name() if author_profile else post.author.get_full_name() or post.author.username
     
     # Increment view count with optimized batching
     ViewCountOptimizer.increment_view_count(post.id)
     
     # Get related posts using optimized caching
     related_posts = QueryOptimizer.get_related_posts_optimized(post, limit=3)
+    previous_post = Post.objects.filter(
+        status='published',
+        created_at__lt=post.created_at
+    ).order_by('-created_at').first()
+    next_post = Post.objects.filter(
+        status='published',
+        created_at__gt=post.created_at
+    ).order_by('created_at').first()
 
     # Get approved comments for this post (only top-level comments, replies are handled in template)
     comments = Comment.objects.filter(
@@ -271,12 +289,23 @@ def blog_detail(request, slug):
     post_images = post.media_items.filter(media_type='image').order_by('order')
     post_videos = post.media_items.filter(media_type='video').order_by('order')
     post_galleries = post.media_items.filter(media_type='gallery').order_by('order')
+    primary_image = post.social_image or post.featured_image
+    rendered_content = re.sub(r'<(/?)h1(\b[^>]*)>', r'<\1h2\2>', post.content, flags=re.IGNORECASE)
+    if not primary_image and featured_media:
+        primary_image = (
+            featured_media.large_image
+            or featured_media.medium_image
+            or featured_media.original_image
+        )
 
     context = {
         'post': post,
         'author_profile': author_profile,
+        'author_display_name': author_display_name,
+        'author_social_links': author_social_links,
         'related_posts': related_posts,
         'comments': comments,
+        'comment_count': comments.count(),
         'comment_form': comment_form,
         'share_urls': share_urls,
         'share_counts': share_counts,
@@ -284,14 +313,21 @@ def blog_detail(request, slug):
         'title': post.title,
         'meta_data': post.meta_data,
         'meta_details': post.excerpt or post.content[:160],
+        'rendered_content': rendered_content,
         'toc_data': toc_data,
         'media_items': media_items,
         'featured_media': featured_media,
+        'primary_image': primary_image,
         'post_images': post_images,
         'post_videos': post_videos,
         'post_galleries': post_galleries,
+        'previous_post': previous_post,
+        'next_post': next_post,
     }
-    return render(request, 'blog/blog_detail.html', context)
+    active_theme = get_active_theme()
+    context['active_theme'] = active_theme
+    template_name = f'themes/{active_theme}/blog_detail.html'
+    return render(request, template_name, context)
 
 
 def subscribe_newsletter(request):

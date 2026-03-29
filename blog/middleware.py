@@ -25,6 +25,12 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
         
         for header, value in security_headers.items():
             response[header] = value
+
+        if 'X-Robots-Tag' not in response:
+            if response.status_code == 200 and request.method == 'GET':
+                response['X-Robots-Tag'] = 'index,follow,max-image-preview:large'
+            else:
+                response['X-Robots-Tag'] = 'noindex,noarchive'
         
         return response
 

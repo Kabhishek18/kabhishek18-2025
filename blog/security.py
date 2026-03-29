@@ -250,20 +250,21 @@ class SecurityHeaders:
             'Referrer-Policy': 'strict-origin-when-cross-origin',
             'Content-Security-Policy': (
                 "default-src 'self'; "
-                "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: "
                 "https://cdnjs.cloudflare.com https://cdn.jsdelivr.net "
                 "https://cdn.ampproject.org https://www.googletagmanager.com "
                 "https://pagead2.googlesyndication.com https://www.google-analytics.com; "
                 "style-src 'self' 'unsafe-inline' "
                 "https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
                 "font-src 'self' https://fonts.gstatic.com; "
-                "img-src 'self' data: https:; "
-                "media-src 'self' https:; "
+                "img-src 'self' data: blob: https:; "
+                "media-src 'self' blob: https:; "
+                "worker-src 'self' blob:; "
                 "frame-src https://www.youtube.com https://player.vimeo.com "
                 "https://googleads.g.doubleclick.net https://tpc.googlesyndication.com; "
-                "connect-src 'self' https://www.google-analytics.com "
+                "connect-src 'self' blob: data: https://www.google-analytics.com "
                 "https://ep1.adtrafficquality.google https://pagead2.googlesyndication.com "
-                "https://cdn.ampproject.org;"
+                "https://cdn.ampproject.org https://raw.githack.com https://raw.githubusercontent.com;"
             )
         }
 

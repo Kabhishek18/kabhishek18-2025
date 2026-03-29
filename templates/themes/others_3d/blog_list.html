@@ -1,0 +1,10 @@
+{# others_3d — cyan/electric accent #}
+{% extends "themes/base_blog_list.html" %}
+
+{% block theme_css %}
+.post-card:hover { border-color:#8ff5ff; transform:translateY(-4px); box-shadow: 0 8px 32px rgba(143,245,255,.08); }
+.blog-filter-list a.active, .blog-filter-list a:hover { color:#8ff5ff; border-color:#8ff5ff; }
+.blog-theme-chip { color:#8ff5ff; border-color:rgba(143,245,255,.28); }
+.blog-pagination a:hover { border-color:#8ff5ff; color:#8ff5ff; }
+.post-tag { border-color:rgba(143,245,255,.18); }
+{% endblock theme_css %}

@@ -1,0 +1,146 @@
+.blog-page {
+  padding-top: 7rem;
+}
+
+.blog-hero {
+  padding-bottom: 2rem;
+}
+
+.blog-page-title {
+  max-width: 11ch;
+  font-size: clamp(3.5rem, 8vw, 6.4rem);
+  line-height: 0.95;
+}
+
+.blog-page-intro {
+  max-width: 44rem;
+  margin-top: 1.25rem;
+  font-size: 1.1rem;
+}
+
+.blog-featured-section {
+  padding-top: 2rem;
+}
+
+.blog-featured-card {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 2rem;
+  padding: 2rem;
+  border-radius: 1.5rem;
+  background:
+    radial-gradient(circle at top left, rgba(143, 245, 255, 0.12), transparent 22%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+}
+
+.blog-featured-label {
+  min-height: 280px;
+  border-radius: 1.2rem;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.3rem;
+  color: var(--color-on-surface);
+  background:
+    radial-gradient(circle at center, rgba(172, 137, 255, 0.18), transparent 48%),
+    rgba(6, 10, 18, 0.9);
+}
+
+.blog-featured-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.blog-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+}
+
+.blog-featured-title {
+  max-width: 20ch;
+}
+
+.blog-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.blog-featured-actions {
+  margin-top: auto;
+}
+
+.blog-archive-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.blog-archive-heading {
+  max-width: 46rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.blog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.4rem;
+}
+
+.blog-card {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  border-radius: 1.2rem;
+}
+
+.blog-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  height: 100%;
+}
+
+.blog-card-cover {
+  min-height: 180px;
+  border-radius: 1rem;
+  display: flex;
+  align-items: flex-end;
+  padding: 1.25rem;
+  background:
+    linear-gradient(160deg, rgba(143, 245, 255, 0.14), rgba(172, 137, 255, 0.08)),
+    rgba(8, 12, 22, 0.9);
+}
+
+.blog-card-title {
+  min-height: 3.8rem;
+}
+
+.blog-link-button {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  padding: 0;
+  font: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  text-align: left;
+}
+
+@media (max-width: 900px) {
+  .blog-featured-card {
+    grid-template-columns: 1fr;
+  }
+
+  .blog-featured-label {
+    min-height: 180px;
+  }
+}

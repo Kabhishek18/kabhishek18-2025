@@ -49,6 +49,39 @@ class Template(models.Model):
         return self.name
 
 
+class SiteThemeSettings(models.Model):
+    THEME_OTHERS_3D = 'others_3d'
+    THEME_PORTFOLIO_3D = 'portfolio_3d'
+    THEME_PORTFOLIO = 'portfolio'
+
+    THEME_CHOICES = [
+        (THEME_OTHERS_3D, 'Others-3d'),
+        (THEME_PORTFOLIO_3D, 'portfolio-3d'),
+        (THEME_PORTFOLIO, 'portfolio'),
+    ]
+
+    site_name = models.CharField(max_length=120, default='Kumar Abhishek')
+    active_theme = models.CharField(max_length=30, choices=THEME_CHOICES, default=THEME_OTHERS_3D)
+    enable_template_switch = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Site Theme Settings'
+        verbose_name_plural = 'Site Theme Settings'
+
+    def __str__(self):
+        return f'Active Theme: {self.get_active_theme_display()}'
+
+    def save(self, *args, **kwargs):
+        if not self.pk and SiteThemeSettings.objects.exists():
+            self.pk = SiteThemeSettings.objects.first().pk
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_solo(cls):
+        return cls.objects.first() or cls.objects.create()
+
+
 class Page(models.Model):
     """
     Represents a single content page on the website, which can be rendered

@@ -1,0 +1,137 @@
+.blog-detail-page {
+  padding-top: 7rem;
+}
+
+.blog-detail-hero {
+  padding-bottom: 2rem;
+}
+
+.blog-detail-breadcrumb {
+  margin-bottom: 1.25rem;
+}
+
+.blog-detail-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 2rem;
+  padding: 2rem;
+  border-radius: 1.5rem;
+}
+
+.blog-detail-cover {
+  min-height: 280px;
+  border-radius: 1.2rem;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 2rem;
+  background:
+    radial-gradient(circle at center, rgba(143, 245, 255, 0.12), transparent 42%),
+    rgba(8, 12, 22, 0.92);
+}
+
+.blog-detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.blog-detail-title {
+  font-size: clamp(3rem, 7vw, 5.6rem);
+  line-height: 0.95;
+  max-width: 12ch;
+}
+
+.blog-detail-excerpt {
+  max-width: 42rem;
+  font-size: 1.1rem;
+}
+
+.blog-detail-body-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.8fr);
+  gap: 1.4rem;
+  align-items: start;
+}
+
+.blog-detail-article,
+.blog-detail-cta {
+  padding: 2rem;
+  border-radius: 1.2rem;
+}
+
+.blog-detail-article {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.blog-detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.blog-detail-section-title {
+  font-size: 1.8rem;
+  line-height: 1.1;
+}
+
+.blog-detail-paragraph {
+  font-size: 1.06rem;
+  line-height: 1.9;
+  color: var(--color-on-surface-variant);
+}
+
+.blog-faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.blog-faq-item {
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-outline-variant);
+}
+
+.blog-detail-cta {
+  position: sticky;
+  top: 7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.blog-related-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.blog-related-item {
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid var(--color-outline-variant);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.blog-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+}
+
+@media (max-width: 960px) {
+  .blog-detail-shell,
+  .blog-detail-body-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .blog-detail-cover {
+    min-height: 180px;
+  }
+
+  .blog-detail-cta {
+    position: static;
+  }
+}

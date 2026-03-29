@@ -2,7 +2,7 @@
 import json
 import logging
 from datetime import datetime, timedelta
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum, Count, Q, Max
 from django.contrib.auth.models import User
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views import View
@@ -14,12 +14,103 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import user_passes_test
 from django.conf import settings
+from django.urls import reverse
 
-from blog.models import Post, Category
+from blog.models import Post, Category, Tag
 from .models import Page, Template, Component, HealthMetric, SystemAlert
 from .services.health_service import health_service
+from .theme import get_active_theme
 
 logger = logging.getLogger(__name__)
+
+
+def sitemap_view(request):
+    site_url = getattr(settings, "SITE_URL", "https://kabhishek18.com").rstrip("/")
+    now = timezone.now()
+    sitemap_items = []
+
+    def add_item(path, lastmod, changefreq, priority):
+        sitemap_items.append({
+            "loc": f"{site_url}{path}",
+            "lastmod": lastmod,
+            "changefreq": changefreq,
+            "priority": priority,
+        })
+
+    published_posts = (
+        Post.objects.filter(status="published")
+        .select_related("author")
+        .prefetch_related("categories", "tags")
+        .order_by("-updated_at")
+    )
+    latest_blog_update = published_posts.first().updated_at if published_posts.exists() else now
+
+    add_item("/", latest_blog_update, "daily", "1.0")
+    add_item("/blog/", latest_blog_update, "daily", "0.9")
+    add_item("/contact/", now, "monthly", "0.7")
+    add_item("/web_apps/", now, "weekly", "0.7")
+    add_item("/logs/", now, "monthly", "0.5")
+    add_item("/config/", now, "monthly", "0.5")
+    add_item("/dashboard/health/", now, "weekly", "0.4")
+
+    for post in published_posts:
+        add_item(
+            post.get_absolute_url(),
+            post.updated_at or post.created_at or now,
+            "monthly",
+            "0.85" if post.is_featured else "0.8",
+        )
+
+    categories = (
+        Category.objects.filter(posts__status="published")
+        .annotate(latest_update=Max("posts__updated_at"))
+        .distinct()
+        .order_by("name")
+    )
+    for category in categories:
+        add_item(
+            reverse("blog:list_by_category", kwargs={"category_slug": category.slug}),
+            category.latest_update or now,
+            "weekly",
+            "0.7",
+        )
+
+    tags = (
+        Tag.objects.filter(posts__status="published")
+        .annotate(latest_update=Max("posts__updated_at"))
+        .distinct()
+        .order_by("name")
+    )
+    for tag in tags:
+        add_item(
+            reverse("blog:list_by_tag", kwargs={"tag_slug": tag.slug}),
+            tag.latest_update or now,
+            "weekly",
+            "0.65",
+        )
+
+    authors = (
+        User.objects.filter(blog_posts__status="published")
+        .annotate(latest_update=Max("blog_posts__updated_at"))
+        .distinct()
+        .order_by("username")
+    )
+    for author in authors:
+        add_item(
+            reverse("blog:author_detail", kwargs={"username": author.username}),
+            author.latest_update or now,
+            "monthly",
+            "0.6",
+        )
+
+    response = render(
+        request,
+        "sitemap.xml",
+        {"sitemap_items": sitemap_items},
+        content_type="application/xml",
+    )
+    response["X-Robots-Tag"] = "index,follow,max-image-preview:large"
+    return response
 
 
 def dashboard_callback(request, context):
@@ -459,6 +550,7 @@ class PageRequest(View):
                 'page_content': None,
                 'template_includes': [],
                 'page': page,
+                'active_theme': get_active_theme(),
             }
 
             # Handle template vs content rendering
@@ -469,6 +561,11 @@ class PageRequest(View):
             else:
                 # Use manual content
                 context['page_content'] = page.content
+
+            if slug is None:
+                active_theme = get_active_theme()
+                template_name = f'themes/{active_theme}/home.html'
+                return render(request, template_name, context)
 
             return render(request, 'index.html', context)
             
